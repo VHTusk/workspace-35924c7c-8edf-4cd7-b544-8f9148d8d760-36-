@@ -5,6 +5,9 @@
  */
 
 import { SportType } from '@prisma/client';
+import { getAppUrl } from '@/lib/app-url';
+
+const APP_URL = getAppUrl();
 
 export interface TournamentConfirmationData {
   recipientName: string;
@@ -221,7 +224,7 @@ export function TournamentConfirmationEmail(data: TournamentConfirmationData): s
 <body>
   <div class="email-container">
     <div class="header">
-      <a href="https://valorhive.com" class="logo">VALORHIVE</a>
+      <a href="${APP_URL}" class="logo">VALORHIVE</a>
     </div>
     
     <div class="content">

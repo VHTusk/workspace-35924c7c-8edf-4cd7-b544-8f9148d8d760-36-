@@ -9,6 +9,9 @@
  */
 
 import { SportType } from '@prisma/client';
+import { getAppUrl } from '@/lib/app-url';
+
+const APP_URL = getAppUrl();
 
 // Brand colors by sport
 const SPORT_COLORS = {
@@ -254,7 +257,7 @@ export function getEmailWrapper(sport: SportType, content: string, previewText: 
   
   <div class="email-container">
     <div class="header">
-      <a href="https://valorhive.com" class="logo">🎯 VALORHIVE</a>
+      <a href="${APP_URL}" class="logo">🎯 VALORHIVE</a>
     </div>
     
     <div class="content">
@@ -266,9 +269,9 @@ export function getEmailWrapper(sport: SportType, content: string, previewText: 
         You're receiving this email because you're registered on VALORHIVE.
       </p>
       <p class="footer-text" style="margin-top: 8px;">
-        <a href="https://valorhive.com/legal/privacy" class="footer-link">Privacy Policy</a>
+        <a href="${APP_URL}/legal/privacy" class="footer-link">Privacy Policy</a>
         &nbsp;•&nbsp;
-        <a href="https://valorhive.com/legal/terms" class="footer-link">Terms of Service</a>
+        <a href="${APP_URL}/legal/terms" class="footer-link">Terms of Service</a>
         &nbsp;•&nbsp;
         <a href="{{unsubscribe_url}}" class="footer-link">Unsubscribe</a>
       </p>
@@ -321,7 +324,7 @@ export function getTournamentRegistrationEmail(params: {
     </div>
     
     <div style="text-align: center; margin: 32px 0;">
-      <a href="https://valorhive.com/${params.sport.toLowerCase()}/tournaments/${params.tournamentId}" class="btn">
+      <a href="${APP_URL}/${params.sport.toLowerCase()}/tournaments/${params.tournamentId}" class="btn">
         View Tournament Details
       </a>
     </div>
@@ -401,7 +404,7 @@ export function getMatchResultEmail(params: {
     </div>
     
     <div style="text-align: center; margin: 32px 0;">
-      <a href="https://valorhive.com/${params.sport.toLowerCase()}/stats" class="btn">
+      <a href="${APP_URL}/${params.sport.toLowerCase()}/stats" class="btn">
         View Full Stats
       </a>
     </div>
@@ -467,12 +470,12 @@ export function getTournamentReminderEmail(params: {
     </div>
     
     <div style="text-align: center; margin: 32px 0;">
-      <a href="https://valorhive.com/${params.sport.toLowerCase()}/tournaments/${params.tournamentId}" class="btn">
+      <a href="${APP_URL}/${params.sport.toLowerCase()}/tournaments/${params.tournamentId}" class="btn">
         View Tournament
       </a>
       ${!isUrgent ? `
       <br/>
-      <a href="https://valorhive.com/${params.sport.toLowerCase()}/tournaments/${params.tournamentId}/calendar" class="btn btn-secondary" style="margin-top: 12px;">
+      <a href="${APP_URL}/${params.sport.toLowerCase()}/tournaments/${params.tournamentId}/calendar" class="btn btn-secondary" style="margin-top: 12px;">
         Add to Calendar
       </a>
       ` : ''}
@@ -559,11 +562,11 @@ export function getTournamentRecapEmail(params: {
     ` : ''}
     
     <div style="text-align: center; margin: 32px 0;">
-      <a href="https://valorhive.com/${params.sport.toLowerCase()}/tournaments/${params.tournamentId}/recap" class="btn">
+      <a href="${APP_URL}/${params.sport.toLowerCase()}/tournaments/${params.tournamentId}/recap" class="btn">
         View Full Recap
       </a>
       <br/>
-      <a href="https://valorhive.com/${params.sport.toLowerCase()}/stats" class="btn btn-secondary" style="margin-top: 12px;">
+      <a href="${APP_URL}/${params.sport.toLowerCase()}/stats" class="btn btn-secondary" style="margin-top: 12px;">
         View Your Stats
       </a>
     </div>
@@ -633,7 +636,7 @@ export function getRankChangeEmail(params: {
     </div>
     
     <div style="text-align: center; margin: 32px 0;">
-      <a href="https://valorhive.com/${params.sport.toLowerCase()}/leaderboard" class="btn">
+      <a href="${APP_URL}/${params.sport.toLowerCase()}/leaderboard" class="btn">
         View Leaderboard
       </a>
     </div>
@@ -674,7 +677,7 @@ export function getMilestoneEmail(params: {
     ` : ''}
     
     <div style="text-align: center; margin: 32px 0;">
-      <a href="https://valorhive.com/${params.sport.toLowerCase()}/milestones" class="btn">
+      <a href="${APP_URL}/${params.sport.toLowerCase()}/milestones" class="btn">
         View All Achievements
       </a>
     </div>
@@ -758,11 +761,11 @@ export function getWelcomeEmail(params: {
     </div>
     
     <div style="text-align: center; margin: 32px 0;">
-      <a href="https://valorhive.com/${params.sport.toLowerCase()}/dashboard" class="btn">
+      <a href="${APP_URL}/${params.sport.toLowerCase()}/dashboard" class="btn">
         Go to Dashboard
       </a>
       <br/>
-      <a href="https://valorhive.com/${params.sport.toLowerCase()}/subscription" class="btn btn-secondary" style="margin-top: 12px;">
+      <a href="${APP_URL}/${params.sport.toLowerCase()}/subscription" class="btn btn-secondary" style="margin-top: 12px;">
         Get Player Subscription
       </a>
     </div>

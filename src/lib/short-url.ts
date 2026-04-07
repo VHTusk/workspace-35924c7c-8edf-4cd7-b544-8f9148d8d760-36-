@@ -4,6 +4,7 @@
 import { db } from './db';
 import { SportType } from '@prisma/client';
 import { nanoid } from 'nanoid';
+import { buildAppUrl, getAppUrl } from './app-url';
 
 // Short URL configuration
 const SHORT_CODE_LENGTH = 7;
@@ -52,11 +53,11 @@ export const createShortUrl = async (
       sport: options?.sport,
       createdById: options?.createdById,
       expiresAt,
-      qrCodeUrl: `${process.env.NEXT_PUBLIC_APP_URL || 'https://valorhive.com'}/qr/${shortCode}.png`,
+      qrCodeUrl: buildAppUrl(`/qr/${shortCode}.png`),
     },
   });
 
-  const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://valorhive.com';
+  const baseUrl = getAppUrl();
   
   return {
     shortCode,
@@ -109,7 +110,7 @@ export const createPlayerShortUrl = async (
   userId: string,
   sport: SportType
 ): Promise<{ shortCode: string; shortUrl: string }> => {
-  const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://valorhive.com';
+  const baseUrl = getAppUrl();
   const targetUrl = `${baseUrl}/${sport.toLowerCase()}/players/${userId}`;
 
   return createShortUrl('player', userId, targetUrl, { sport });
@@ -120,7 +121,7 @@ export const createTournamentShortUrl = async (
   tournamentId: string,
   sport: SportType
 ): Promise<{ shortCode: string; shortUrl: string }> => {
-  const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://valorhive.com';
+  const baseUrl = getAppUrl();
   const targetUrl = `${baseUrl}/${sport.toLowerCase()}/tournaments/${tournamentId}`;
 
   return createShortUrl('tournament', tournamentId, targetUrl, { sport });

@@ -13,6 +13,7 @@
 import { db } from './db';
 import { TournamentStatus, BracketMatchStatus, BracketFormat, WaitlistStatus, RegistrationStatus } from '@prisma/client';
 import { generateSeedings, SeedingOptions } from './seeding';
+import { buildAppUrl } from './app-url';
 import { 
   initializeSwissTournament, 
   generateSwissRound, 
@@ -1183,7 +1184,7 @@ export async function processMatchReminders(): Promise<{
                   scheduledTime: match.scheduledTime!,
                   court: null, // Could be enhanced with court info
                   minutesBefore: interval.minutesBefore,
-                  matchUrl: `${process.env.NEXT_PUBLIC_APP_URL || ''}/${match.tournament.sport.toLowerCase()}/tournaments/${match.tournament.id}/matches/${match.id}`,
+                  matchUrl: buildAppUrl(`/${match.tournament.sport.toLowerCase()}/tournaments/${match.tournament.id}/matches/${match.id}`),
                 }
               );
             }

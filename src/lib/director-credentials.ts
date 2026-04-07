@@ -8,6 +8,7 @@
 import crypto from 'crypto';
 import bcrypt from 'bcryptjs';
 import { db } from '@/lib/db';
+import { buildAppUrl } from '@/lib/app-url';
 
 // Credential configuration
 const USERNAME_PREFIX = 'td_'; // Tournament Director prefix
@@ -335,7 +336,7 @@ Your login credentials:
 👤 Username: ${username}
 🔑 Password: ${password}
 
-Login at: valorhive.com/director/login
+Login at: ${buildAppUrl('/director/login')}
 
 Please keep these credentials secure.
 You can manage your tournament after logging in.
@@ -351,7 +352,7 @@ export function formatCredentialsSMS(
   username: string,
   password: string
 ): string {
-  return `VALORHIVE: You're assigned as Director for "${tournamentName}". Login: ${username} | Pass: ${password}. Login at valorhive.com/director/login`;
+  return `VALORHIVE: You're assigned as Director for "${tournamentName}". Login: ${username} | Pass: ${password}. Login at ${buildAppUrl('/director/login')}`;
 }
 
 // ============================================
@@ -432,8 +433,7 @@ export async function createDirectorMagicLink(
     });
     
     // Generate the full magic link URL
-    const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://valorhive.com';
-    const magicLink = `${baseUrl}/director/magic-login?token=${token}`;
+    const magicLink = buildAppUrl(`/director/magic-login?token=${token}`);
     
     return {
       success: true,

@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import "./globals.css";
 import { ThemeProvider } from "@/components/theme-provider";
+import { getAppUrl } from "@/lib/app-url";
 
 export const viewport: Viewport = {
   width: "device-width",
@@ -10,7 +11,7 @@ export const viewport: Viewport = {
 };
 
 export const metadata: Metadata = {
-  metadataBase: new URL(process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000"),
+  metadataBase: new URL(getAppUrl()),
   title: "ValorHive - Where Champions Compete",
   description: "Multi-sport tournament platform for Cornhole and Darts.",
 };

@@ -5,6 +5,9 @@
  */
 
 import { SportType } from '@prisma/client';
+import { getAppUrl } from '@/lib/app-url';
+
+const APP_URL = getAppUrl();
 
 export interface WelcomeEmailData {
   recipientName: string;
@@ -348,7 +351,7 @@ export function WelcomeEmail(data: WelcomeEmailData): string {
 <body>
   <div class="email-container">
     <div class="header">
-      <a href="https://valorhive.com" class="logo">VALORHIVE</a>
+      <a href="${APP_URL}" class="logo">VALORHIVE</a>
       <div class="welcome-badge">Welcome to the Community!</div>
     </div>
     
@@ -445,7 +448,7 @@ export function WelcomeEmail(data: WelcomeEmailData): string {
       </div>
       
       <p class="footer-text">
-        Questions? Reply to this email or visit our <a href="https://valorhive.com/help" class="footer-link">Help Center</a>.
+        Questions? Reply to this email or visit our <a href="${APP_URL}/help" class="footer-link">Help Center</a>.
       </p>
       <p class="footer-text" style="margin-top: 8px;">
         <a href="${data.privacyUrl}" class="footer-link">Privacy Policy</a>

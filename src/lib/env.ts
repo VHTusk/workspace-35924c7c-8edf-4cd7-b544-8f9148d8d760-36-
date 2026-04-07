@@ -64,10 +64,10 @@ const productionEnvSchema = z.object({
  */
 const optionalEnvSchema = z.object({
   // Public URLs (defaults for development)
-  NEXT_PUBLIC_APP_URL: z.string().url().default('http://localhost:3000'),
-  NEXT_PUBLIC_BASE_URL: z.string().url().default('http://localhost:3000'),
-  NEXT_PUBLIC_API_URL: z.string().url().default('http://localhost:3000'),
-  NEXT_PUBLIC_WS_URL: z.string().default('ws://localhost:3003'),
+  NEXT_PUBLIC_APP_URL: z.string().url().default('https://example.invalid'),
+  NEXT_PUBLIC_BASE_URL: z.string().url().default('https://example.invalid'),
+  NEXT_PUBLIC_API_URL: z.string().url().default('https://example.invalid'),
+  NEXT_PUBLIC_WS_URL: z.string().default('wss://example.invalid'),
   NEXT_PUBLIC_APP_NAME: z.string().default('VALORHIVE'),
   
   // Redis
@@ -209,10 +209,10 @@ if (!validationResult.success) {
 export const env = {
   // Application
   nodeEnv: process.env.NODE_ENV as 'development' | 'production' | 'test',
-  appUrl: process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000',
-  baseUrl: process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000',
-  apiUrl: process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000',
-  wsUrl: process.env.NEXT_PUBLIC_WS_URL || 'ws://localhost:3003',
+  appUrl: process.env.NEXT_PUBLIC_APP_URL ?? 'https://example.invalid',
+  baseUrl: process.env.NEXT_PUBLIC_BASE_URL ?? 'https://example.invalid',
+  apiUrl: process.env.NEXT_PUBLIC_API_URL ?? 'https://example.invalid',
+  wsUrl: process.env.NEXT_PUBLIC_WS_URL ?? 'wss://example.invalid',
   appName: process.env.NEXT_PUBLIC_APP_NAME || 'VALORHIVE',
   
   // Database

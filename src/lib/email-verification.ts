@@ -8,23 +8,13 @@
 import { db } from '@/lib/db';
 import { sendTemplatedEmail, EmailTemplates } from '@/lib/email';
 import { SportType } from '@prisma/client';
+import { buildAppUrl } from '@/lib/app-url';
 
 // Token expiration time in milliseconds (24 hours)
 const VERIFICATION_TOKEN_EXPIRY_MS = 24 * 60 * 60 * 1000;
 
 // Lock reason for unverified accounts
 const LOCK_REASON_UNVERIFIED_EMAIL = 'Account locked: Email not verified within 24 hours';
-
-// Base URL for the application
-const getBaseUrl = (): string => {
-  if (process.env.NEXT_PUBLIC_APP_URL) {
-    return process.env.NEXT_PUBLIC_APP_URL;
-  }
-  if (process.env.VERCEL_URL) {
-    return `https://${process.env.VERCEL_URL}`;
-  }
-  return 'http://localhost:3000';
-};
 
 /**
  * Generate a secure random verification token
@@ -55,8 +45,7 @@ export async function sendVerificationEmail(
   sport: SportType,
   firstName: string = 'there'
 ): Promise<{ success: boolean; error?: string }> {
-  const baseUrl = getBaseUrl();
-  const verifyUrl = `${baseUrl}/api/auth/verify-email?token=${token}`;
+  const verifyUrl = buildAppUrl(`/api/auth/verify-email?token=${token}`);
   
   try {
     const result = await sendTemplatedEmail(
@@ -372,7 +361,7 @@ export async function lockUnverifiedAccounts(): Promise<{
             {
               playerName: user.firstName || 'there',
               lockReason: LOCK_REASON_UNVERIFIED_EMAIL,
-              supportUrl: `${getBaseUrl()}/support`,
+              supportUrl: buildAppUrl('/support'),
               sport: user.sport,
               subject: 'Your Account Has Been Locked - VALORHIVE',
             }

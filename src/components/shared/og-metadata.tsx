@@ -2,6 +2,9 @@
  * OG Metadata Component for VALORHIVE
  * Generates Open Graph and Twitter Card meta tags for social sharing
  */
+import { buildAppUrl, getAppUrl } from "@/lib/app-url";
+
+const APP_URL = getAppUrl();
 
 interface OGMetadataProps {
   title: string;
@@ -26,9 +29,10 @@ export function OGMetadata({
   twitterSite = '@valorhive',
   twitterCreator = '@valorhive',
 }: OGMetadataProps) {
-  const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://valorhive.com';
-  const fullUrl = url ? `${baseUrl}${url}` : baseUrl;
-  const fullOgImage = ogImage ? (ogImage.startsWith('http') ? ogImage : `${baseUrl}${ogImage}`) : `${baseUrl}/api/og/image?type=default`;
+  const fullUrl = url ? buildAppUrl(url, APP_URL) : APP_URL;
+  const fullOgImage = ogImage
+    ? (ogImage.startsWith('http') ? ogImage : buildAppUrl(ogImage, APP_URL))
+    : buildAppUrl('/api/og/image?type=default', APP_URL);
 
   return (
     <>
@@ -71,7 +75,6 @@ export function getMatchResultOGUrl(params: {
   tournament?: string;
   points: number;
 }): string {
-  const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://valorhive.com';
   const query = new URLSearchParams({
     type: 'match',
     sport: params.sport,
@@ -82,7 +85,7 @@ export function getMatchResultOGUrl(params: {
     points: params.points.toString(),
   });
   if (params.tournament) query.set('tournament', params.tournament);
-  return `${baseUrl}/api/og/image?${query.toString()}`;
+  return buildAppUrl(`/api/og/image?${query.toString()}`, APP_URL);
 }
 
 /**
@@ -96,7 +99,6 @@ export function getTournamentWinOGUrl(params: {
   prize?: number;
   participants?: number;
 }): string {
-  const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://valorhive.com';
   const query = new URLSearchParams({
     type: 'tournament',
     sport: params.sport,
@@ -106,7 +108,7 @@ export function getTournamentWinOGUrl(params: {
   });
   if (params.prize) query.set('prize', params.prize.toString());
   if (params.participants) query.set('participants', params.participants.toString());
-  return `${baseUrl}/api/og/image?${query.toString()}`;
+  return buildAppUrl(`/api/og/image?${query.toString()}`, APP_URL);
 }
 
 /**
@@ -119,7 +121,6 @@ export function getAchievementOGUrl(params: {
   desc: string;
   tier?: 'BRONZE' | 'SILVER' | 'GOLD' | 'PLATINUM';
 }): string {
-  const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://valorhive.com';
   const query = new URLSearchParams({
     type: 'achievement',
     sport: params.sport,
@@ -128,7 +129,7 @@ export function getAchievementOGUrl(params: {
     desc: params.desc,
   });
   if (params.tier) query.set('tier', params.tier);
-  return `${baseUrl}/api/og/image?${query.toString()}`;
+  return buildAppUrl(`/api/og/image?${query.toString()}`, APP_URL);
 }
 
 /**
@@ -141,7 +142,6 @@ export function getLeaderboardOGUrl(params: {
   points: number;
   scope?: string;
 }): string {
-  const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://valorhive.com';
   const query = new URLSearchParams({
     type: 'leaderboard',
     sport: params.sport,
@@ -150,5 +150,5 @@ export function getLeaderboardOGUrl(params: {
     points: params.points.toString(),
   });
   if (params.scope) query.set('scope', params.scope);
-  return `${baseUrl}/api/og/image?${query.toString()}`;
+  return buildAppUrl(`/api/og/image?${query.toString()}`, APP_URL);
 }

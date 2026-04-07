@@ -10,25 +10,13 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { verifyEmailToken } from '@/lib/email-verification';
 
-// Base URL for the application
-const getBaseUrl = (): string => {
-  if (process.env.NEXT_PUBLIC_APP_URL) {
-    return process.env.NEXT_PUBLIC_APP_URL;
-  }
-  if (process.env.VERCEL_URL) {
-    return `https://${process.env.VERCEL_URL}`;
-  }
-  return 'http://localhost:3000';
-};
-
 export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url);
   const token = searchParams.get('token');
   
   // Validate token presence
   if (!token) {
-    const baseUrl = getBaseUrl();
-    const loginUrl = new URL(`/${encodeURIComponent('CORNHOLE')}/login`, baseUrl);
+    const loginUrl = new URL(`/${encodeURIComponent('CORNHOLE')}/login`, request.url);
     loginUrl.searchParams.set('error', 'missing_token');
     loginUrl.searchParams.set('message', 'Verification token is missing. Please request a new verification email.');
     return NextResponse.redirect(loginUrl);
@@ -37,11 +25,9 @@ export async function GET(request: NextRequest) {
   // Verify the token
   const result = await verifyEmailToken(token);
   
-  const baseUrl = getBaseUrl();
-  
   if (!result.success) {
     // Redirect to login with error
-    const loginUrl = new URL(`/${encodeURIComponent(result.sport || 'CORNHOLE')}/login`, baseUrl);
+    const loginUrl = new URL(`/${encodeURIComponent(result.sport || 'CORNHOLE')}/login`, request.url);
     loginUrl.searchParams.set('error', 'verification_failed');
     loginUrl.searchParams.set('message', result.error || 'Email verification failed. Please try again.');
     loginUrl.searchParams.set('email', result.email || '');
@@ -49,7 +35,7 @@ export async function GET(request: NextRequest) {
   }
   
   // Success - redirect to login with success message
-  const loginUrl = new URL(`/${encodeURIComponent(result.sport || 'CORNHOLE')}/login`, baseUrl);
+  const loginUrl = new URL(`/${encodeURIComponent(result.sport || 'CORNHOLE')}/login`, request.url);
   loginUrl.searchParams.set('verified', 'true');
   loginUrl.searchParams.set('message', 'Your email has been verified successfully! You can now log in.');
   

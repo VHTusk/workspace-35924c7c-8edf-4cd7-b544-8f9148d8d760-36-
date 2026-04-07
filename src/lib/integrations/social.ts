@@ -9,6 +9,7 @@
  */
 
 import { db } from '@/lib/db'
+import { getAppUrl } from '@/lib/app-url'
 
 // ============================================
 // Types and Interfaces
@@ -62,7 +63,7 @@ const HASHTAGS = {
   GENERAL: ['VALORHIVE', 'TournamentGaming', 'CompetitiveSports'],
 }
 
-const BASE_URL = process.env.NEXT_PUBLIC_APP_URL || 'https://valorhive.com'
+const BASE_URL = getAppUrl()
 
 // Short code character set (alphanumeric, no ambiguous chars)
 const SHORT_CODE_CHARS = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'

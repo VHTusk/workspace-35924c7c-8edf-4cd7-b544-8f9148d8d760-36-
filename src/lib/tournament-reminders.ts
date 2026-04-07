@@ -4,6 +4,7 @@
 import { db } from './db';
 import { emailService, NotificationService } from './email-service';
 import { SportType, TournamentStatus } from '@prisma/client';
+import { buildAppUrl } from './app-url';
 
 // Reminder configuration
 const REMINDER_INTERVALS = [
@@ -300,7 +301,7 @@ export const processTournamentReminders = async (tournamentId: string): Promise<
             hoursUntilStart: reminderToSend.hoursBefore,
             checkinRequired: true, // Always require check-in
             checkinDeadline,
-            tournamentUrl: `${process.env.NEXT_PUBLIC_APP_URL || 'https://valorhive.com'}/${tournament.sport.toLowerCase()}/tournaments/${tournamentId}`,
+            tournamentUrl: buildAppUrl(`/${tournament.sport.toLowerCase()}/tournaments/${tournamentId}`),
             opponentName: firstMatch?.opponentName,
             matchTime: firstMatch?.matchTime,
             court: firstMatch?.court || undefined,

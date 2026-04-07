@@ -7,6 +7,7 @@ export async function GET(
 ) {
   try {
     const { id } = await params;
+    const requestUrl = new URL(request.url);
     
     const tournament = await db.tournament.findUnique({
       where: { id },
@@ -29,8 +30,10 @@ export async function GET(
     }
 
     // Generate QR code data (URL to tournament registration page)
-    const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000';
-    const registrationUrl = `${baseUrl}/${tournament.sport.toLowerCase()}/tournaments/${id}`;
+    const registrationUrl = new URL(
+      `/${tournament.sport.toLowerCase()}/tournaments/${id}`,
+      requestUrl.origin
+    ).toString();
 
     // For QR code, we'll return the URL that can be encoded
     // The frontend will generate the actual QR image

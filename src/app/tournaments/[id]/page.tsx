@@ -1,5 +1,7 @@
 import { Metadata } from "next";
+import { headers } from "next/headers";
 import { notFound } from "next/navigation";
+import { buildAppUrl, getRequestOrigin } from "@/lib/app-url";
 import { TournamentDetailClient } from "./tournament-detail-client";
 
 interface PageProps {
@@ -8,9 +10,11 @@ interface PageProps {
 
 export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
   const { id } = await params;
+  const requestHeaders = await headers();
+  const baseUrl = getRequestOrigin(requestHeaders);
   
   try {
-    const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || ''}/api/public/tournaments/${id}`, {
+    const response = await fetch(buildAppUrl(`/api/public/tournaments/${id}`, baseUrl), {
       cache: 'no-store',
     });
     
@@ -32,12 +36,14 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
 
 export default async function TournamentDetailPage({ params }: PageProps) {
   const { id } = await params;
+  const requestHeaders = await headers();
+  const baseUrl = getRequestOrigin(requestHeaders);
   
   // Fetch tournament data server-side
   let tournament = null;
   
   try {
-    const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || ''}/api/public/tournaments/${id}`, {
+    const response = await fetch(buildAppUrl(`/api/public/tournaments/${id}`, baseUrl), {
       cache: 'no-store',
     });
     

@@ -3,6 +3,7 @@
 
 import { SportType } from '@prisma/client';
 import { emailTemplates, getWhatsAppTemplates, TournamentReminderData, MatchResultData, TournamentRecapData, RegistrationConfirmData, WeeklyDigestData, MilestoneData, SubscriptionExpiryData } from './email-templates';
+import { getAppUrl } from './app-url';
 
 // Email configuration
 interface EmailConfig {
@@ -130,7 +131,7 @@ export class EmailService {
   private baseUrl: string;
   
   constructor() {
-    this.baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://valorhive.com';
+    this.baseUrl = getAppUrl();
   }
 
   // Generate URLs for email templates

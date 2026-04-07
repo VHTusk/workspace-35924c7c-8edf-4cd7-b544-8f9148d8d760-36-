@@ -9,6 +9,7 @@ import { db } from '@/lib/db';
 import { sendEmail } from './email';
 import { sendPushNotification } from './push-notifications';
 import { NotificationType } from '@prisma/client';
+import { buildAppUrl } from './app-url';
 
 // Notification channels
 export type NotificationChannel = 'email' | 'push' | 'whatsapp' | 'in_app';
@@ -318,12 +319,15 @@ function shouldSendWhatsApp(user: any, template: NotificationTemplate): boolean 
 }
 
 function buildEmailHtml(template: NotificationTemplate, payload: NotificationPayload, user: any): string {
+  const actionUrl = payload.actionUrl ? buildAppUrl(payload.actionUrl) : null;
+  const preferencesUrl = buildAppUrl('/settings/notifications');
+
   return `
     <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
       <h2 style="color: #1a1a1a;">${payload.title}</h2>
       <p style="color: #4a4a4a; font-size: 16px;">${payload.body}</p>
-      ${payload.actionUrl ? `
-        <a href="https://valorhive.com${payload.actionUrl}" 
+      ${actionUrl ? `
+        <a href="${actionUrl}" 
            style="display: inline-block; background: #0d9488; color: white; padding: 12px 24px; 
                   text-decoration: none; border-radius: 6px; margin-top: 16px;">
           View Details
@@ -333,7 +337,7 @@ function buildEmailHtml(template: NotificationTemplate, payload: NotificationPay
       <p style="color: #888; font-size: 12px;">
         You're receiving this because you're registered on VALORHIVE.
         <br />
-        <a href="https://valorhive.com/settings/notifications">Manage notification preferences</a>
+        <a href="${preferencesUrl}">Manage notification preferences</a>
       </p>
     </div>
   `;

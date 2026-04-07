@@ -10,6 +10,9 @@
 
 import { db } from '@/lib/db';
 import { sendWhatsAppMessage } from '@/lib/whatsapp';
+import { buildAppUrl, getAppUrl } from '@/lib/app-url';
+
+const APP_URL = getAppUrl();
 
 async function sendWhatsAppNotification(phone: string, message: string) {
   return sendWhatsAppMessage({ to: phone, message });
@@ -205,7 +208,7 @@ Hi everyone! Join the official WhatsApp group for tournament updates:
 3. Share important updates here
 
 *Share this link with participants:*
-🔗 https://valorhive.com/tournaments/${tournamentId}
+🔗 ${buildAppUrl(`/tournaments/${tournamentId}`)}
 
 - Team VALORHIVE`;
     
@@ -214,7 +217,7 @@ Hi everyone! Join the official WhatsApp group for tournament updates:
     
     return { 
       success: true, 
-      inviteLink: `https://valorhive.com/tournaments/${tournamentId}/whatsapp-group`
+      inviteLink: buildAppUrl(`/tournaments/${tournamentId}/whatsapp-group`)
     };
   } catch (error) {
     console.error('[WhatsApp] Error creating tournament group:', error);
@@ -244,8 +247,8 @@ This is the official WhatsApp group for tournament updates.
 3. Be respectful to all participants
 
 *🔗 Quick Links:*
-• View Bracket: https://valorhive.com/tournaments/${tournamentId}/bracket
-• Tournament Details: https://valorhive.com/tournaments/${tournamentId}
+• View Bracket: ${buildAppUrl(`/tournaments/${tournamentId}/bracket`)}
+• Tournament Details: ${buildAppUrl(`/tournaments/${tournamentId}`)}
 
 Questions? Contact the tournament director.
 
@@ -274,7 +277,7 @@ export function getWhatsAppStatusShareUrl(
 
 👤 ${playerName}
 📊 ${tier} Tier
-📱 Get yours: https://valorhive.com
+📱 Get yours: ${APP_URL}
 
 #VALORHIVE #${sport}Tournament`;
   
@@ -325,7 +328,7 @@ export const WHATSAPP_TEMPLES = {
 
 Don't forget to check in!
 
-🔗 https://valorhive.com
+🔗 ${APP_URL}
 
 - Team VALORHIVE`,
 
@@ -364,7 +367,7 @@ Every match is a learning experience. Train harder! 💪
 
 ${message}
 
-🔗 https://valorhive.com
+🔗 ${APP_URL}
 
 - Tournament Director`,
 

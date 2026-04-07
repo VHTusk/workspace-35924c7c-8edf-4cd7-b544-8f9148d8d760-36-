@@ -5,6 +5,7 @@
  */
 
 import { SportType } from '@prisma/client';
+import { buildAppUrl, getBaseUrl } from './app-url';
 
 export interface ShareCardData {
   sport: SportType;
@@ -23,7 +24,6 @@ export interface ShareCardData {
  * Returns a URL that will render an OG image
  */
 export function generateShareCardUrl(data: ShareCardData): string {
-  const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'https://valorhive.com';
   const params = new URLSearchParams({
     winner: data.winnerName,
     loser: data.loserName,
@@ -35,7 +35,7 @@ export function generateShareCardUrl(data: ShareCardData): string {
     date: data.matchDate.toISOString(),
   });
   
-  return `${baseUrl}/api/share/match-card?${params.toString()}`;
+  return buildAppUrl(`/api/share/match-card?${params.toString()}`, getBaseUrl());
 }
 
 /**

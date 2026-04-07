@@ -2,6 +2,9 @@
 // Professional HTML email templates for all notification types
 
 import { SportType } from '@prisma/client';
+import { getAppUrl } from './app-url';
+
+const APP_URL = getAppUrl();
 
 // Base email wrapper with VALORHIVE branding
 const getEmailWrapper = (content: string, preheader?: string): string => `
@@ -910,7 +913,7 @@ export function generateWelcomeEmail(data: EmailTemplateData & {
     </div>
     
     <div style="text-align: center; margin-top: 30px;">
-      <a href="https://valorhive.com/${data.sport.toLowerCase()}/dashboard" class="button">
+      <a href="${APP_URL}/${data.sport.toLowerCase()}/dashboard" class="button">
         Go to Dashboard
       </a>
     </div>

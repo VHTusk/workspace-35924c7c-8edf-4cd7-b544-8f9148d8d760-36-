@@ -4,6 +4,7 @@ import { hashPassword, validatePassword, hashToken } from '@/lib/auth';
 import { sendPasswordResetEmail } from '@/lib/email/service';
 import { SportType } from '@prisma/client';
 import { withRateLimit } from '@/lib/rate-limit';
+import { buildAppUrl } from '@/lib/app-url';
 
 /**
  * Password Reset Flow:
@@ -93,10 +94,11 @@ async function resetPasswordHandler(request: NextRequest): Promise<NextResponse>
       // In production, send email with reset link
       // For development, log to console only - NEVER return token in response
       const isProduction = process.env.NODE_ENV === 'production';
-      const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
       
       if (user.email) {
-        const resetUrl = `${baseUrl}/reset-password?token=${resetToken}&email=${encodeURIComponent(user.email)}&sport=${sport}`;
+        const resetUrl = buildAppUrl(
+          `/reset-password?token=${resetToken}&email=${encodeURIComponent(user.email)}&sport=${sport}`
+        );
         
         try {
           await sendPasswordResetEmail({
