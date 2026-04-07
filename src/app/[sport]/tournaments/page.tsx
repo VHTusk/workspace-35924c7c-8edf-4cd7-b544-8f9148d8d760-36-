@@ -80,110 +80,6 @@ const indianStates = [
   "Chandigarh", "Andaman and Nicobar Islands", "Dadra and Nagar Haveli and Daman and Diu", "Lakshadweep"
 ];
 
-// Fallback tournaments for demo
-const fallbackTournaments: Tournament[] = [
-  {
-    id: "demo-1",
-    name: "Jaipur City Championship",
-    scope: "CITY",
-    location: "Jaipur Sports Complex",
-    city: "Jaipur",
-    district: "Jaipur",
-    state: "Rajasthan",
-    startDate: new Date(Date.now() + 14 * 24 * 60 * 60 * 1000).toISOString(),
-    endDate: new Date(Date.now() + 15 * 24 * 60 * 60 * 1000).toISOString(),
-    prizePool: 50000,
-    maxPlayers: 64,
-    registeredPlayers: 45,
-    entryFee: 500,
-    status: "REGISTRATION_OPEN",
-    bracketFormat: "SINGLE_ELIMINATION",
-    gender: "MIXED",
-    ageMin: 14,  // Senior - 14+
-    ageMax: null,
-  },
-  {
-    id: "demo-2",
-    name: "Rajasthan State Open Championship",
-    scope: "STATE",
-    location: "State Convention Center, Jaipur",
-    city: "Jaipur",
-    district: "Jaipur",
-    state: "Rajasthan",
-    startDate: new Date(Date.now() + 21 * 24 * 60 * 60 * 1000).toISOString(),
-    endDate: new Date(Date.now() + 22 * 24 * 60 * 60 * 1000).toISOString(),
-    prizePool: 100000,
-    maxPlayers: 128,
-    registeredPlayers: 89,
-    entryFee: 800,
-    status: "REGISTRATION_OPEN",
-    bracketFormat: "DOUBLE_ELIMINATION",
-    gender: null,
-    ageMin: null,  // Open - all ages
-    ageMax: null,
-  },
-  {
-    id: "demo-3",
-    name: "Women's Weekly Club Tournament",
-    scope: "CITY",
-    location: "Community Center, Delhi",
-    city: "New Delhi",
-    district: "Central Delhi",
-    state: "Delhi",
-    startDate: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString(),
-    endDate: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString(),
-    prizePool: 10000,
-    maxPlayers: 32,
-    registeredPlayers: 32,
-    entryFee: 200,
-    status: "IN_PROGRESS",
-    bracketFormat: "SINGLE_ELIMINATION",
-    gender: "FEMALE",
-    ageMin: 14,  // Senior - 14+
-    ageMax: null,
-  },
-  {
-    id: "demo-4",
-    name: "Junior District Championship (U-14)",
-    scope: "DISTRICT",
-    location: "Sports Academy, Jodhpur",
-    city: "Jodhpur",
-    district: "Jodhpur",
-    state: "Rajasthan",
-    startDate: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),
-    endDate: new Date(Date.now() + 8 * 24 * 60 * 60 * 1000).toISOString(),
-    prizePool: 25000,
-    maxPlayers: 48,
-    registeredPlayers: 32,
-    entryFee: 300,
-    status: "REGISTRATION_OPEN",
-    bracketFormat: "SINGLE_ELIMINATION",
-    gender: "MALE",
-    ageMin: null,
-    ageMax: 14,  // Junior - U-14
-  },
-  {
-    id: "demo-5",
-    name: "Junior Girls State Tournament (U-14)",
-    scope: "STATE",
-    location: "Indoor Stadium, Udaipur",
-    city: "Udaipur",
-    district: "Udaipur",
-    state: "Rajasthan",
-    startDate: new Date(Date.now() + 10 * 24 * 60 * 60 * 1000).toISOString(),
-    endDate: new Date(Date.now() + 11 * 24 * 60 * 60 * 1000).toISOString(),
-    prizePool: 30000,
-    maxPlayers: 32,
-    registeredPlayers: 28,
-    entryFee: 200,
-    status: "REGISTRATION_OPEN",
-    bracketFormat: "SINGLE_ELIMINATION",
-    gender: "FEMALE",
-    ageMin: null,
-    ageMax: 14,  // Junior - U-14
-  },
-];
-
 export default function TournamentsPage() {
   const params = useParams();
   const sport = params.sport as string;
@@ -274,14 +170,14 @@ export default function TournamentsPage() {
               registeredPlayers: t.registeredPlayers || 0
             })));
           } else {
-            setTournaments(fallbackTournaments);
+            setTournaments([]);
           }
         } else {
-          setTournaments(fallbackTournaments);
+          setTournaments([]);
         }
       } catch {
         if (!signal.aborted) {
-          setTournaments(fallbackTournaments);
+          setTournaments([]);
         }
       } finally {
         if (!signal.aborted) {

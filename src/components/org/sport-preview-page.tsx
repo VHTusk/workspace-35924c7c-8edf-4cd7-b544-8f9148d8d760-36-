@@ -95,20 +95,7 @@ export function SportPreviewPage({ sport, orgId, orgName }: SportPreviewPageProp
         const data = await response.json();
         setPublicData(data);
       } else {
-        // Set demo data for preview
-        setPublicData({
-          upcomingTournaments: [
-            { id: "1", name: "Corporate Championship 2026", startDate: "2026-04-15", city: "Mumbai", state: "Maharashtra", maxParticipants: 64, currentParticipants: 32, prizePool: 100000 },
-            { id: "2", name: "Inter-Company League", startDate: "2026-05-01", city: "Delhi", state: "Delhi", maxParticipants: 32, currentParticipants: 18, prizePool: 50000 },
-          ],
-          topOrganizations: [
-            { id: "1", name: "TechCorp India", wins: 12, tournaments: 8 },
-            { id: "2", name: "Global Solutions Ltd", wins: 10, tournaments: 7 },
-            { id: "3", name: "Innovation Labs", wins: 8, tournaments: 6 },
-          ],
-          liveTournaments: 2,
-          totalParticipants: 1247,
-        });
+        setPublicData(null);
       }
     } catch (error) {
       console.error("Failed to fetch public data:", error);

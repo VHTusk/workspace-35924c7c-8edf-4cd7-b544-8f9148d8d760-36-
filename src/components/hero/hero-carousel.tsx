@@ -26,50 +26,6 @@ interface HeroCarouselProps {
   className?: string;
 }
 
-// Fallback static slides when no dynamic data exists
-const fallbackSlides: Record<"cornhole" | "darts", HeroSlide[]> = {
-  cornhole: [
-    {
-      id: "fallback-1",
-      title: "Cornhole Tournament",
-      caption: "Compete in tournaments across India",
-      imageUrl: "/images/hero/cornhole/tournament-scene.png",
-    },
-    {
-      id: "fallback-2",
-      title: "Competitive Action",
-      caption: "Experience the thrill of competition",
-      imageUrl: "/images/hero/cornhole/action-shot.png",
-    },
-    {
-      id: "fallback-3",
-      title: "Championship Glory",
-      caption: "Win prizes and climb the leaderboards",
-      imageUrl: "/images/hero/cornhole/trophy-presentation.png",
-    },
-  ],
-  darts: [
-    {
-      id: "fallback-1",
-      title: "Darts Tournament",
-      caption: "Compete in tournaments across India",
-      imageUrl: "/images/hero/darts/tournament-scene.png",
-    },
-    {
-      id: "fallback-2",
-      title: "Precision Play",
-      caption: "Experience the thrill of precision",
-      imageUrl: "/images/hero/darts/action-shot.png",
-    },
-    {
-      id: "fallback-3",
-      title: "Master Your Aim",
-      caption: "Master your aim and climb the ranks",
-      imageUrl: "/images/hero/darts/dartboard-closeup.png",
-    },
-  ],
-};
-
 export function HeroCarousel({
   sport,
   autoPlayInterval = 5000,
@@ -91,7 +47,7 @@ export function HeroCarousel({
     };
   }, []);
 
-  // Fetch slides from API (with fallback to static)
+  // Fetch slides from API.
   useEffect(() => {
     const fetchSlides = async () => {
       try {
@@ -101,15 +57,14 @@ export function HeroCarousel({
           if (data.slides && data.slides.length > 0) {
             setSlides(data.slides);
           } else {
-            // Use fallback slides if no dynamic data
-            setSlides(fallbackSlides[sport]);
+            setSlides([]);
           }
         } else {
-          setSlides(fallbackSlides[sport]);
+          setSlides([]);
         }
       } catch (error) {
         console.error("Failed to fetch hero slides:", error);
-        setSlides(fallbackSlides[sport]);
+        setSlides([]);
       } finally {
         setLoading(false);
       }
