@@ -40,12 +40,12 @@ ARG NEXTAUTH_SECRET=build-only-dummy-secret
 FROM base AS deps
 WORKDIR /app
 
-# Copy package files
 COPY package.json package-lock.json* ./
 COPY prisma ./prisma/
+COPY packages ./packages
+COPY mini-services ./mini-services
 
-# Install dependencies with npm ci for reproducible builds
-RUN npm ci --include=optional
+RUN npm install --include=optional
 
 # Generate Prisma Client
 RUN npx prisma generate
