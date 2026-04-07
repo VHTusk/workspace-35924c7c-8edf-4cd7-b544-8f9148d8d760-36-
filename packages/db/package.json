@@ -1,0 +1,26 @@
+{
+  "name": "@valorhive/db",
+  "version": "1.0.0",
+  "description": "Database module for VALORHIVE services - Prisma client wrapper",
+  "main": "index.ts",
+  "types": "index.ts",
+  "scripts": {
+    "build": "tsc",
+    "typecheck": "tsc --noEmit",
+    "generate": "prisma generate"
+  },
+  "dependencies": {
+    "@prisma/client": "^6.11.1"
+  },
+  "devDependencies": {
+    "@types/node": "^20.17.12",
+    "prisma": "^6.11.1",
+    "typescript": "^5"
+  },
+  "peerDependencies": {
+    "@prisma/client": "^6.0.0"
+  },
+  "exports": {
+    ".": "./index.ts"
+  }
+}

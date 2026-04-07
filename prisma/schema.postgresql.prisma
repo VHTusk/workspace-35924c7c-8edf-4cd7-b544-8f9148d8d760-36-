@@ -1,0 +1,2605 @@
+// VALORHIVE v3.6 - PostgreSQL Production Schema
+// Multi-Sport Tournament Platform: Cornhole & Darts
+//
+// ============================================
+// MIGRATION NOTES (SQLite -> PostgreSQL)
+// ============================================
+//
+// This schema is optimized for PostgreSQL production deployment.
+// Key changes from SQLite version:
+//
+// 1. Provider changed to "postgresql"
+// 2. String fields that may contain long text use @db.Text
+// 3. JSON data stored in String fields use @db.Json
+// 4. Full-text search indexes using PostgreSQL GIN indexes
+// 5. Connection pooling settings (see DATABASE_URL_PRODUCTION)
+//
+// MIGRATION PROCESS:
+// 1. Set up PostgreSQL database (recommended: Supabase, Railway, or Neon)
+// 2. Configure DATABASE_URL_PRODUCTION in .env
+// 3. Run: npm run db:migrate:prod
+// 4. Run migration script: npx ts-node scripts/migrate-to-postgres.ts
+//
+// CONNECTION POOLING (Recommended for production):
+// - Use PgBouncer or connection pooling from your provider
+// - Supabase: Use pooler connection string (port 6543)
+// - Railway: Built-in connection pooling
+// - Neon: Use -pooler connection string
+//
+// ENVIRONMENT VARIABLES:
+// DATABASE_URL_PRODUCTION=postgresql://user:password@host:5432/dbname?pgbouncer=true&connect_timeout=15
+
+generator client {
+  provider = "prisma-client-js"
+  
+  // PostgreSQL-specific options
+  previewFeatures = ["fullTextSearch", "fullTextIndex"]
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL_PRODUCTION")
+  directUrl = env("DATABASE_URL_PRODUCTION_DIRECT") // For migrations (no pooler)
+}
+
+// ============================================
+// ENUMS
+// ============================================
+
+enum SportType {
+  CORNHOLE
+  DARTS
+}
+
+enum Role {
+  PLAYER
+  ORG_ADMIN
+  SUB_ADMIN
+  ADMIN
+  TOURNAMENT_DIRECTOR
+}
+
+enum AccountType {
+  PLAYER
+  ORG
+}
+
+enum AccountTier {
+  FAN      // Free tier - spectator only
+  PLAYER   // Paid tier - can compete
+}
+
+enum OrgType {
+  CLUB
+  SCHOOL
+  CORPORATE
+  ACADEMY
+}
+
+enum OrgAdminRole {
+  PRIMARY
+  ADMIN
+  STAFF
+}
+
+enum BracketSide {
+  WINNERS
+  LOSERS
+}
+
+enum SubscriptionStatus {
+  ACTIVE
+  EXPIRED
+}
+
+enum TournamentType {
+  INDIVIDUAL
+  INTER_ORG
+  INTRA_ORG
+}
+
+// Tournament Format - Individual (1v1), Doubles (2v2), or Team (3-4 players)
+enum TournamentFormat {
+  INDIVIDUAL  // 1v1 matches
+  DOUBLES     // 2v2 matches (teams of 2)
+  TEAM        // Team matches (3-4 players per team)
+}
+
+enum TournamentScope {
+  CITY
+  DISTRICT
+  STATE
+  NATIONAL
+}
+
+enum TournamentStatus {
+  DRAFT
+  REGISTRATION_OPEN
+  REGISTRATION_CLOSED
+  BRACKET_GENERATED
+  IN_PROGRESS
+  COMPLETED
+  CANCELLED
+}
+
+enum GenderCategory {
+  MALE
+  FEMALE
+  MIXED
+}
+
+enum MatchOutcome {
+  PLAYED
+  WALKOVER
+  NO_SHOW
+  FORFEIT
+  BYE
+}
+
+enum BracketFormat {
+  SINGLE_ELIMINATION
+  DOUBLE_ELIMINATION
+  ROUND_ROBIN
+}
+
+enum BracketMatchStatus {
+  PENDING
+  LIVE
+  COMPLETED
+  BYE
+}
+
+enum PaymentLedgerStatus {
+  INITIATED
+  PAID
+  FAILED
+  REFUNDED
+}
+
+enum WaitlistStatus {
+  WAITING
+  PROMOTED
+  EXPIRED
+  CANCELLED
+}
+
+enum NotificationType {
+  TOURNAMENT_REGISTERED
+  MATCH_RESULT
+  POINTS_EARNED
+  SUBSCRIPTION_EXPIRY
+  DISPUTE_UPDATE
+  WAITLIST_PROMOTED
+  EMAIL_VERIFIED
+  TOURNAMENT_CANCELLED
+  REFUND_PROCESSED
+}
+
+enum DisputeStatus {
+  OPEN
+  REVIEWING
+  RESOLVED
+}
+
+enum AuditAction {
+  MATCH_RESULT_ENTERED
+  MATCH_RESULT_EDITED
+  MATCH_RESULT_REVERTED
+  BRACKET_GENERATED
+  BRACKET_DELETED
+  BRACKET_RESET
+  TOURNAMENT_COMPLETED
+  TOURNAMENT_CANCELLED
+  PRIZE_PAYOUT_RECORDED
+  DISPUTE_RESOLVED
+  USER_BANNED
+  USER_UNBANNED
+  ADMIN_OVERRIDE
+}
+
+enum PlayerScoreStatus {
+  PENDING
+  CONFIRMED
+  DISPUTED
+}
+
+enum MatchVerificationStatus {
+  PENDING
+  VERIFIED
+  DISPUTED
+}
+
+enum ScoringMode {
+  STAFF_ONLY
+  PLAYER_SELF
+  HYBRID
+}
+
+enum OrgPlanTier {
+  BASIC
+  PRO
+  ENTERPRISE
+}
+
+enum RegistrationStatus {
+  PENDING
+  CONFIRMED
+  CANCELLED
+  WAITLISTED
+}
+
+enum RosterRequestStatus {
+  PENDING
+  ACCEPTED
+  DECLINED
+  CANCELLED
+  EXPIRED
+}
+
+enum PlayerOrgType {
+  EMPLOYEE      // Regular employee of the organization
+  CONTRACTED    // Has a contract with the org (not employee)
+  INDEPENDENT   // Not associated with any org
+}
+
+enum VerificationStatus {
+  NONE          // No verification requested
+  PENDING       // ID uploaded, pending verification
+  VERIFIED      // Verified by org admin
+  REJECTED      // Rejected by org admin
+}
+
+enum ContractStatus {
+  PENDING       // Awaiting admin verification
+  ACTIVE        // Verified and active
+  EXPIRED       // Contract ended
+  TERMINATED    // Contract terminated early
+  REJECTED      // Rejected by admin
+}
+
+// ============================================
+// TEAM MODELS (for Doubles and Team tournaments)
+// ============================================
+
+model Team {
+  id          String   @id @default(cuid())
+  name        String
+  sport       SportType
+  captainId   String
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // Team type based on tournament format
+  format      TournamentFormat @default(DOUBLES)
+
+  // Team stats
+  teamElo     Float    @default(1000)  // Team rating for doubles/team tournaments
+  wins        Int      @default(0)
+  losses      Int      @default(0)
+  points      Int      @default(0)
+  matchesPlayed Int    @default(0)
+
+  // Status: PENDING (waiting for partner), ACTIVE (team ready), INACTIVE (soft delete)
+  status      TeamStatus @default(PENDING)
+
+  // Relations
+  captain     User     @relation("TeamCaptain", fields: [captainId], references: [id])
+  members     TeamMember[]
+  invitations TeamInvitation[]
+  tournamentTeams TournamentTeam[]
+  matchesAsA  Match[]  @relation("TeamA")
+  matchesAsB  Match[]  @relation("TeamB")
+  bracketMatchesAsA BracketMatch[] @relation("BracketTeamA")
+  bracketMatchesAsB BracketMatch[] @relation("BracketTeamB")
+
+  @@unique([name, sport])
+  @@index([sport, status])
+  @@index([sport, teamElo])
+  @@index([captainId])
+}
+
+enum TeamStatus {
+  PENDING   // Waiting for partner to accept invitation
+  ACTIVE    // Team is fully formed and ready
+  INACTIVE  // Soft deleted
+}
+
+model TeamMember {
+  id       String   @id @default(cuid())
+  teamId   String
+  userId   String
+  role     String   @default("MEMBER") // CAPTAIN, MEMBER
+  joinedAt DateTime @default(now())
+
+  team     Team     @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  user     User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([teamId, userId])
+  @@index([userId])
+}
+
+model TournamentTeam {
+  id              String            @id @default(cuid())
+  tournamentId    String
+  teamId          String
+  status          RegistrationStatus @default(PENDING)
+  paymentId       String?
+  amount          Int
+  registeredAt    DateTime          @default(now())
+  cancelledAt     DateTime?
+  refundId        String?
+  refundAmount    Int?
+
+  tournament      Tournament        @relation(fields: [tournamentId], references: [id])
+  team            Team              @relation(fields: [teamId], references: [id])
+
+  @@unique([tournamentId, teamId])
+  @@index([teamId])
+  @@index([status])
+  @@index([tournamentId, status])
+}
+
+// Team Invitation for doubles/team partner invites
+model TeamInvitation {
+  id          String   @id @default(cuid())
+  teamId      String
+  inviterId   String   // Captain who sent the invite
+  inviteeId   String   // Partner being invited
+  status      TeamInvitationStatus @default(PENDING)
+  message     String?  @db.Text // Optional message from inviter
+  expiresAt   DateTime
+  createdAt   DateTime @default(now())
+  respondedAt DateTime?
+
+  team        Team     @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  inviter     User     @relation("TeamInviter", fields: [inviterId], references: [id])
+  invitee     User     @relation("TeamInvitee", fields: [inviteeId], references: [id])
+
+  @@unique([teamId, inviteeId])
+  @@index([inviteeId, status])
+  @@index([status, expiresAt])
+}
+
+enum TeamInvitationStatus {
+  PENDING
+  ACCEPTED
+  DECLINED
+  EXPIRED
+  CANCELLED
+}
+
+// ============================================
+// MODELS
+// ============================================
+
+model User {
+  id            String   @id @default(cuid())
+  sport         SportType
+  role          Role     @default(PLAYER)
+  accountTier   AccountTier @default(FAN)  // FAN (free) or PLAYER (paid)
+
+  // Auth fields
+  email         String?
+  password      String?
+  phone         String?
+  googleId      String?
+
+  // Profile fields
+  firstName     String
+  lastName      String
+  dob           DateTime?
+  gender        GenderCategory?
+
+  // Location
+  city          String?
+  district      String?
+  state         String?
+  pinCode       String?
+  affiliatedOrgId String?
+  identityLocked Boolean @default(false)
+
+  // Dual rating system
+  hiddenElo     Float    @default(1500)
+  visiblePoints Int      @default(0)
+
+  // Email verification
+  emailVerifyToken  String?
+  emailVerifyExpiry DateTime?
+  verified          Boolean @default(false)
+  verifiedAt        DateTime?
+
+  // Legal consent
+  tosAcceptedAt     DateTime?
+  privacyAcceptedAt DateTime?
+
+  // Preferences
+  language      String   @default("en")
+
+  // Privacy settings
+  hideElo       Boolean  @default(false)
+  showOnLeaderboard Boolean @default(true)
+
+  // Organization relationship
+  playerOrgType       PlayerOrgType      @default(INDEPENDENT)
+  verificationStatus  VerificationStatus @default(NONE)
+  idDocumentUrl       String?
+  idDocumentType      String?            // passport, aadhaar, employee_id, etc.
+  orgVerifiedAt       DateTime?
+  orgVerifiedBy       String?            // User ID of org admin who verified
+  verificationNotes   String?            @db.Text
+
+  // Account status
+  isActive          Boolean  @default(true)
+  deactivatedAt     DateTime?
+  deactivationReason String?            @db.Text
+
+  // Account lockout
+  failedLoginAttempts Int      @default(0)
+  lockedUntil         DateTime?
+
+  // Anonymization
+  isAnonymized   Boolean  @default(false)
+  anonymizedAt   DateTime?
+
+  // GDPR Compliance (v3.26.0)
+  gdprDeletionRequestedAt DateTime?
+  gdprDeletionScheduledFor DateTime?
+
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  // Relations
+  sessions              Session[]
+  subscriptions         Subscription[]
+  tournamentRegs        TournamentRegistration[]
+  matchesAsA            Match[]           @relation("PlayerA")
+  matchesAsB            Match[]           @relation("PlayerB")
+  matchesUpdated        Match[]           @relation("MatchUpdater")
+  affiliatedOrg         Organization?     @relation("AffiliatedPlayers", fields: [affiliatedOrgId], references: [id])
+  disputes              Dispute[]
+  rating                PlayerRating?
+  achievements          PlayerAchievement[]
+  notifications         Notification[]
+  tournamentResults     TournamentResult[]
+  prizePayouts          PrizePayoutRecord[]
+  prizePayoutsMarked    PrizePayoutRecord[] @relation("PayoutMarker")
+  mfaSecret             MfaSecret?
+  mfaRecoveryCodes      MfaRecoveryCode[]
+  notificationPref      NotificationPreference?
+  orgAdminRoles         OrgAdmin[]
+  orgAdminInvites       OrgAdmin[]        @relation("OrgAdminInviter")
+  bracketsGenerated     Bracket[]         @relation("BracketGenerator")
+  auditLogs             AuditLog[]        @relation("AuditActor")
+  orgRosterEntries      OrgRosterPlayer[]
+  rosterRequests        OrgRosterRequest[]
+  wallet                Wallet?
+  transferCooldowns     TransferCooldown[]
+  identityChangeReqs    IdentityChangeRequest[]
+  staffAssignments      TournamentStaff[]
+  // New relations for top 10 features
+  availabilities        PlayerAvailability[]
+  blockedUsers          BlockedPlayer[]   @relation("Blocker")
+  blockedBy             BlockedPlayer[]   @relation("Blocked")
+  conversationParticipants ConversationParticipant[]
+  sentMessages          Message[]
+  leaderboardSnapshots  LeaderboardSnapshot[]
+  referrals             Referral[]        @relation("Referrer")
+  referredBy            Referral[]        @relation("Referee")
+
+  // Referral code for this user
+  referralCode          String?           @unique
+
+  // Follow system
+  following             UserFollow[]      @relation("UserFollower")
+  followers             UserFollow[]      @relation("UserFollowing")
+  followingOrgs         UserFollowsOrg[]
+  followedByOrgs        OrgFollowsUser[]
+  
+  // Notification settings
+  emailNotificationSettings EmailNotificationSetting[]
+  whatsappNotificationSettings WhatsAppNotificationSetting[]
+  
+  // Milestones
+  milestones            Milestone[]
+
+  // Contract relations
+  playerContracts       PlayerContract[]  @relation("PlayerContracts")
+  interOrgTeamPlayers   InterOrgTeamPlayer[]
+  idVerifications       PlayerIdVerification[]
+
+  // GDPR Compliance (v3.26.0)
+  gdprConsents          GdprConsent[]
+
+  // Team memberships (for Doubles/Team tournaments)
+  teamMemberships       TeamMember[]
+  captainedTeams        Team[]            @relation("TeamCaptain")
+  sentTeamInvitations   TeamInvitation[]  @relation("TeamInviter")
+  receivedTeamInvitations TeamInvitation[] @relation("TeamInvitee")
+
+  @@unique([email, sport])
+  @@unique([phone, sport])
+  @@unique([googleId, sport])
+  @@index([sport, hiddenElo])
+  @@index([sport, visiblePoints])
+  @@index([sport, isActive])
+  
+  // Full-text search index for user search
+  @@fulltext([firstName, lastName, city, state])
+}
+
+model Session {
+  id            String      @id @default(cuid())
+  token         String      @unique
+  userId        String?
+  orgId         String?
+  sport         SportType
+  accountType   AccountType
+  expiresAt     DateTime
+  createdAt     DateTime    @default(now())
+  lastActivityAt DateTime   @default(now())
+
+  // Org operator identity (for shared-credential sessions)
+  operatorName  String?
+  operatorEmail String?
+
+  user          User?       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  org           Organization? @relation(fields: [orgId], references: [id], onDelete: Cascade)
+
+  @@index([userId, expiresAt])
+  @@index([token])
+}
+
+model Match {
+  id              String                @id @default(cuid())
+  sport           SportType
+  tournamentId    String?
+
+  // Individual player references (for INDIVIDUAL format)
+  playerAId       String?
+  playerBId       String?
+
+  // Team references (for DOUBLES/TEAM format)
+  teamAId         String?
+  teamBId         String?
+
+  scoreA          Int?
+  scoreB          Int?
+  winnerId        String?
+  winnerTeamId    String?               // For team matches
+
+  outcome         MatchOutcome?
+  outcomeReason   String?               @db.Text
+
+  // Points awarded - locked at completion
+  pointsA         Int?
+  pointsB         Int?
+  tournamentScope TournamentScope?
+
+  // Elo changes
+  eloChangeA     Float?
+  eloChangeB     Float?
+
+  // Scheduling
+  scheduledTime  DateTime?
+  courtName      String?
+
+  // Player-confirmed scoring
+  submittedById      String?
+  playerScoreStatus  PlayerScoreStatus?
+  verificationStatus MatchVerificationStatus @default(PENDING)
+  verificationDeadline DateTime?
+
+  // Referee
+  refereeId      String?
+  refereeName    String?
+
+  playedAt       DateTime    @default(now())
+  updatedById    String?
+  updatedAt      DateTime    @updatedAt
+
+  // Offline sync
+  enteredOffline Boolean     @default(false)
+  syncedAt       DateTime?
+  rowVersion     Int         @default(1)
+
+  // Relations
+  tournament     Tournament? @relation(fields: [tournamentId], references: [id])
+  playerA        User?       @relation("PlayerA", fields: [playerAId], references: [id])
+  playerB        User?       @relation("PlayerB", fields: [playerBId], references: [id])
+  teamA          Team?       @relation("TeamA", fields: [teamAId], references: [id])
+  teamB          Team?       @relation("TeamB", fields: [teamBId], references: [id])
+  updatedBy      User?       @relation("MatchUpdater", fields: [updatedById], references: [id])
+  history        MatchResultHistory[]
+  bracketMatch   BracketMatch?
+
+  @@index([tournamentId])
+  @@index([playerAId, playedAt])
+  @@index([playerBId, playedAt])
+  @@index([teamAId, playedAt])
+  @@index([teamBId, playedAt])
+  @@index([tournamentId, verificationStatus])
+}
+
+model Tournament {
+  id                    String                @id @default(cuid())
+  name                  String
+  sport                 SportType
+  type                  TournamentType
+  scope                 TournamentScope?
+  location              String
+  startDate             DateTime
+  endDate               DateTime
+  regDeadline           DateTime
+  prizePool             Int
+  maxPlayers            Int
+  entryFee              Int                   @default(0)
+  maxPlayersPerOrg      Int?
+
+  // Tournament format: INDIVIDUAL (1v1), DOUBLES (2v2), TEAM (3-4 players)
+  format                TournamentFormat      @default(INDIVIDUAL)
+  // For team/doubles tournaments
+  teamSize              Int?                  // Number of players per team (2 for doubles, 3-4 for team)
+  maxTeams              Int?                  // Max number of teams (alternative to maxPlayers for team tournaments)
+
+  // Early bird & discounts
+  earlyBirdFee          Int?
+  earlyBirdDeadline     DateTime?
+  groupDiscountMin      Int?
+  groupDiscountPercent  Int?
+
+  bracketFormat         BracketFormat?
+
+  // Geographic scope
+  city                  String?
+  district              String?
+  state                 String?
+
+  orgId                 String?
+  ageMin                Int?
+  ageMax                Int?
+  gender                GenderCategory?
+  isPublic              Boolean               @default(false)
+  status                TournamentStatus      @default(DRAFT)
+  scoringMode           ScoringMode           @default(STAFF_ONLY)
+  rosterLockDate        DateTime?
+
+  createdById           String?
+  templateId            String?             // Source template if created from template
+  seriesId              String?             // Series this tournament belongs to
+  seriesPoints          Int?                // Points awarded for this tournament in series
+  createdAt             DateTime              @default(now())
+  updatedAt             DateTime              @updatedAt
+
+  // Relations
+  hostOrg               Organization?         @relation("IntraOrgHost", fields: [orgId], references: [id])
+  series                TournamentSeries?     @relation(fields: [seriesId], references: [id])
+  registrations         TournamentRegistration[]
+  orgRegistrations      OrgTournamentRegistration[]
+  teamRegistrations     TournamentTeam[]      // For team/doubles tournaments
+  matches               Match[]
+  waitlist              TournamentWaitlist[]
+  bracket               Bracket?
+  sponsors              TournamentSponsor[]
+  media                 TournamentMedia[]
+  mediaItems            TournamentMediaItem[] // Enhanced media gallery
+  videoHighlights       VideoHighlight[]
+  tournamentRecap       TournamentRecap?
+  checkins              TournamentCheckin[]
+  staff                 TournamentStaff[]
+  scheduleSlots         ScheduleSlot[]
+  announcements         TournamentAnnouncement[]
+  results               TournamentResult[]
+  prizePayouts          PrizePayoutRecord[]
+  interOrgTeamSelections InterOrgTeamSelection[]
+
+  @@index([sport, status])
+  @@index([sport, type])
+  @@index([city, sport, status])
+  @@index([state, sport, status])
+  @@index([sport, isPublic, status])
+  
+  // Full-text search for tournament search
+  @@fulltext([name, location, city, state])
+}
+
+model Organization {
+  id            String        @id @default(cuid())
+  sport         SportType
+  name          String
+  type          OrgType       @default(CLUB)
+  planTier      OrgPlanTier   @default(BASIC)
+  email         String?
+  password      String
+  phone         String?
+  city          String?
+  district      String?
+  state         String?
+  pinCode       String?
+  logoUrl       String?
+
+  tosAcceptedAt     DateTime?
+  privacyAcceptedAt DateTime?
+
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+
+  sessions          Session[]
+  roster            OrgRosterPlayer[]
+  rosterRequests    OrgRosterRequest[]
+  affiliatedPlayers User[]        @relation("AffiliatedPlayers")
+  subscription      OrgSubscription?
+  tournamentRegs    OrgTournamentRegistration[]
+  hostedIntraOrgs   Tournament[]  @relation("IntraOrgHost")
+  sponsors          TournamentSponsor[]
+  announcements     Announcement[]
+  orgAdmins         OrgAdmin[]
+  statistics        OrgStatistics?
+
+  // Follow system
+  followedByUsers   UserFollowsOrg[]
+  followingUsers    OrgFollowsUser[]
+  
+  // Notification settings
+  emailNotificationSettings EmailNotificationSetting[]
+  whatsappNotificationSettings WhatsAppNotificationSetting[]
+  
+  // Milestones
+  milestones        Milestone[]
+
+  // Contract relations
+  orgContracts      PlayerContract[]  @relation("OrgContracts")
+  interOrgTeamSelections InterOrgTeamSelection[]
+  idVerifications   PlayerIdVerification[]
+  
+  // Tournament templates (v3.26.0)
+  tournamentTemplates TournamentTemplate[]
+  
+  // Tournament series/seasons
+  tournamentSeries    TournamentSeries[]
+
+  @@index([sport])
+  @@index([email])
+  @@index([phone])
+  
+  // Full-text search for organization search
+  @@fulltext([name, city, state])
+}
+
+model Bracket {
+  id              String            @id @default(cuid())
+  tournamentId    String            @unique
+  format          BracketFormat
+  totalRounds     Int
+  seedingMethod   String            @default("ELO")
+  generatedAt     DateTime          @default(now())
+  generatedById   String
+
+  generatedBy     User              @relation("BracketGenerator", fields: [generatedById], references: [id])
+  tournament      Tournament        @relation(fields: [tournamentId], references: [id], onDelete: Cascade)
+  matches         BracketMatch[]
+}
+
+model BracketMatch {
+  id              String              @id @default(cuid())
+  bracketId       String
+  matchId         String?             @unique
+  roundNumber     Int
+  matchNumber     Int
+
+  // Individual player references (for INDIVIDUAL format)
+  playerAId       String?
+  playerBId       String?
+  winnerId        String?
+
+  // Team references (for DOUBLES/TEAM format)
+  teamAId         String?
+  teamBId         String?
+  winnerTeamId    String?
+
+  status          BracketMatchStatus  @default(PENDING)
+  scheduledAt     DateTime?
+  courtAssignment String?
+  bracketSide     BracketSide?
+  nextMatchId     String?
+  loserNextMatchId String?
+  rowVersion      Int                 @default(1)
+
+  bracket         Bracket             @relation(fields: [bracketId], references: [id], onDelete: Cascade)
+  match           Match?              @relation(fields: [matchId], references: [id])
+  teamA           Team?               @relation("BracketTeamA", fields: [teamAId], references: [id])
+  teamB           Team?               @relation("BracketTeamB", fields: [teamBId], references: [id])
+
+  @@index([bracketId, roundNumber])
+  @@index([bracketId, status])
+}
+
+model OrgAdmin {
+  id          String        @id @default(cuid())
+  orgId       String
+  userId      String
+  role        OrgAdminRole
+  invitedById String
+  invitedAt   DateTime      @default(now())
+  acceptedAt  DateTime?
+  isActive    Boolean       @default(true)
+
+  org         Organization  @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  user        User          @relation(fields: [userId], references: [id])
+  invitedBy   User          @relation("OrgAdminInviter", fields: [invitedById], references: [id])
+
+  @@unique([orgId, userId])
+}
+
+model Notification {
+  id        String            @id @default(cuid())
+  userId    String
+  sport     SportType
+  type      NotificationType
+  title     String
+  message   String            @db.Text
+  isRead    Boolean           @default(false)
+  readAt    DateTime?
+  link      String?
+  createdAt DateTime          @default(now())
+
+  user      User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, isRead])
+  @@index([userId, createdAt])
+}
+
+model TournamentResult {
+  id            String          @id @default(cuid())
+  tournamentId  String
+  userId        String
+  sport         SportType
+  rank          Int
+  bonusPoints   Int
+  awardedAt     DateTime        @default(now())
+
+  tournament    Tournament      @relation(fields: [tournamentId], references: [id])
+  user          User            @relation(fields: [userId], references: [id])
+
+  @@unique([tournamentId, rank])
+  @@unique([tournamentId, userId])
+  @@index([userId])
+  @@index([sport])
+}
+
+model PrizePayoutRecord {
+  id            String        @id @default(cuid())
+  tournamentId  String
+  userId        String
+  sport         SportType
+  amount        Int
+  method        String
+  reference     String?
+  paidAt        DateTime
+  markedById    String
+  createdAt     DateTime      @default(now())
+
+  tournament    Tournament    @relation(fields: [tournamentId], references: [id])
+  user          User          @relation(fields: [userId], references: [id])
+  markedBy      User          @relation("PayoutMarker", fields: [markedById], references: [id])
+
+  @@unique([tournamentId, userId])
+  @@index([sport])
+}
+
+model AuditLog {
+  id            String        @id @default(cuid())
+  sport         SportType
+  action        AuditAction
+  actorId       String
+  actorRole     Role
+  targetType    String
+  targetId      String
+  tournamentId  String?
+  operatorName  String?
+  operatorEmail String?
+  reason        String?           @db.Text
+  metadata      Json?             // PostgreSQL JSON type for structured data
+  ipAddress     String?
+  createdAt     DateTime      @default(now())
+
+  actor         User          @relation("AuditActor", fields: [actorId], references: [id])
+
+  @@index([sport, action])
+  @@index([actorId])
+  @@index([targetType, targetId])
+  @@index([tournamentId])
+  @@index([createdAt])
+}
+
+model SportRules {
+  id                      String    @id @default(cuid())
+  sport                   SportType
+
+  // Match points by scope
+  cityParticipation       Int       @default(1)
+  cityWin                 Int       @default(2)
+  districtParticipation   Int       @default(1)
+  districtWin             Int       @default(3)
+  stateParticipation      Int       @default(2)
+  stateWin                Int       @default(4)
+  nationalParticipation   Int       @default(3)
+  nationalWin             Int       @default(6)
+
+  // Placement points by scope
+  cityFirst               Int       @default(10)
+  citySecond              Int       @default(6)
+  cityThird               Int       @default(3)
+  districtFirst           Int       @default(15)
+  districtSecond          Int       @default(9)
+  districtThird           Int       @default(5)
+  stateFirst              Int       @default(20)
+  stateSecond             Int       @default(12)
+  stateThird              Int       @default(6)
+  nationalFirst           Int       @default(30)
+  nationalSecond          Int       @default(18)
+  nationalThird           Int       @default(9)
+
+  createdAt               DateTime  @default(now())
+  updatedAt               DateTime  @updatedAt
+
+  @@unique([sport])
+}
+
+model MfaSecret {
+  id        String    @id @default(cuid())
+  userId    String    @unique
+  secret    String
+  enabled   Boolean   @default(false)
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model MfaRecoveryCode {
+  id        String    @id @default(cuid())
+  userId    String
+  codeHash  String
+  usedAt    DateTime?
+  createdAt DateTime  @default(now())
+
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, codeHash])
+}
+
+model Wallet {
+  id        String    @id @default(cuid())
+  userId    String    @unique
+  sport     SportType
+  balance   Int       @default(0)
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([sport])
+}
+
+// ============================================
+// SUBSCRIPTION MODELS
+// ============================================
+
+model Subscription {
+  id              String            @id @default(cuid())
+  userId          String
+  sport           SportType
+  status          SubscriptionStatus @default(ACTIVE)
+  startDate       DateTime
+  endDate         DateTime
+  amount          Int
+  paymentId       String?
+  createdAt       DateTime          @default(now())
+  updatedAt       DateTime          @updatedAt
+
+  user            User              @relation(fields: [userId], references: [id])
+
+  @@index([userId, sport])
+  @@index([status])
+}
+
+model OrgSubscription {
+  id              String            @id @default(cuid())
+  orgId           String            @unique
+  status          SubscriptionStatus @default(ACTIVE)
+  startDate       DateTime
+  endDate         DateTime
+  amount          Int
+  paymentId       String?
+  createdAt       DateTime          @default(now())
+  updatedAt       DateTime          @updatedAt
+
+  org             Organization      @relation(fields: [orgId], references: [id])
+}
+
+// ============================================
+// REGISTRATION MODELS
+// ============================================
+
+model TournamentRegistration {
+  id              String            @id @default(cuid())
+  tournamentId    String
+  userId          String
+  status          RegistrationStatus @default(PENDING)
+  paymentId       String?
+  amount          Int
+  registeredAt    DateTime          @default(now())
+  cancelledAt     DateTime?
+  refundId        String?
+  refundAmount    Int?
+
+  tournament      Tournament        @relation(fields: [tournamentId], references: [id])
+  user            User              @relation(fields: [userId], references: [id])
+
+  @@unique([tournamentId, userId])
+  @@index([userId])
+  @@index([status])
+  @@index([tournamentId, status])
+}
+
+model OrgTournamentRegistration {
+  id              String            @id @default(cuid())
+  tournamentId    String
+  orgId           String
+  userId          String
+  status          RegistrationStatus @default(PENDING)
+  paymentId       String?
+  amount          Int
+  registeredAt    DateTime          @default(now())
+  cancelledAt     DateTime?
+
+  tournament      Tournament        @relation(fields: [tournamentId], references: [id])
+  org             Organization      @relation(fields: [orgId], references: [id])
+
+  @@unique([tournamentId, userId])
+  @@index([orgId])
+}
+
+model TournamentWaitlist {
+  id              String          @id @default(cuid())
+  tournamentId    String
+  userId          String
+  status          WaitlistStatus  @default(WAITING)
+  position        Int
+  promotedAt      DateTime?
+  expiresAt       DateTime?
+  createdAt       DateTime        @default(now())
+
+  tournament      Tournament      @relation(fields: [tournamentId], references: [id])
+
+  @@unique([tournamentId, userId])
+  @@index([tournamentId, position])
+}
+
+// ============================================
+// ORGANIZATION MODELS
+// ============================================
+
+model OrgRosterPlayer {
+  id            String      @id @default(cuid())
+  orgId         String
+  userId        String
+  sport         SportType
+  joinedAt      DateTime    @default(now())
+  isActive      Boolean     @default(true)
+
+  org           Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  user          User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, sport])  // Player can only be in ONE org per sport
+  @@index([orgId, isActive])
+}
+
+model OrgRosterRequest {
+  id           String             @id @default(cuid())
+  orgId        String
+  playerId     String
+  sport        SportType
+  status       RosterRequestStatus @default(PENDING)
+  message      String?            @db.Text
+  requestedAt  DateTime           @default(now())
+  respondedAt  DateTime?
+  expiresAt    DateTime
+
+  org          Organization       @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  player       User               @relation(fields: [playerId], references: [id], onDelete: Cascade)
+
+  @@unique([orgId, playerId, sport])
+  @@index([playerId, status])
+  @@index([orgId, status])
+}
+
+// ============================================
+// ADDITIONAL MODELS
+// ============================================
+
+model PlayerRating {
+  id                String    @id @default(cuid())
+  userId            String    @unique
+  sport             SportType
+  matchesPlayed     Int       @default(0)
+  wins              Int       @default(0)
+  losses            Int       @default(0)
+  highestElo        Float     @default(1500)
+  currentStreak     Int       @default(0)
+  bestStreak        Int       @default(0)
+  tournamentsPlayed Int       @default(0)
+  tournamentsWon    Int       @default(0)
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+
+  user              User      @relation(fields: [userId], references: [id])
+}
+
+model PlayerAchievement {
+  id            String    @id @default(cuid())
+  userId        String
+  sport         SportType
+  type          String
+  title         String
+  description   String    @db.Text
+  earnedAt      DateTime  @default(now())
+  badgeId       String?
+
+  user          User      @relation(fields: [userId], references: [id])
+  badge         BadgeDefinition? @relation(fields: [badgeId], references: [id])
+
+  @@index([userId, sport])
+}
+
+model Dispute {
+  id            String          @id @default(cuid())
+  matchId       String
+  raisedById    String
+  sport         SportType
+  status        DisputeStatus   @default(OPEN)
+  reason        String          @db.Text
+  evidence      String?         @db.Text
+  resolution    String?         @db.Text
+  resolvedById  String?
+  resolvedAt    DateTime?
+  createdAt     DateTime        @default(now())
+  updatedAt     DateTime        @updatedAt
+
+  user          User            @relation(fields: [raisedById], references: [id])
+}
+
+model MatchResultHistory {
+  id            String    @id @default(cuid())
+  matchId       String
+  oldScoreA     Int?
+  oldScoreB     Int?
+  newScoreA     Int?
+  newScoreB     Int?
+  oldWinnerId   String?
+  newWinnerId   String?
+  reason        String    @db.Text
+  editedById    String
+  editedAt      DateTime  @default(now())
+
+  match         Match     @relation(fields: [matchId], references: [id])
+}
+
+model NotificationPreference {
+  id                    String    @id @default(cuid())
+  userId                String    @unique
+  emailNotifications    Boolean   @default(true)
+  pushNotifications     Boolean   @default(true)
+  matchResultNotifs     Boolean   @default(true)
+  tournamentNotifs      Boolean   @default(true)
+  pointsNotifs          Boolean   @default(true)
+  createdAt             DateTime  @default(now())
+  updatedAt             DateTime  @updatedAt
+
+  user                  User      @relation(fields: [userId], references: [id])
+}
+
+model TransferCooldown {
+  id            String    @id @default(cuid())
+  userId        String
+  fromOrgId     String?
+  toOrgId       String?
+  cooldownEnds  DateTime
+  createdAt     DateTime  @default(now())
+
+  user          User      @relation(fields: [userId], references: [id])
+}
+
+model IdentityChangeRequest {
+  id            String    @id @default(cuid())
+  userId        String
+  field         String
+  oldValue      String?
+  newValue      String
+  status        String    @default("PENDING")
+  reviewedById  String?
+  reviewedAt    DateTime?
+  createdAt     DateTime  @default(now())
+
+  user          User      @relation(fields: [userId], references: [id])
+}
+
+model TournamentStaff {
+  id            String    @id @default(cuid())
+  tournamentId  String
+  userId        String
+  role          String
+  assignedAt    DateTime  @default(now())
+
+  tournament    Tournament @relation(fields: [tournamentId], references: [id])
+  user          User      @relation(fields: [userId], references: [id])
+
+  @@unique([tournamentId, userId])
+}
+
+model TournamentSponsor {
+  id            String    @id @default(cuid())
+  tournamentId  String?
+  orgId         String?
+  name          String
+  logoUrl       String?
+  website       String?
+  tier          String?
+  createdAt     DateTime  @default(now())
+
+  tournament    Tournament? @relation(fields: [tournamentId], references: [id])
+  org           Organization? @relation(fields: [orgId], references: [id])
+}
+
+model TournamentMedia {
+  id            String    @id @default(cuid())
+  tournamentId  String
+  type          String
+  url           String
+  caption       String?   @db.Text
+  uploadedAt    DateTime  @default(now())
+
+  tournament    Tournament @relation(fields: [tournamentId], references: [id])
+}
+
+model TournamentCheckin {
+  id            String    @id @default(cuid())
+  tournamentId  String
+  userId        String
+  checkedInAt   DateTime  @default(now())
+  method        String    @default("SELF")
+
+  tournament    Tournament @relation(fields: [tournamentId], references: [id])
+}
+
+model ScheduleSlot {
+  id            String    @id @default(cuid())
+  tournamentId  String
+  courtName     String
+  startTime     DateTime
+  endTime       DateTime
+  matchId       String?
+  createdAt     DateTime  @default(now())
+
+  tournament    Tournament @relation(fields: [tournamentId], references: [id])
+}
+
+model TournamentAnnouncement {
+  id            String    @id @default(cuid())
+  tournamentId  String
+  title         String
+  message       String    @db.Text
+  createdAt     DateTime  @default(now())
+
+  tournament    Tournament @relation(fields: [tournamentId], references: [id])
+}
+
+model Announcement {
+  id            String        @id @default(cuid())
+  orgId         String
+  title         String
+  message       String        @db.Text
+  targetRoles   String?
+  createdAt     DateTime      @default(now())
+
+  org           Organization  @relation(fields: [orgId], references: [id])
+}
+
+model PaymentLedger {
+  id              String                @id @default(cuid())
+  userId          String?
+  orgId           String?
+  sport           SportType
+  amount          Int
+  type            String
+  status          PaymentLedgerStatus   @default(INITIATED)
+  paymentId       String?
+  razorpayId      String?
+  description     String?               @db.Text
+  createdAt       DateTime              @default(now())
+  updatedAt       DateTime              @updatedAt
+}
+
+// ============================================
+// NEW MODELS FOR TOP 10 FEATURES
+// ============================================
+
+// Player Availability Calendar
+model PlayerAvailability {
+  id          String    @id @default(cuid())
+  userId      String
+  sport       SportType
+  dayOfWeek   Int       // 0=Sunday, 6=Saturday
+  startTime   String    // HH:mm format
+  endTime     String    // HH:mm format
+  isRecurring Boolean   @default(true)
+  specificDate DateTime?
+  notes       String?   @db.Text
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, sport, dayOfWeek, startTime])
+  @@index([userId, sport])
+}
+
+// Player Blocking/Muting
+model BlockedPlayer {
+  id          String    @id @default(cuid())
+  blockerId   String
+  blockedId   String
+  sport       SportType
+  reason      String?   @db.Text
+  isMute      Boolean   @default(false)  // false = block, true = mute
+  createdAt   DateTime  @default(now())
+
+  blocker     User      @relation("Blocker", fields: [blockerId], references: [id])
+  blocked     User      @relation("Blocked", fields: [blockedId], references: [id])
+
+  @@unique([blockerId, blockedId, sport])
+  @@index([blockerId])
+  @@index([blockedId])
+}
+
+// Badge Definitions (admin-configurable)
+model BadgeDefinition {
+  id              String    @id @default(cuid())
+  sport           SportType
+  code            String    // e.g., "FIRST_WIN", "TOURNAMENT_CHAMP"
+  name            String
+  description     String    @db.Text
+  iconUrl         String?
+  category        String    // "achievement", "milestone", "special"
+  tier            String    // "bronze", "silver", "gold", "platinum"
+  pointsRequired  Int?
+  conditionExpr   String?   @db.Text // JSON expression for auto-award
+  isActive        Boolean   @default(true)
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  achievements    PlayerAchievement[]
+
+  @@unique([sport, code])
+}
+
+// Activity Feed
+model ActivityFeed {
+  id          String    @id @default(cuid())
+  sport       SportType
+  type        String    // "MATCH_RESULT", "TOURNAMENT_WIN", "ACHIEVEMENT", "RANK_CHANGE"
+  actorId     String?
+  actorName   String
+  title       String
+  description String    @db.Text
+  metadata    Json?     // PostgreSQL JSON type for additional data
+  isPublic    Boolean   @default(true)
+  createdAt   DateTime  @default(now())
+
+  @@index([sport, createdAt])
+  @@index([actorId])
+}
+
+// In-App Messaging
+model Conversation {
+  id            String    @id @default(cuid())
+  sport         SportType
+  type          String    // "direct", "group", "tournament"
+  name          String?   // for group conversations
+  createdById   String?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  participants  ConversationParticipant[]
+  messages      Message[]
+
+  @@index([sport])
+}
+
+model ConversationParticipant {
+  id              String    @id @default(cuid())
+  conversationId  String
+  userId          String
+  lastReadAt      DateTime?
+  muted           Boolean   @default(false)
+  joinedAt        DateTime  @default(now())
+
+  conversation    Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  user            User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([conversationId, userId])
+}
+
+model Message {
+  id              String    @id @default(cuid())
+  conversationId  String
+  senderId        String
+  content         String    @db.Text
+  isSystemMessage Boolean   @default(false)
+  createdAt       DateTime  @default(now())
+  editedAt        DateTime?
+  deletedAt       DateTime?
+
+  conversation    Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  sender          User        @relation(fields: [senderId], references: [id])
+
+  @@index([conversationId, createdAt])
+}
+
+// Leaderboard Snapshots (for historical tracking)
+model LeaderboardSnapshot {
+  id            String    @id @default(cuid())
+  sport         SportType
+  dimension     String    // "overall", "weekly", "monthly", "city", "state"
+  periodStart   DateTime
+  periodEnd     DateTime?
+  userId        String
+  rank          Int
+  visiblePoints Int
+  hiddenElo     Float
+  createdAt     DateTime  @default(now())
+
+  user          User      @relation(fields: [userId], references: [id])
+
+  @@unique([sport, dimension, periodStart, userId])
+  @@index([sport, dimension, rank])
+}
+
+// Referral System
+model Referral {
+  id            String    @id @default(cuid())
+  referrerId    String    // User who referred
+  refereeId     String    // User who was referred
+  sport         SportType
+  code          String    // Referral code used
+  status        String    @default("PENDING") // PENDING, COMPLETED, REWARDED
+  rewardPoints  Int       @default(0)
+  createdAt     DateTime  @default(now())
+  completedAt   DateTime?
+
+  referrer      User      @relation("Referrer", fields: [referrerId], references: [id])
+  referee       User      @relation("Referee", fields: [refereeId], references: [id])
+
+  @@unique([refereeId, sport]) // Each user can only be referred once per sport
+  @@index([referrerId])
+  @@index([code])
+}
+
+// Organization Statistics (aggregated)
+model OrgStatistics {
+  id                  String    @id @default(cuid())
+  orgId               String    @unique
+  sport               SportType
+  totalMembers        Int       @default(0)
+  activeMembers       Int       @default(0)
+  tournamentsHosted   Int       @default(0)
+  tournamentsWon      Int       @default(0)
+  totalMatchesPlayed  Int       @default(0)
+  totalWins           Int       @default(0)
+  topPlayerId         String?
+  avgMemberElo        Float     @default(0)
+  lastCalculated      DateTime  @default(now())
+
+  org                 Organization @relation(fields: [orgId], references: [id])
+}
+
+// ============================================
+// FOLLOW SYSTEM
+// ============================================
+
+// User following User (Player follows Player)
+model UserFollow {
+  id          String    @id @default(cuid())
+  followerId  String    // User who follows
+  followingId String    // User being followed
+  sport       SportType
+  createdAt   DateTime  @default(now())
+
+  follower    User      @relation("UserFollower", fields: [followerId], references: [id], onDelete: Cascade)
+  following   User      @relation("UserFollowing", fields: [followingId], references: [id], onDelete: Cascade)
+
+  @@unique([followerId, followingId, sport])
+  @@index([followerId])
+  @@index([followingId])
+}
+
+// User following Organization
+model UserFollowsOrg {
+  id          String    @id @default(cuid())
+  userId      String    // User who follows
+  orgId       String    // Organization being followed
+  sport       SportType
+  createdAt   DateTime  @default(now())
+
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  org         Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, orgId, sport])
+  @@index([userId])
+  @@index([orgId])
+}
+
+// Organization following User
+model OrgFollowsUser {
+  id          String    @id @default(cuid())
+  orgId       String    // Organization who follows
+  userId      String    // User being followed
+  sport       SportType
+  createdAt   DateTime  @default(now())
+
+  org         Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([orgId, userId, sport])
+  @@index([orgId])
+  @@index([userId])
+}
+
+// ============================================
+// NOTIFICATION PREFERENCES
+// ============================================
+
+model EmailNotificationSetting {
+  id                String    @id @default(cuid())
+  userId            String?   // For players
+  orgId             String?   // For organizations
+  sport             SportType
+  
+  // Notification types
+  matchResults      Boolean   @default(true)
+  tournamentUpdates Boolean   @default(true)
+  rankChanges       Boolean   @default(true)
+  milestones        Boolean   @default(true)
+  weeklyDigest      Boolean   @default(true)
+  announcements     Boolean   @default(true)
+  promotional       Boolean   @default(true)
+  
+  // Quiet hours (24-hour format, null = disabled)
+  quietHoursStart   Int?      // 0-23
+  quietHoursEnd     Int?      // 0-23
+  quietHoursTimezone String? @default("Asia/Kolkata")
+  
+  // Digest mode (batch notifications)
+  digestMode        Boolean   @default(false)
+  digestFrequency   String?   @default("daily") // daily, weekly
+  
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+
+  user              User?     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  org               Organization? @relation(fields: [orgId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, sport])
+  @@unique([orgId, sport])
+}
+
+model WhatsAppNotificationSetting {
+  id                String    @id @default(cuid())
+  userId            String?   // For players
+  orgId             String?   // For organizations
+  sport             SportType
+  
+  // Notification types
+  matchResults      Boolean   @default(true)
+  tournamentUpdates Boolean   @default(true)
+  rankChanges       Boolean   @default(true)
+  milestones        Boolean   @default(false)
+  weeklyDigest      Boolean   @default(false)
+  promotional       Boolean   @default(false)
+  
+  // Quiet hours (24-hour format, null = disabled)
+  quietHoursStart   Int?      // 0-23
+  quietHoursEnd     Int?      // 0-23
+  quietHoursTimezone String? @default("Asia/Kolkata")
+  
+  // WhatsApp specific
+  phoneNumber       String?
+  verified          Boolean   @default(false)
+  
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+
+  user              User?     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  org               Organization? @relation(fields: [orgId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, sport])
+  @@unique([orgId, sport])
+}
+
+// ============================================
+// MILESTONE TRACKING
+// ============================================
+
+model Milestone {
+  id            String    @id @default(cuid())
+  userId        String?
+  orgId         String?
+  sport         SportType
+  type          String    // RANK_TOP_10, RANK_TOP_100, TIER_GOLD, FIRST_TOURNAMENT, etc.
+  title         String
+  description   String    @db.Text
+  metadata      Json?     // PostgreSQL JSON type for additional data
+  earnedAt      DateTime  @default(now())
+  
+  user          User?     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  org           Organization? @relation(fields: [orgId], references: [id], onDelete: Cascade)
+
+  @@index([userId, sport])
+  @@index([orgId, sport])
+  @@index([type])
+}
+
+// ============================================
+// WEBHOOK EVENTS (for retry with idempotency)
+// ============================================
+
+enum WebhookEventStatus {
+  PENDING
+  PROCESSING
+  COMPLETED
+  FAILED
+  RETRYING
+  DEAD_LETTER
+}
+
+model WebhookEvent {
+  id              String            @id @default(cuid())
+  provider        String            // 'razorpay', 'stripe', etc.
+  eventType       String
+  eventId         String            // Provider's unique event ID
+  idempotencyKey  String            @unique
+  payload         Json              // PostgreSQL JSON type
+  signature       String?
+  status          WebhookEventStatus @default(PENDING)
+  attemptCount    Int               @default(0)
+  nextRetryAt     DateTime?
+  lastError       String?           @db.Text
+  processedAt     DateTime?
+  createdAt       DateTime          @default(now())
+  updatedAt       DateTime          @updatedAt
+
+  @@index([provider, eventType])
+  @@index([status, nextRetryAt])
+  @@index([createdAt])
+}
+
+// ============================================
+// FEATURE FLAGS
+// ============================================
+
+model FeatureFlag {
+  id                String    @id @default(cuid())
+  key               String    @unique
+  enabled           Boolean   @default(false)
+  rolloutPercentage Int       @default(0)  // 0-100
+  description       String?   @db.Text
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+
+  @@index([enabled])
+}
+
+// ============================================
+// CONTENT MODERATION
+// ============================================
+
+model ContentReport {
+  id              String            @id @default(cuid())
+  reporterId      String
+  reportedUserId  String?
+  reportedOrgId   String?
+  contentType     String            // 'message', 'profile_image', 'tournament_media', etc.
+  contentId       String
+  contentSnapshot String?           @db.Text // JSON snapshot of reported content
+  reason          String            @db.Text
+  description     String?           @db.Text
+  status          ReportStatus      @default(PENDING)
+  reviewedById    String?
+  reviewedAt      DateTime?
+  action          String?           // 'warning', 'content_removed', 'account_suspended'
+  createdAt       DateTime          @default(now())
+  updatedAt       DateTime          @updatedAt
+
+  @@index([status, createdAt])
+  @@index([reportedUserId])
+  @@index([contentType, contentId])
+}
+
+enum ReportStatus {
+  PENDING
+  REVIEWING
+  RESOLVED
+  DISMISSED
+}
+
+// ============================================
+// ARCHIVED DATA
+// ============================================
+
+model ArchivedTournament {
+  id              String    @id @default(cuid())
+  originalId      String    @unique
+  sport           SportType
+  name            String
+  type            TournamentType
+  scope           TournamentScope?
+  location        String
+  startDate       DateTime
+  endDate         DateTime
+  summary         Json      // PostgreSQL JSON type - summary of tournament results
+  archivedAt      DateTime  @default(now())
+
+  @@index([sport, archivedAt])
+}
+
+model ArchivedMatch {
+  id              String    @id @default(cuid())
+  originalId      String    @unique
+  tournamentId    String
+  archivedTournamentId String?
+  sport           SportType
+  playerAId       String
+  playerBId       String?
+  scoreA          Int?
+  scoreB          Int?
+  winnerId        String?
+  playedAt        DateTime
+  archivedAt      DateTime  @default(now())
+
+  @@index([archivedTournamentId])
+}
+
+// ============================================
+// PLAYER SEARCH INDEX
+// ============================================
+
+model PlayerSearchIndex {
+  id              String    @id @default(cuid())
+  userId          String    @unique
+  sport           SportType
+  firstName       String
+  lastName        String
+  city            String?
+  state           String?
+  visiblePoints   Int
+  hiddenElo       Float
+  searchVector    Unsupported("tsvector")?   // PostgreSQL full-text search vector
+  updatedAt       DateTime  @updatedAt
+
+  @@index([sport, visiblePoints])
+  @@index([sport, hiddenElo])
+}
+
+// ============================================
+// SYSTEM CONFIGURATION
+// ============================================
+
+model SystemConfig {
+  id              String    @id @default(cuid())
+  key             String    @unique
+  value           Json      // PostgreSQL JSON type
+  description     String?   @db.Text
+  updatedAt       DateTime  @updatedAt
+
+  @@index([key])
+}
+
+// ============================================
+// PUSH NOTIFICATION TOKENS
+// ============================================
+
+// Device tokens for push notifications
+model DeviceToken {
+  id            String    @id @default(cuid())
+  userId        String    // For players
+  orgId         String?   // For organizations (optional)
+  token         String    // FCM/APNs device token
+  platform      String    // 'ios', 'android', 'web'
+  deviceId      String?   // Unique device identifier
+  deviceName    String?
+  appVersion    String?
+  isActive      Boolean   @default(true)
+  lastUsedAt    DateTime  @default(now())
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  @@unique([token])
+  @@index([userId, isActive])
+  @@index([orgId, isActive])
+}
+
+// Push notification log for tracking
+model PushNotificationLog {
+  id            String    @id @default(cuid())
+  userId        String?
+  orgId         String?
+  token         String
+  title         String
+  body          String    @db.Text
+  data          Json?     // PostgreSQL JSON type
+  status        String    // 'sent', 'failed', 'pending'
+  error         String?   @db.Text
+  sentAt        DateTime  @default(now())
+
+  @@index([userId, sentAt])
+  @@index([status])
+}
+
+// ============================================
+// PLAYER SCOUTING & CONTRACT SYSTEM
+// ============================================
+
+// Contract Record (Simplified - no money flow through platform)
+model PlayerContract {
+  id                  String               @id @default(cuid())
+  
+  // Parties
+  playerId            String
+  player              User                 @relation("PlayerContracts", fields: [playerId], references: [id])
+  organizationId      String
+  organization        Organization         @relation("OrgContracts", fields: [organizationId], references: [id])
+  
+  // Contract Details
+  contractTitle       String
+  contractType        String               // tournament, seasonal, annual
+  contractTerms       String               @db.Text
+  
+  // Duration
+  startDate           DateTime
+  endDate             DateTime
+  
+  // Status
+  status              ContractStatus       @default(PENDING)
+  
+  // Admin Verification
+  verifiedBy          String?              // Admin user ID
+  verifiedAt          DateTime?
+  rejectionReason     String?              @db.Text
+  
+  // Documents
+  contractDocumentUrl String?              // Optional signed contract PDF
+  
+  // Audit
+  createdById         String?              // User ID of org admin who created
+  createdAt           DateTime             @default(now())
+  updatedAt           DateTime             @updatedAt
+
+  @@unique([playerId, organizationId])
+  @@index([organizationId, status])
+  @@index([playerId, status])
+  @@index([status, endDate])
+}
+
+// Inter-Org Tournament Team Selection
+model InterOrgTeamSelection {
+  id                  String               @id @default(cuid())
+  
+  tournamentId        String
+  tournament          Tournament           @relation(fields: [tournamentId], references: [id])
+  
+  organizationId      String
+  organization        Organization         @relation(fields: [organizationId], references: [id])
+  
+  // Selected players for this tournament
+  players             InterOrgTeamPlayer[]
+  
+  // Selection details
+  selectedBy          String               // User ID of org admin who selected
+  selectedAt          DateTime             @default(now())
+  
+  // Status
+  isSubmitted         Boolean              @default(false)
+  submittedAt         DateTime?
+
+  @@unique([tournamentId, organizationId])
+  @@index([organizationId])
+}
+
+model InterOrgTeamPlayer {
+  id                  String               @id @default(cuid())
+  
+  teamSelectionId     String
+  teamSelection       InterOrgTeamSelection @relation(fields: [teamSelectionId], references: [id], onDelete: Cascade)
+  
+  playerId            String
+  player              User                 @relation(fields: [playerId], references: [id])
+  
+  // Player type at time of selection
+  playerOrgType       PlayerOrgType        // EMPLOYEE or CONTRACTED
+  
+  // Role in this tournament
+  isCaptain           Boolean              @default(false)
+  
+  // Audit
+  addedAt             DateTime             @default(now())
+
+  @@unique([teamSelectionId, playerId])
+  @@index([playerId])
+}
+
+// Player ID Verification Request Tracking
+model PlayerIdVerification {
+  id                  String               @id @default(cuid())
+  
+  playerId            String
+  player              User                 @relation(fields: [playerId], references: [id])
+  organizationId      String
+  organization        Organization         @relation(fields: [organizationId], references: [id])
+  
+  // Document info
+  documentUrl         String
+  documentType        String               // passport, aadhaar, employee_id, etc.
+  
+  // Status
+  status              VerificationStatus   @default(PENDING)
+  
+  // Verification
+  verifiedBy          String?              // User ID of org admin who verified
+  verifiedAt          DateTime?
+  rejectionReason     String?              @db.Text
+  
+  // Audit
+  createdAt           DateTime             @default(now())
+  updatedAt           DateTime             @updatedAt
+
+  @@index([organizationId, status])
+  @@index([playerId])
+  @@index([status, createdAt])
+}
+
+// GDPR Consent Tracking (v3.26.0)
+model GdprConsent {
+  id                  String               @id @default(cuid())
+  userId              String
+  user                User                 @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  // Consent type
+  consentType         String               // TOS, PRIVACY_POLICY, MARKETING, DATA_PROCESSING, COOKIES
+  granted             Boolean
+  
+  // Context
+  ipAddress           String?
+  userAgent           String?
+  source              String?              // web, mobile_app, etc.
+  
+  // Audit
+  createdAt           DateTime             @default(now())
+
+  @@index([userId, consentType])
+  @@index([createdAt])
+}
+
+// ============================================
+// TOURNAMENT TEMPLATES & SERIES (v3.26.0+)
+// ============================================
+
+model TournamentTemplate {
+  id                      String            @id @default(cuid())
+  orgId                   String
+  name                    String            // Template name
+  sport                   SportType
+  
+  // Tournament configuration
+  type                    TournamentType    @default(INDIVIDUAL)
+  format                  TournamentFormat  @default(INDIVIDUAL) // INDIVIDUAL, DOUBLES, TEAM
+  scope                   TournamentScope?
+  maxPlayers              Int               @default(64)
+  maxTeams                Int?              // For doubles/team tournaments
+  teamSize                Int?              // 2 for doubles, 3-4 for team
+  entryFee                Int               @default(0)
+  earlyBirdFee            Int?
+  earlyBirdDeadlineDays   Int?              // Days before reg deadline
+  groupDiscountMin        Int?
+  groupDiscountPercent    Int?
+  bracketFormat           BracketFormat     @default(SINGLE_ELIMINATION)
+  
+  // Eligibility
+  ageMin                  Int?
+  ageMax                  Int?
+  gender                  GenderCategory?
+  
+  // Settings
+  scoringMode             ScoringMode       @default(STAFF_ONLY)
+  maxPlayersPerOrg        Int?
+  prizePoolDefault        Int?
+  regDeadlineDays         Int               @default(7)   // Days before start
+  durationDays            Int               @default(1)   // Tournament duration
+  isPublic                Boolean           @default(true)
+  
+  // Default location
+  defaultLocation         String?
+  defaultCity             String?
+  defaultState            String?
+  
+  // Description
+  description             String?           @db.Text
+  rules                   String?           @db.Text
+  
+  // Recurring schedule
+  isRecurring             Boolean           @default(false)
+  recurringFrequency      String?           // weekly, biweekly, monthly, quarterly
+  recurringDayOfWeek      Int?              // 0=Sunday for weekly
+  recurringDayOfMonth     Int?              // 1-31 for monthly
+  recurringWeekOfMonth    Int?              // 1-4 for "first Saturday of month"
+  recurringMonthQuarter   Int?              // 1,4,7,10 for quarterly
+  
+  // Series linkage
+  seriesId                String?           // Link to a tournament series
+  
+  // Metadata
+  timesUsed               Int               @default(0)
+  lastUsedAt              DateTime?
+  isActive                Boolean           @default(true)
+  createdAt               DateTime          @default(now())
+  updatedAt               DateTime          @updatedAt
+  
+  org                     Organization      @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  series                  TournamentSeries? @relation(fields: [seriesId], references: [id])
+  scheduledTournaments    RecurringTournament[]
+  
+  @@index([orgId, sport])
+  @@index([orgId, createdAt])
+  @@index([orgId, isActive])
+}
+
+// Tournament Series/Season - links multiple tournaments together
+model TournamentSeries {
+  id                      String            @id @default(cuid())
+  orgId                   String
+  name                    String            // e.g., "Summer League 2025", "Monthly Championship Series"
+  sport                   SportType
+  description             String?           @db.Text
+  
+  // Series config
+  seriesType              String            @default("SEASON") // SEASON, LEAGUE, CHAMPIONSHIP
+  scoringSystem           String            @default("POINTS") // POINTS, ELO_AVERAGE, PLACEMENT
+  
+  // Duration
+  startDate               DateTime          // Series start date
+  endDate                 DateTime          // Series end date
+  registrationDeadline    DateTime?         // Deadline to join the series
+  
+  // Points system
+  participationPoints     Int               @default(1)
+  winPoints               Int               @default(3)
+  placementPoints         Json?             // PostgreSQL JSON: {"1": 20, "2": 15, "3": 10}
+  maxTournamentsCounted   Int?              // Max tournaments to count for final standings
+  
+  // Prizes
+  totalPrizePool          Int?
+  prizeDistribution       Json?             // PostgreSQL JSON: {"1": 40, "2": 25, "3": 15}
+  
+  // Status
+  status                  SeriesStatus      @default(UPCOMING)
+  isPublic                Boolean           @default(true)
+  
+  // Standings calculation
+  lastCalculatedAt        DateTime?
+  
+  createdAt               DateTime          @default(now())
+  updatedAt               DateTime          @updatedAt
+  
+  org                     Organization      @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  tournaments             Tournament[]
+  templates               TournamentTemplate[]
+  standings               SeriesStanding[]
+  
+  @@index([orgId, sport])
+  @@index([sport, status])
+  @@index([startDate])
+}
+
+enum SeriesStatus {
+  UPCOMING
+  REGISTRATION_OPEN
+  IN_PROGRESS
+  COMPLETED
+  CANCELLED
+}
+
+// Series standings - tracks player/team performance across tournaments in a series
+model SeriesStanding {
+  id                      String            @id @default(cuid())
+  seriesId                String
+  userId                  String?           // For individual tournaments
+  teamId                  String?           // For doubles/team tournaments
+  
+  // Points
+  totalPoints             Int               @default(0)
+  participationCount      Int               @default(0)
+  winCount                Int               @default(0)
+  placementCount          Json?             // PostgreSQL JSON: {"1": 2, "2": 1, "3": 3}
+  
+  // Tournament breakdown
+  tournamentBreakdown     Json?             // PostgreSQL JSON: [{tournamentId, points, placement}]
+  
+  // Rank
+  rank                    Int?
+  
+  updatedAt               DateTime          @updatedAt
+  
+  series                  TournamentSeries  @relation(fields: [seriesId], references: [id], onDelete: Cascade)
+  
+  @@unique([seriesId, userId])
+  @@unique([seriesId, teamId])
+  @@index([seriesId, rank])
+  @@index([seriesId, totalPoints])
+}
+
+// Scheduled tournaments from recurring templates
+model RecurringTournament {
+  id                      String            @id @default(cuid())
+  templateId              String
+  tournamentId            String?           // Created tournament ID
+  
+  // Schedule
+  scheduledStartDate      DateTime
+  scheduledRegDeadline    DateTime
+  
+  // Status
+  status                  RecurringStatus   @default(SCHEDULED)
+  
+  // Creation tracking
+  createdAt               DateTime          @default(now())
+  tournamentCreatedAt     DateTime?
+  error                   String?           @db.Text
+  
+  template                TournamentTemplate @relation(fields: [templateId], references: [id], onDelete: Cascade)
+  
+  @@index([templateId, scheduledStartDate])
+  @@index([status, scheduledStartDate])
+}
+
+enum RecurringStatus {
+  SCHEDULED     // Waiting to be created
+  CREATED       // Tournament created
+  SKIPPED       // Skipped (holiday, conflict, etc.)
+  FAILED        // Creation failed
+}
+
+// ============================================
+// ADVANCED PLAYER ANALYTICS (v3.26.0+)
+// ============================================
+
+// Player performance trends over time (aggregated monthly/weekly)
+model PlayerPerformanceTrend {
+  id                      String            @id @default(cuid())
+  userId                  String
+  sport                   SportType
+  
+  // Period
+  periodType              String            // daily, weekly, monthly
+  periodStart             DateTime
+  periodEnd               DateTime
+  
+  // Win/Loss
+  matchesPlayed           Int               @default(0)
+  wins                    Int               @default(0)
+  losses                  Int               @default(0)
+  winRate                 Float             @default(0)
+  
+  // Rating changes
+  eloStart                Float
+  eloEnd                  Float
+  eloChange               Float
+  pointsEarned            Int               @default(0)
+  
+  // Performance breakdown
+  avgMarginOfVictory      Float?
+  avgMarginOfDefeat       Float?
+  upsetWins               Int               @default(0)  // Wins against higher-rated
+  upsetLosses             Int               @default(0)  // Losses to lower-rated
+  
+  // Tournament performance
+  tournamentsPlayed       Int               @default(0)
+  tournamentsWon          Int               @default(0)
+  avgPlacement            Float?
+  
+  // Form indicator (weighted recent performance)
+  formScore               Float             @default(0)  // -10 to +10 scale
+  formTrend               String            @default("STABLE") // RISING, FALLING, STABLE
+  
+  createdAt               DateTime          @default(now())
+  
+  @@unique([userId, sport, periodType, periodStart])
+  @@index([userId, sport, periodStart])
+  @@index([sport, periodStart])
+}
+
+// Darts scoring heatmap - tracks where darts land on the board
+model DartsScoringHeatmap {
+  id                      String            @id @default(cuid())
+  userId                  String
+  sport                   SportType         @default(DARTS)
+  
+  // Board segment (standard dart board has 20 numbered segments + bull)
+  segment                 Int               // 1-20 for numbered segments, 21=outer bull, 22=inner bull
+  ring                    String            // SINGLE, DOUBLE, TRIPLE, OUTER_BULL, INNER_BULL
+  
+  // Statistics
+  hitCount                Int               @default(0)
+  missCount               Int               @default(0)
+  avgScore                Float             @default(0)
+  
+  // Context
+  gamePhase               String?           // OPENING, MIDDLE, FINISH (checkout)
+  matchType               String?           // PRACTICE, LEAGUE, TOURNAMENT
+  
+  // Period
+  periodStart             DateTime
+  periodEnd               DateTime
+  
+  updatedAt               DateTime          @updatedAt
+  
+  @@unique([userId, segment, ring, periodStart])
+  @@index([userId, periodStart])
+  @@index([userId, segment, ring])
+}
+
+// Cornhole scoring heatmap - tracks bag placement
+model CornholeScoringHeatmap {
+  id                      String            @id @default(cuid())
+  userId                  String
+  sport                   SportType         @default(CORNHOLE)
+  
+  // Zone (4 zones + hole)
+  zone                    String            // HOLE, BOARD_FRONT, BOARD_BACK, LEFT_OFF, RIGHT_OFF
+  
+  // Statistics
+  throwCount              Int               @default(0)
+  successCount            Int               @default(0)
+  successRate             Float             @default(0)
+  
+  // Context
+  roundPosition           Int?              // 1-4 for position in round
+  scoreSituation          String?           // AHEAD, BEHIND, TIE
+  
+  // Period
+  periodStart             DateTime
+  periodEnd               DateTime
+  
+  updatedAt               DateTime          @updatedAt
+  
+  @@unique([userId, zone, periodStart])
+  @@index([userId, periodStart])
+}
+
+// Form indicator - quick view of player's current form
+model PlayerFormIndicator {
+  id                      String            @id @default(cuid())
+  userId                  String
+  sport                   SportType
+  
+  // Current form (-10 to +10)
+  currentForm             Float             @default(0)
+  formLevel               String            @default("NEUTRAL") // HOT, WARM, NEUTRAL, COLD, ICY
+  
+  // Trend
+  trendDirection          String            @default("STABLE") // RISING, FALLING, STABLE
+  trendMagnitude          Float             @default(0)  // Rate of change
+  
+  // Recent results (last 10 matches)
+  recentResults           Json?             // PostgreSQL JSON array: ["W", "W", "L", "W", ...]
+  recentWinRate           Float             @default(0)
+  
+  // Streak
+  currentStreak           Int               @default(0)
+  streakType              String            @default("NONE") // WIN, LOSS, NONE
+  longestWinStreak        Int               @default(0)
+  longestLossStreak       Int               @default(0)
+  
+  // Performance vs expectation
+  upsetRatio              Float             @default(0)  // (upset wins / upset losses)
+  
+  // Period-based form
+  last7DaysForm           Float             @default(0)
+  last30DaysForm          Float             @default(0)
+  last90DaysForm          Float             @default(0)
+  
+  // Calculation metadata
+  calculatedAt            DateTime          @default(now())
+  matchesConsidered       Int               @default(0)
+  
+  @@unique([userId, sport])
+  @@index([sport, currentForm])
+}
+
+// Head-to-head detailed record
+model HeadToHeadRecord {
+  id                      String            @id @default(cuid())
+  playerAId               String
+  playerBId               String
+  sport                   SportType
+  
+  // Overall record
+  totalMatches            Int               @default(0)
+  playerAWins             Int               @default(0)
+  playerBWins             Int               @default(0)
+  
+  // By tournament type
+  individualMatches       Int               @default(0)
+  doublesMatches          Int               @default(0)
+  
+  // By tournament scope
+  cityMatches             Int               @default(0)
+  districtMatches         Int               @default(0)
+  stateMatches            Int               @default(0)
+  nationalMatches         Int               @default(0)
+  
+  // Scoring
+  playerATotalScore       Int               @default(0)
+  playerBTotalScore       Int               @default(0)
+  avgScoreMargin          Float             @default(0)
+  
+  // Recent encounters
+  recentMatches           Json?             // PostgreSQL JSON: [{matchId, date, winnerId, score}]
+  lastEncounterDate       DateTime?
+  lastWinnerId            String?
+  
+  // ELO history when facing each other
+  avgEloDifference        Float             @default(0)
+  
+  updatedAt               DateTime          @updatedAt
+  
+  @@unique([playerAId, playerBId, sport])
+  @@index([playerAId, sport])
+  @@index([playerBId, sport])
+}
+
+// ============================================
+// VIDEO HIGHLIGHTS & MEDIA GALLERY MODELS
+// ============================================
+
+// Media types for tournaments
+enum MediaType {
+  PHOTO
+  VIDEO
+  HIGHLIGHT_CLIP
+  RECAP_VIDEO
+  SHAREABLE_CARD
+}
+
+// Enhanced tournament media with metadata
+model TournamentMediaItem {
+  id              String      @id @default(cuid())
+  tournamentId    String
+  sport           SportType
+  
+  // Media details
+  type            MediaType
+  url             String      // CDN URL
+  thumbnailUrl    String?     // For videos
+  fileName        String
+  fileSize        Int         // In bytes
+  mimeType        String
+  duration        Int?        // For videos, in seconds
+  
+  // Metadata
+  title           String?
+  caption         String?     @db.Text
+  description     String?     @db.Text
+  
+  // Categorization
+  category        String      // "match", "ceremony", "venue", "highlights", "interview"
+  matchId         String?     // Associated match if applicable
+  roundNumber     Int?        // Associated round
+  
+  // Player tagging
+  taggedPlayerIds Json?       // PostgreSQL JSON array of player IDs
+  
+  // Upload info
+  uploadedById    String      // User who uploaded
+  uploadedAt      DateTime    @default(now())
+  approvedAt      DateTime?   // Admin approval
+  approvedById    String?
+  isPublic        Boolean     @default(true)
+  
+  // Engagement
+  viewCount       Int         @default(0)
+  downloadCount   Int         @default(0)
+  shareCount      Int         @default(0)
+  
+  // For highlights
+  isHighlight     Boolean     @default(false)
+  highlightType   String?     // "best_of", "finals", "upset", "comeback"
+  
+  tournament      Tournament  @relation(fields: [tournamentId], references: [id])
+  
+  @@index([tournamentId, type])
+  @@index([tournamentId, category])
+  @@index([sport, uploadedAt])
+}
+
+// Video highlight clips (30-60 second clips)
+model VideoHighlight {
+  id              String      @id @default(cuid())
+  tournamentId    String
+  matchId         String?
+  sport           SportType
+  
+  // Video details
+  sourceVideoUrl  String      // Original full video
+  clipUrl         String      // Processed clip URL
+  thumbnailUrl    String
+  duration        Int         // Clip duration in seconds (30-60)
+  
+  // Content
+  title           String
+  description     String?     @db.Text
+  highlightType   String      // "winning_point", "comeback", "upset", "best_rally", "final_shot"
+  
+  // Timestamps
+  startTimestamp  Int         // Start time in source video (seconds)
+  endTimestamp    Int         // End time in source video (seconds)
+  
+  // Players involved
+  playerIds       Json        // PostgreSQL JSON array of player IDs involved
+  
+  // Processing status
+  status          String      @default("PENDING") // PENDING, PROCESSING, READY, FAILED
+  
+  // Engagement
+  viewCount       Int         @default(0)
+  shareCount      Int         @default(0)
+  
+  // Social sharing
+  shareUrl        String?     // Short URL for sharing
+  
+  createdAt       DateTime    @default(now())
+  updatedAt       DateTime    @updatedAt
+  
+  tournament      Tournament  @relation(fields: [tournamentId], references: [id])
+  
+  @@index([tournamentId, status])
+  @@index([sport, createdAt])
+}
+
+// Tournament recap (auto-generated)
+model TournamentRecap {
+  id              String      @id @default(cuid())
+  tournamentId    String      @unique
+  sport           SportType
+  
+  // Video recap
+  videoUrl        String?     // Full recap video
+  thumbnailUrl    String?
+  duration        Int?        // Video duration
+  
+  // Written recap
+  title           String
+  summary         String      @db.Text
+  highlights      Json        // PostgreSQL JSON array of highlight moments
+  
+  // Key stats
+  totalMatches    Int
+  totalUpsets     Int
+  longestMatch    Json?       // PostgreSQL JSON with match details
+  highestScore    Json?       // PostgreSQL JSON with match details
+  
+  // Top performers
+  mvpPlayerId     String?
+  topScorerId     String?
+  bestDefensivePlayerId String?
+  
+  // Final standings summary
+  standings       Json        // PostgreSQL JSON array
+  
+  // Media gallery
+  photoCount      Int         @default(0)
+  videoCount      Int         @default(0)
+  
+  // Auto-generated flag
+  isAutoGenerated Boolean     @default(false)
+  generatedAt     DateTime?
+  
+  // Publishing
+  publishedAt     DateTime?
+  isPublic        Boolean     @default(true)
+  
+  createdAt       DateTime    @default(now())
+  updatedAt       DateTime    @updatedAt
+  
+  tournament      Tournament  @relation(fields: [tournamentId], references: [id])
+  
+  @@index([sport, publishedAt])
+}
+
+// Social media shareable result card
+model ShareableResultCard {
+  id              String      @id @default(cuid())
+  sport           SportType
+  
+  // Card type
+  cardType        String      // "match_result", "tournament_win", "achievement", "leaderboard_rank"
+  
+  // Associated entities
+  tournamentId    String?
+  matchId         String?
+  userId          String?     // Player the card is about
+  
+  // Card content
+  title           String
+  subtitle        String?
+  message         String?     @db.Text
+  
+  // Visual elements
+  imageUrl        String      // Generated card image URL
+  templateId      String?     // Card template used
+  
+  // Stats displayed on card
+  stats           Json?       // PostgreSQL JSON array of stats to display
+  
+  // Sharing
+  shareUrl        String      @unique  // Short URL for sharing
+  shortCode       String      @unique  // Short code for URL
+  
+  // Platform-specific
+  shareToTwitter  Int         @default(0)
+  shareToWhatsApp Int         @default(0)
+  shareToFacebook Int         @default(0)
+  shareToLinkedIn Int         @default(0)
+  
+  // Expiry
+  expiresAt       DateTime?
+  
+  createdAt       DateTime    @default(now())
+  
+  @@index([userId, cardType])
+  @@index([tournamentId])
+  @@index([sport, createdAt])
+}
+
+// ============================================
+// SHORT URL REDIRECT SYSTEM
+// ============================================
+
+model ShortUrlRedirect {
+  id              String      @id @default(cuid())
+  shortCode       String      @unique  // e.g., "abc123"
+  
+  // Target
+  targetType      String      // "player", "tournament", "org", "match", "card", "custom"
+  targetId        String?     // ID of the entity
+  targetUrl       String
+  
+  // Metadata
+  sport           SportType?
+  createdById     String?
+  
+  // Tracking
+  clickCount      Int         @default(0)
+  lastClickedAt   DateTime?
+  
+  // QR code
+  qrCodeUrl       String?
+  
+  // Expiry
+  expiresAt       DateTime?
+  isActive        Boolean     @default(true)
+  
+  createdAt       DateTime    @default(now())
+  updatedAt       DateTime    @updatedAt
+  
+  @@index([targetType, targetId])
+  @@index([shortCode])
+}

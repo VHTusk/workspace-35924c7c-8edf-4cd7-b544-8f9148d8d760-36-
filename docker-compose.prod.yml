@@ -1,0 +1,522 @@
+# VALORHIVE Production Docker Compose
+#
+# This configuration is for production deployments on AWS ECS/EKS
+# or standalone server deployments.
+#
+# Usage:
+#   docker compose -f docker-compose.prod.yml up -d
+#
+# Security Features:
+# - Secrets management via Docker secrets
+# - Non-root container execution
+# - Health checks for all services
+# - Resource limits
+# - Network isolation
+
+version: "3.9"
+
+services:
+  # ===========================================
+  # VALORHIVE Application
+  # ===========================================
+  app:
+    image: ${ECR_REGISTRY}/${ECR_REPOSITORY}:${IMAGE_TAG:-latest}
+    container_name: valorhive-app
+    
+    # Production restart policy
+    restart: always
+    
+    # Run migrations before starting
+    command: ["./startup.sh"]
+    
+    # Port configuration
+    ports:
+      - "${APP_PORT:-3000}:3000"
+    
+    # Environment configuration
+    environment:
+      - NODE_ENV=production
+      - PORT=3000
+      - HOSTNAME=0.0.0.0
+      - NEXT_TELEMETRY_DISABLED=1
+      # Database via PgBouncer (pooled connections)
+      - DATABASE_URL_FILE=/run/secrets/database_url
+      # Direct URL for migrations (bypasses PgBouncer)
+      - DIRECT_URL_FILE=/run/secrets/direct_url
+      # Redis (via secret)
+      - REDIS_URL_FILE=/run/secrets/redis_url
+      # Session secrets (via secret)
+      - SESSION_SECRET_FILE=/run/secrets/session_secret
+      - NEXTAUTH_SECRET_FILE=/run/secrets/nextauth_secret
+    
+    # Secrets configuration
+    secrets:
+      - database_url
+      - direct_url
+      - redis_url
+      - session_secret
+      - nextauth_secret
+      - razorpay_key_id
+      - razorpay_key_secret
+      - aws_access_key_id
+      - aws_secret_access_key
+    
+    # Health check
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3000/api/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+    
+    # Resource limits
+    deploy:
+      resources:
+        limits:
+          cpus: '2'
+          memory: 2G
+        reservations:
+          cpus: '0.5'
+          memory: 512M
+      replicas: 2
+      update_config:
+        parallelism: 1
+        delay: 10s
+        failure_action: rollback
+        order: start-first
+    
+    # Logging configuration
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+        labels: "app,environment"
+    
+    # Network
+    networks:
+      - valorhive-network
+    
+    # Volume for persistent data
+    volumes:
+      - app-logs:/app/logs
+      - app-uploads:/app/uploads
+    
+    # Dependencies
+    depends_on:
+      pgbouncer:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+  # ===========================================
+  # PgBouncer (Connection Pooling)
+  # ===========================================
+  # FIX: Added PgBouncer to prevent connection exhaustion
+  # With 2 app replicas + cron service + WS service, PostgreSQL connections
+  # can quickly be exhausted under load without pooling.
+  pgbouncer:
+    image: edoburu/pgbouncer:v1.23.0
+    container_name: valorhive-pgbouncer
+    
+    restart: always
+    
+    environment:
+      - DATABASE_URL=${DATABASE_URL}
+      - POOL_MODE=transaction
+      - MAX_CLIENT_CONN=500
+      - DEFAULT_POOL_SIZE=25
+      - MIN_POOL_SIZE=5
+      - RESERVE_POOL_SIZE=5
+      - RESERVE_POOL_TIMEOUT=3
+      - SERVER_IDLE_TIMEOUT=600
+      - SERVER_CONNECT_TIMEOUT=15
+      - CLIENT_IDLE_TIMEOUT=0
+      - CLIENT_LOGIN_TIMEOUT=60
+      - AUTH_TYPE=scram-sha-256
+      - AUTH_USER=${DB_USER}
+      - AUTH_PASSWORD=${DB_PASSWORD}
+      - ADMIN_USERS=${DB_USER}
+      - STATS_USERS=${DB_USER}
+      - LOG_STATS=0
+      - VERBOSE=0
+    
+    # PgBouncer listens on port 6432
+    # App connects to pgbouncer:6432 instead of postgres:5432
+    ports:
+      - "127.0.0.1:6432:6432"
+    
+    healthcheck:
+      test: ["CMD", "pgbouncer", "-R", "-u", "pgbouncer", "-d", "/etc/pgbouncer/pgbouncer.ini"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+    
+    deploy:
+      resources:
+        limits:
+          cpus: '0.25'
+          memory: 128M
+        reservations:
+          cpus: '0.05'
+          memory: 32M
+    
+    logging:
+      driver: json-file
+      options:
+        max-size: "5m"
+        max-file: "2"
+    
+    networks:
+      - valorhive-network
+    
+    # External database connection is handled outside Docker
+    # For AWS RDS/Aurora, use the provided endpoint
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+
+  # ===========================================
+  # Redis Cache
+  # ===========================================
+  redis:
+    image: redis:7-alpine
+    container_name: valorhive-redis
+    
+    restart: always
+    
+    # FIX: Add Redis password authentication
+    # Password is loaded from secret file
+    command: >
+      redis-server
+      --maxmemory 256mb
+      --maxmemory-policy allkeys-lru
+      --appendonly yes
+      --appendfsync everysec
+      --requirepass ${REDIS_PASSWORD}
+    
+    # FIX: Removed port exposure - Redis should only be accessible within Docker network
+    # All services on valorhive-network can reach Redis by hostname 'redis'
+    # ports:
+    #   - "${REDIS_PORT:-6379}:6379"
+    
+    healthcheck:
+      # FIX: Use password in health check
+      test: ["CMD", "redis-cli", "-a", "${REDIS_PASSWORD}", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 512M
+        reservations:
+          cpus: '0.1'
+          memory: 128M
+    
+    logging:
+      driver: json-file
+      options:
+        max-size: "5m"
+        max-file: "2"
+    
+    networks:
+      - valorhive-network
+    
+    volumes:
+      - redis-data:/data
+
+  # ===========================================
+  # Tournament WebSocket Service
+  # ===========================================
+  tournament-ws:
+    build:
+      context: ./mini-services/tournament-ws
+      dockerfile: Dockerfile
+    container_name: valorhive-tournament-ws
+    
+    restart: always
+    
+    ports:
+      - "${WS_PORT:-3003}:3003"
+    
+    environment:
+      - NODE_ENV=production
+      - PORT=3003
+      - DATABASE_URL_FILE=/run/secrets/database_url
+    
+    secrets:
+      - database_url
+    
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3003/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+    
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 256M
+        reservations:
+          cpus: '0.1'
+          memory: 64M
+    
+    logging:
+      driver: json-file
+      options:
+        max-size: "5m"
+        max-file: "2"
+    
+    networks:
+      - valorhive-network
+    
+    depends_on:
+      redis:
+        condition: service_healthy
+
+  # ===========================================
+  # Cron Service (for scheduled tasks)
+  # ===========================================
+  cron-service:
+    build:
+      context: ./mini-services/cron-service
+      dockerfile: Dockerfile
+    container_name: valorhive-cron
+    
+    restart: always
+    
+    environment:
+      - NODE_ENV=production
+      - DATABASE_URL_FILE=/run/secrets/database_url
+      - REDIS_URL_FILE=/run/secrets/redis_url
+    
+    secrets:
+      - database_url
+      - redis_url
+    
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3010/health"]
+      interval: 60s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+    
+    deploy:
+      resources:
+        limits:
+          cpus: '0.25'
+          memory: 256M
+        reservations:
+          cpus: '0.05'
+          memory: 64M
+    
+    logging:
+      driver: json-file
+      options:
+        max-size: "5m"
+        max-file: "2"
+    
+    networks:
+      - valorhive-network
+    
+    depends_on:
+      redis:
+        condition: service_healthy
+
+  # ===========================================
+  # Prometheus (Metrics Collection)
+  # ===========================================
+  prometheus:
+    image: prom/prometheus:v2.48.0
+    container_name: valorhive-prometheus
+    
+    restart: always
+    
+    # FIX: Removed --web.enable-admin-api to prevent unauthorized data deletion
+    # Admin API should only be enabled when needed and accessed via VPN/tunnel
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--storage.tsdb.retention.time=15d'
+      - '--web.console.libraries=/usr/share/prometheus/console_libraries'
+      - '--web.console.templates=/usr/share/prometheus/consoles'
+      - '--web.enable-lifecycle'
+    
+    # FIX: Removed port exposure - access via VPN/SSH tunnel only
+    # To access: ssh -L 9090:localhost:9090 user@server
+    # ports:
+    #   - "${PROMETHEUS_PORT:-9090}:9090"
+    
+    volumes:
+      - ./config/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - ./config/prometheus-alerts.yml:/etc/prometheus/alerts.yml:ro
+      - prometheus-data:/prometheus
+    
+    healthcheck:
+      test: ["CMD", "wget", "-q", "--spider", "http://localhost:9090/-/healthy"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+    
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 512M
+        reservations:
+          cpus: '0.1'
+          memory: 128M
+    
+    logging:
+      driver: json-file
+      options:
+        max-size: "5m"
+        max-file: "2"
+    
+    networks:
+      - valorhive-network
+    
+    depends_on:
+      - app
+
+  # ===========================================
+  # Grafana (Monitoring Dashboard)
+  # ===========================================
+  grafana:
+    image: grafana/grafana:10.2.2
+    container_name: valorhive-grafana
+    
+    restart: always
+    
+    environment:
+      - GF_SECURITY_ADMIN_USER=admin
+      - GF_SECURITY_ADMIN_PASSWORD__FILE=/run/secrets/grafana_admin_password
+      - GF_USERS_ALLOW_SIGN_UP=false
+      - GF_SERVER_ROOT_URL=${GRAFANA_ROOT_URL:-http://localhost:3001}
+      - GF_INSTALL_PLUGINS=redis-datasource
+      - GF_ALERTING_ENABLED=true
+      - GF_UNIFIED_ALERTING_ENABLED=true
+    
+    secrets:
+      - grafana_admin_password
+    
+    # FIX: Removed port exposure - access via VPN/SSH tunnel only
+    # To access: ssh -L 3001:localhost:3000 user@server
+    # ports:
+    #   - "${GRAFANA_PORT:-3001}:3000"
+    
+    volumes:
+      - ./config/grafana/provisioning:/etc/grafana/provisioning:ro
+      - grafana-data:/var/lib/grafana
+    
+    healthcheck:
+      test: ["CMD", "wget", "-q", "--spider", "http://localhost:3000/api/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+    
+    deploy:
+      resources:
+        limits:
+          cpus: '0.25'
+          memory: 256M
+        reservations:
+          cpus: '0.05'
+          memory: 64M
+    
+    logging:
+      driver: json-file
+      options:
+        max-size: "5m"
+        max-file: "2"
+    
+    networks:
+      - valorhive-network
+    
+    depends_on:
+      - prometheus
+      - redis
+
+# ===========================================
+# Secrets Configuration
+# ===========================================
+secrets:
+  database_url:
+    file: ./secrets/database_url.txt
+    # Or use external secrets in production:
+    # external: true
+    # name: valorhive-database-url
+
+  # FIX: Added direct_url for migrations (bypasses PgBouncer)
+  direct_url:
+    file: ./secrets/direct_url.txt
+
+  redis_url:
+    file: ./secrets/redis_url.txt
+  
+  # FIX: Added separate redis_password for Redis authentication
+  redis_password:
+    file: ./secrets/redis_password.txt
+  
+  session_secret:
+    file: ./secrets/session_secret.txt
+  
+  nextauth_secret:
+    file: ./secrets/nextauth_secret.txt
+  
+  razorpay_key_id:
+    file: ./secrets/razorpay_key_id.txt
+  
+  razorpay_key_secret:
+    file: ./secrets/razorpay_key_secret.txt
+  
+  aws_access_key_id:
+    file: ./secrets/aws_access_key_id.txt
+  
+  aws_secret_access_key:
+    file: ./secrets/aws_secret_access_key.txt
+  
+  grafana_admin_password:
+    file: ./secrets/grafana_admin_password.txt
+  
+  # FIX: Added cron_secret for secure cron endpoint authentication
+  cron_secret:
+    file: ./secrets/cron_secret.txt
+
+# ===========================================
+# Networks
+# ===========================================
+networks:
+  valorhive-network:
+    driver: bridge
+    ipam:
+      driver: default
+      config:
+        - subnet: 172.28.0.0/16
+
+# ===========================================
+# Volumes
+# ===========================================
+volumes:
+  app-logs:
+    driver: local
+  
+  app-uploads:
+    driver: local
+  
+  redis-data:
+    driver: local
+  
+  prometheus-data:
+    driver: local
+  
+  grafana-data:
+    driver: local

@@ -1,0 +1,314 @@
+# VALORHIVE Pull Request Workflow
+# Runs checks on all pull requests and posts results as comments
+#
+# This workflow:
+# - Runs lint and type checks
+# - Builds the application
+# - Posts results as PR comment
+# - Updates status checks
+
+name: PR Checks
+
+on:
+  pull_request:
+    branches:
+      - main
+      - develop
+    types: [opened, synchronize, reopened]
+
+# Cancel in-progress runs for the same PR
+concurrency:
+  group: pr-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+env:
+  NODE_VERSION: '20'
+
+jobs:
+  # ===========================================
+  # Lint and Type Check
+  # ===========================================
+  lint:
+    name: Lint & Type Check
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Generate Prisma Client
+        run: npx prisma generate
+
+      - name: Run ESLint
+        id: lint
+        run: |
+          npm run lint 2>&1 | tee lint-output.txt
+          echo "lint_result=${PIPESTATUS[0]}" >> $GITHUB_OUTPUT
+        continue-on-error: true
+
+      - name: TypeScript type check
+        id: typecheck
+        run: |
+          npx tsc --noEmit 2>&1 | tee typecheck-output.txt
+          echo "typecheck_result=${PIPESTATUS[0]}" >> $GITHUB_OUTPUT
+        continue-on-error: true
+
+      - name: Upload lint results
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: lint-results
+          path: |
+            lint-output.txt
+            typecheck-output.txt
+          retention-days: 1
+
+      - name: Check results
+        run: |
+          if [ "${{ steps.lint.outputs.lint_result }}" != "0" ]; then
+            echo "::error::Lint check failed"
+            exit 1
+          fi
+          if [ "${{ steps.typecheck.outputs.typecheck_result }}" != "0" ]; then
+            echo "::error::Type check failed"
+            exit 1
+          fi
+          echo "✅ All checks passed"
+
+  # ===========================================
+  # Build Test
+  # ===========================================
+  build:
+    name: Build Test
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    needs: lint
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Generate Prisma Client
+        run: npx prisma generate
+
+      - name: Build Next.js application
+        id: build
+        run: |
+          npm run build 2>&1 | tee build-output.txt
+          echo "build_result=${PIPESTATUS[0]}" >> $GITHUB_OUTPUT
+        env:
+          NODE_ENV: production
+          NEXT_TELEMETRY_DISABLED: 1
+          DATABASE_URL: 'file:./build.db'
+          SESSION_SECRET: 'build-session-secret'
+          NEXTAUTH_SECRET: 'build-nextauth-secret'
+        continue-on-error: true
+
+      - name: Upload build results
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: build-results
+          path: build-output.txt
+          retention-days: 1
+
+      - name: Check build result
+        run: |
+          if [ "${{ steps.build.outputs.build_result }}" != "0" ]; then
+            echo "::error::Build failed"
+            exit 1
+          fi
+          echo "✅ Build passed"
+
+  # ===========================================
+  # Size Check
+  # ===========================================
+  size-check:
+    name: Bundle Size Check
+    runs-on: ubuntu-latest
+    needs: build
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Generate Prisma Client
+        run: npx prisma generate
+
+      - name: Build for size analysis
+        run: npm run build
+        env:
+          NODE_ENV: production
+          NEXT_TELEMETRY_DISABLED: 1
+          DATABASE_URL: 'file:./build.db'
+          SESSION_SECRET: 'build-session-secret'
+          NEXTAUTH_SECRET: 'build-nextauth-secret'
+
+      - name: Analyze bundle size
+        id: size
+        run: |
+          # Calculate sizes
+          STANDALONE_SIZE=$(du -sb .next/standalone | cut -f1)
+          STATIC_SIZE=$(du -sb .next/static | cut -f1)
+          PUBLIC_SIZE=$(du -sb public | cut -f1)
+          
+          # Convert to MB
+          STANDALONE_MB=$(echo "scale=2; $STANDALONE_SIZE / 1048576" | bc)
+          STATIC_MB=$(echo "scale=2; $STATIC_SIZE / 1048576" | bc)
+          PUBLIC_MB=$(echo "scale=2; $PUBLIC_SIZE / 1048576" | bc)
+          TOTAL_MB=$(echo "scale=2; ($STANDALONE_SIZE + $STATIC_SIZE + $PUBLIC_SIZE) / 1048576" | bc)
+          
+          echo "standalone_size=${STANDALONE_MB}" >> $GITHUB_OUTPUT
+          echo "static_size=${STATIC_MB}" >> $GITHUB_OUTPUT
+          echo "public_size=${PUBLIC_MB}" >> $GITHUB_OUTPUT
+          echo "total_size=${TOTAL_MB}" >> $GITHUB_OUTPUT
+          
+          echo "### 📦 Bundle Size" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "| Component | Size |" >> $GITHUB_STEP_SUMMARY
+          echo "|-----------|------|" >> $GITHUB_STEP_SUMMARY
+          echo "| Standalone | ${STANDALONE_MB} MB |" >> $GITHUB_STEP_SUMMARY
+          echo "| Static | ${STATIC_MB} MB |" >> $GITHUB_STEP_SUMMARY
+          echo "| Public | ${PUBLIC_MB} MB |" >> $GITHUB_STEP_SUMMARY
+          echo "| **Total** | **${TOTAL_MB} MB** |" >> $GITHUB_STEP_SUMMARY
+
+  # ===========================================
+  # Post PR Comment
+  # ===========================================
+  comment:
+    name: Post PR Comment
+    runs-on: ubuntu-latest
+    needs: [lint, build, size-check]
+    if: always()
+
+    steps:
+      - name: Download artifacts
+        uses: actions/download-artifact@v4
+        continue-on-error: true
+
+      - name: Create comment body
+        id: comment
+        run: |
+          LINT_RESULT="${{ needs.lint.result }}"
+          BUILD_RESULT="${{ needs.build.result }}"
+          SIZE_RESULT="${{ needs.size-check.result }}"
+          
+          # Create comment body
+          cat << EOF > comment.md
+          ## 🔍 PR Check Results
+          
+          | Check | Status |
+          |-------|--------|
+          | Lint & Type Check | ${LINT_RESULT == 'success' && '✅ Passed' || '❌ Failed'} |
+          | Build | ${BUILD_RESULT == 'success' && '✅ Passed' || '❌ Failed'} |
+          | Bundle Size | ${SIZE_RESULT == 'success' && '✅ Analyzed' || '⚠️ Skipped'} |
+          
+          EOF
+          
+          # Add lint errors if available
+          if [ -f "lint-results/lint-output.txt" ] && [ "${LINT_RESULT}" != "success" ]; then
+            echo "" >> comment.md
+            echo "### ❌ Lint Errors" >> comment.md
+            echo "\`\`\`" >> comment.md
+            head -50 lint-results/lint-output.txt >> comment.md
+            echo "\`\`\`" >> comment.md
+          fi
+          
+          # Add type errors if available
+          if [ -f "lint-results/typecheck-output.txt" ] && [ "${LINT_RESULT}" != "success" ]; then
+            echo "" >> comment.md
+            echo "### ❌ Type Errors" >> comment.md
+            echo "\`\`\`" >> comment.md
+            head -50 lint-results/typecheck-output.txt >> comment.md
+            echo "\`\`\`" >> comment.md
+          fi
+          
+          # Add build errors if available
+          if [ -f "build-results/build-output.txt" ] && [ "${BUILD_RESULT}" != "success" ]; then
+            echo "" >> comment.md
+            echo "### ❌ Build Errors" >> comment.md
+            echo "\`\`\`" >> comment.md
+            head -100 build-results/build-output.txt >> comment.md
+            echo "\`\`\`" >> comment.md
+          fi
+          
+          echo "comment_file=comment.md" >> $GITHUB_OUTPUT
+
+      - name: Comment on PR
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+            const commentBody = fs.readFileSync('comment.md', 'utf8');
+            
+            // Find existing comment
+            const { data: comments } = await github.rest.issues.listComments({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+            });
+            
+            const botComment = comments.find(comment => 
+              comment.user.type === 'Bot' && 
+              comment.body.includes('🔍 PR Check Results')
+            );
+            
+            if (botComment) {
+              // Update existing comment
+              await github.rest.issues.updateComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                comment_id: botComment.id,
+                body: commentBody
+              });
+            } else {
+              // Create new comment
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: context.issue.number,
+                body: commentBody
+              });
+            }
+
+      - name: Set status check
+        run: |
+          if [ "${{ needs.lint.result }}" != "success" ] || [ "${{ needs.build.result }}" != "success" ]; then
+            echo "::error::PR checks failed"
+            exit 1
+          fi
+          echo "✅ All PR checks passed"

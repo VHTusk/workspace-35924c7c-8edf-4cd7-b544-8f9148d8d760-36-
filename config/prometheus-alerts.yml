@@ -1,0 +1,199 @@
+# VALORHIVE Prometheus Alerting Rules
+#
+# Alert rules for monitoring VALORHIVE services
+
+groups:
+  # ===========================================
+  # Application Health Alerts
+  # ===========================================
+  - name: valorhive_app_alerts
+    interval: 30s
+    rules:
+      # High Error Rate
+      - alert: HighErrorRate
+        expr: |
+          rate(valorhive_http_requests_total{status=~"5.."}[5m]) 
+          / 
+          rate(valorhive_http_requests_total[5m]) > 0.05
+        for: 2m
+        labels:
+          severity: critical
+          service: valorhive-app
+        annotations:
+          summary: "High error rate detected"
+          description: "Error rate is {{ $value | humanizePercentage }} for the last 5 minutes"
+
+      # High Latency
+      - alert: HighLatency
+        expr: |
+          histogram_quantile(0.95, 
+            rate(valorhive_http_request_duration_seconds_bucket[5m])
+          ) > 1
+        for: 3m
+        labels:
+          severity: warning
+          service: valorhive-app
+        annotations:
+          summary: "High API latency detected"
+          description: "P95 latency is {{ $value | humanizeDuration }}"
+
+      # Application Down
+      - alert: AppDown
+        expr: up{job="valorhive-app"} == 0
+        for: 1m
+        labels:
+          severity: critical
+          service: valorhive-app
+        annotations:
+          summary: "VALORHIVE application is down"
+          description: "The VALORHIVE app has been unreachable for more than 1 minute"
+
+  # ===========================================
+  # Database Alerts
+  # ===========================================
+  - name: valorhive_database_alerts
+    interval: 30s
+    rules:
+      # Slow Database Queries
+      - alert: SlowDatabaseQueries
+        expr: |
+          histogram_quantile(0.95, 
+            rate(valorhive_db_query_duration_seconds_bucket[5m])
+          ) > 0.5
+        for: 5m
+        labels:
+          severity: warning
+          component: database
+        annotations:
+          summary: "Slow database queries detected"
+          description: "P95 database query duration is {{ $value | humanizeDuration }}"
+
+      # High Database Error Rate
+      - alert: DatabaseErrors
+        expr: |
+          rate(valorhive_errors_total{type="database"}[5m]) > 0.1
+        for: 2m
+        labels:
+          severity: critical
+          component: database
+        annotations:
+          summary: "Database errors detected"
+          description: "Database error rate is {{ $value }} errors/second"
+
+  # ===========================================
+  # Cache Alerts
+  # ===========================================
+  - name: valorhive_cache_alerts
+    interval: 30s
+    rules:
+      # Low Cache Hit Rate
+      - alert: LowCacheHitRate
+        expr: |
+          rate(valorhive_cache_hits_total[5m]) 
+          / 
+          (rate(valorhive_cache_hits_total[5m]) + rate(valorhive_cache_misses_total[5m])) 
+          < 0.5
+        for: 5m
+        labels:
+          severity: warning
+          component: cache
+        annotations:
+          summary: "Low cache hit rate"
+          description: "Cache hit rate is {{ $value | humanizePercentage }}"
+
+  # ===========================================
+  # Tournament Service Alerts
+  # ===========================================
+  - name: valorhive_tournament_alerts
+    interval: 30s
+    rules:
+      # High Pending Matches
+      - alert: HighPendingMatches
+        expr: valorhive_matches_pending_total > 100
+        for: 10m
+        labels:
+          severity: warning
+          service: tournament
+        annotations:
+          summary: "High number of pending matches"
+          description: "There are {{ $value }} pending matches"
+
+      # Tournament Service Down
+      - alert: TournamentServiceDown
+        expr: up{job="valorhive-tournament-ws"} == 0
+        for: 1m
+        labels:
+          severity: critical
+          service: tournament-ws
+        annotations:
+          summary: "Tournament WebSocket service is down"
+          description: "The tournament WebSocket service has been unreachable for more than 1 minute"
+
+  # ===========================================
+  # SLI/SLO Alerts
+  # ===========================================
+  - name: valorhive_slo_alerts
+    interval: 30s
+    rules:
+      # Availability SLO Breach
+      - alert: AvailabilitySLOBreach
+        expr: valorhive_sli_availability_percent < 99.9
+        for: 5m
+        labels:
+          severity: critical
+          type: slo
+        annotations:
+          summary: "Availability SLO breach"
+          description: "Availability is {{ $value }}%, below SLO target of 99.9%"
+
+      # Latency SLO Breach
+      - alert: LatencySLOBreach
+        expr: valorhive_sli_latency_milliseconds{percentile="p95"} > 500
+        for: 5m
+        labels:
+          severity: warning
+          type: slo
+        annotations:
+          summary: "Latency SLO breach"
+          description: "P95 latency is {{ $value }}ms, above SLO target of 500ms"
+
+      # Error Rate SLO Breach
+      - alert: ErrorRateSLOBreach
+        expr: valorhive_sli_error_rate_percent > 0.1
+        for: 3m
+        labels:
+          severity: critical
+          type: slo
+        annotations:
+          summary: "Error rate SLO breach"
+          description: "Error rate is {{ $value }}%, above SLO target of 0.1%"
+
+  # ===========================================
+  # System Resource Alerts
+  # ===========================================
+  - name: valorhive_system_alerts
+    interval: 30s
+    rules:
+      # High Memory Usage
+      - alert: HighMemoryUsage
+        expr: |
+          valorhive_process_resident_memory_bytes 
+          / (1024 * 1024 * 1024) > 1.5
+        for: 5m
+        labels:
+          severity: warning
+          component: system
+        annotations:
+          summary: "High memory usage"
+          description: "Memory usage is {{ $value | humanize }}GB"
+
+      # Instance Going Down
+      - alert: InstanceGoingDown
+        expr: valorhive_process_uptime_seconds < 60
+        for: 0m
+        labels:
+          severity: info
+          component: system
+        annotations:
+          summary: "Instance recently restarted"
+          description: "Instance uptime is {{ $value }} seconds"

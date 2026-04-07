@@ -1,0 +1,219 @@
+// ============================================
+// CORPORATE ARCHITECTURE v4.0 - Schema Additions
+// ============================================
+// This file contains the new models needed for the organization-level architecture
+// Add these to the main schema.prisma file
+
+// ============================================
+// NEW ENUMS
+// ============================================
+
+// Organization Member Roles
+enum OrgMemberRole {
+  OWNER     // Full access, billing, can delete org
+  ADMIN     // Manage sports modules, create tournaments, manage employees/squads
+  MANAGER   // Limited operational access, tournaments/squads only
+  VIEWER    // Read-only access
+}
+
+// Organization Member Status
+enum OrgMemberStatus {
+  ACTIVE    // Active member with access
+  INVITED   // Invited but not yet accepted
+  DISABLED  // Access revoked
+  PENDING   // Pending verification
+}
+
+// Sport Subscription Status
+enum SportSubscriptionStatus {
+  ACTIVE    // Currently active subscription
+  TRIAL     // In trial period
+  EXPIRED   // Subscription expired
+  INACTIVE  // Not activated
+  SUSPENDED // Suspended due to payment issues
+}
+
+// Sport Plan Type
+enum SportPlanType {
+  ROOKIE      // Basic plan
+  PRO         // Professional plan
+  ENTERPRISE  // Enterprise plan
+}
+
+// ============================================
+// NEW MODELS
+// ============================================
+
+// Organization Membership - Multi-user support
+model OrganizationMembership {
+  id          String          @id @default(cuid())
+  orgId       String
+  userId      String
+  role        OrgMemberRole   @default(VIEWER)
+  status      OrgMemberStatus @default(INVITED)
+  
+  // Invitation tracking
+  invitedBy   String?         // User ID who invited
+  invitedAt   DateTime?
+  acceptedAt  DateTime?
+  
+  // Access control
+  lastLoginAt DateTime?
+  
+  // Audit
+  createdAt   DateTime        @default(now())
+  updatedAt   DateTime        @updatedAt
+  
+  // Relations
+  organization Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  user         User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  @@unique([orgId, userId])
+  @@index([userId, status])
+  @@index([orgId, role])
+}
+
+// Organization Sport - Per-sport activation
+model OrganizationSport {
+  id            String                  @id @default(cuid())
+  orgId         String
+  sport         SportType
+  
+  // Subscription
+  status        SportSubscriptionStatus @default(INACTIVE)
+  planType      SportPlanType           @default(ROOKIE)
+  
+  // Dates
+  activatedAt   DateTime?
+  expiresAt     DateTime?
+  trialEndsAt   DateTime?
+  
+  // Billing reference
+  stripeSubscriptionId String?
+  stripePriceId       String?
+  
+  // Audit
+  createdAt     DateTime                @default(now())
+  updatedAt     DateTime                @updatedAt
+  
+  // Relations
+  organization  Organization            @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  entitlements  OrganizationSportEntitlement?
+  
+  @@unique([orgId, sport])
+  @@index([orgId, status])
+  @@index([expiresAt])
+}
+
+// Organization Sport Entitlement - Feature flags per sport
+model OrganizationSportEntitlement {
+  id                      String  @id @default(cuid())
+  orgSportId              String  @unique
+  
+  // Feature toggles
+  canManageIntra          Boolean @default(true)
+  canManageInter          Boolean @default(true)
+  canCreateTournaments    Boolean @default(true)
+  canCreateSquads         Boolean @default(true)
+  canAccessAnalytics      Boolean @default(true)
+  canManageEmployees      Boolean @default(true)
+  canViewLeaderboard      Boolean @default(true)
+  
+  // Limits
+  maxPlayers              Int     @default(50)
+  maxTournaments          Int     @default(10)
+  maxSquads               Int     @default(5)
+  maxEmployees            Int     @default(100)
+  
+  // Audit
+  createdAt               DateTime @default(now())
+  updatedAt               DateTime @updatedAt
+  
+  // Relations
+  orgSport                OrganizationSport @relation(fields: [orgSportId], references: [id], onDelete: Cascade)
+}
+
+// Organization Audit Log
+model OrgAuditLog {
+  id            String    @id @default(cuid())
+  orgId         String
+  userId        String?
+  
+  // Action details
+  action        String    // CREATE_TOURNAMENT, UPDATE_SQUAD, etc.
+  entityType    String    // TOURNAMENT, SQUAD, EMPLOYEE, etc.
+  entityId      String?
+  
+  // Change details
+  oldValues     String?   // JSON
+  newValues     String?   // JSON
+  
+  // Context
+  ipAddress     String?
+  userAgent     String?
+  
+  timestamp     DateTime  @default(now())
+  
+  // Relations
+  organization  Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  user          User?        @relation(fields: [userId], references: [id])
+  
+  @@index([orgId, timestamp])
+  @@index([entityType, entityId])
+  @@index([userId])
+}
+
+// Sport Player - Sport-specific player mapping (links Employee to sport)
+model SportPlayer {
+  id            String            @id @default(cuid())
+  orgId         String
+  sport         SportType
+  employeeId    String
+  
+  // Player status in this sport
+  status        SportPlayerStatus @default(ACTIVE)
+  skillLevel    Int?              // 1-10 skill rating
+  
+  // Sport-specific stats
+  matchesPlayed Int               @default(0)
+  wins          Int               @default(0)
+  losses        Int               @default(0)
+  points        Int               @default(0)
+  
+  // Audit
+  createdAt     DateTime          @default(now())
+  updatedAt     DateTime          @updatedAt
+  
+  // Relations
+  organization  Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  employee      Employee     @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+  
+  @@unique([orgId, sport, employeeId])
+  @@index([orgId, sport, status])
+}
+
+enum SportPlayerStatus {
+  ACTIVE      // Active player
+  BENCH       // On bench
+  INACTIVE    // Not currently playing
+  INJURED     // Injured
+}
+
+// ============================================
+// UPDATES TO EXISTING MODELS
+// ============================================
+
+// Update Organization model to add:
+// - slug: String? @unique
+// - industry: String?
+// - members: OrganizationMembership[]
+// - orgSports: OrganizationSport[]
+// - auditLogs: OrgAuditLog[]
+// - sportPlayers: SportPlayer[]
+
+// Update Employee model to remove sport field (make it org-level only)
+// Add relation: sportPlayers: SportPlayer[]
+
+// Update User model to add:
+// - orgMemberships: OrganizationMembership[]
+// - orgAuditLogs: OrgAuditLog[]

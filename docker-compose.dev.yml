@@ -1,0 +1,270 @@
+# VALORHIVE Docker Compose for Local Development
+# Complete stack with PostgreSQL, Redis, Workers, and Monitoring
+
+services:
+  # ============================================
+  # PostgreSQL Database
+  # ============================================
+  postgres:
+    image: postgres:15-alpine
+    container_name: valorhive-postgres
+    environment:
+      POSTGRES_USER: valorhive
+      POSTGRES_PASSWORD: valorhive123
+      POSTGRES_DB: valorhive
+    ports:
+      - "5433:5432"
+    volumes:
+      - postgres_dev_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U valorhive -d valorhive"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+    networks:
+      - valorhive-dev-network
+
+  # ============================================
+  # Redis Cache
+  # ============================================
+  redis:
+    image: redis:7-alpine
+    container_name: valorhive-redis
+    command: redis-server --appendonly yes --maxmemory 256mb --maxmemory-policy allkeys-lru
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_dev_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+    networks:
+      - valorhive-dev-network
+
+  # ============================================
+  # Main Application
+  # ============================================
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: valorhive-app
+    ports:
+      - "3000:3000"
+    environment:
+      - NODE_ENV=development
+      - DATABASE_URL=postgresql://valorhive:valorhive123@postgres:5432/valorhive?schema=public
+      - DIRECT_URL=postgresql://valorhive:valorhive123@postgres:5432/valorhive?schema=public
+      - REDIS_URL=redis://redis:6379
+      - SESSION_SECRET=${SESSION_SECRET:-dev-secret-change-in-prod}
+      - NEXTAUTH_SECRET=${NEXTAUTH_SECRET:-dev-secret-change-in-prod}
+      - NEXTAUTH_URL=http://localhost:3000
+      - AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID}
+      - AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY}
+      - AWS_REGION=${AWS_REGION:-ap-south-1}
+      - S3_BUCKET_NAME=${S3_BUCKET_NAME}
+      - RAZORPAY_KEY_ID=${RAZORPAY_KEY_ID}
+      - RAZORPAY_KEY_SECRET=${RAZORPAY_KEY_SECRET}
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3000/api/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+    networks:
+      - valorhive-dev-network
+    volumes:
+      - ./prisma:/app/prisma:ro
+
+  # ============================================
+  # Background Worker
+  # ============================================
+  worker:
+    build:
+      context: .
+      dockerfile: Dockerfile.worker
+    container_name: valorhive-worker
+    environment:
+      - NODE_ENV=development
+      - DATABASE_URL=postgresql://valorhive:valorhive123@postgres:5432/valorhive?schema=public
+      - REDIS_URL=redis://redis:6379
+      - AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID}
+      - AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY}
+      - AWS_REGION=${AWS_REGION:-ap-south-1}
+      - QUEUE_CONCURRENCY=5
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    restart: unless-stopped
+    networks:
+      - valorhive-dev-network
+
+  # ============================================
+  # WebSocket Service
+  # ============================================
+  websocket:
+    build:
+      context: .
+      dockerfile: mini-services/tournament-ws/Dockerfile
+    container_name: valorhive-websocket
+    ports:
+      - "3003:3003"
+    environment:
+      - NODE_ENV=development
+      - DATABASE_URL=postgresql://valorhive:valorhive123@postgres:5432/valorhive?schema=public
+      - REDIS_URL=redis://redis:6379
+    depends_on:
+      - postgres
+      - redis
+    restart: unless-stopped
+    networks:
+      - valorhive-dev-network
+
+  # ============================================
+  # Cron Service (Scheduled Jobs)
+  # ============================================
+  cron:
+    build:
+      context: .
+      dockerfile: mini-services/cron-service/Dockerfile
+    container_name: valorhive-cron
+    environment:
+      - NODE_ENV=development
+      - DATABASE_URL=postgresql://valorhive:valorhive123@postgres:5432/valorhive?schema=public
+      - REDIS_URL=redis://redis:6379
+      - INTERNAL_BASE_URL=http://app:3000
+    depends_on:
+      - app
+    restart: unless-stopped
+    networks:
+      - valorhive-dev-network
+
+  # ============================================
+  # Prometheus (Metrics)
+  # ============================================
+  prometheus:
+    image: prom/prometheus:v2.48.0
+    container_name: valorhive-prometheus
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./docker/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - prometheus_data:/prometheus
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--web.enable-lifecycle'
+    restart: unless-stopped
+    networks:
+      - valorhive-dev-network
+
+  # ============================================
+  # Grafana (Dashboards)
+  # ============================================
+  grafana:
+    image: grafana/grafana:10.2.2
+    container_name: valorhive-grafana
+    ports:
+      - "3001:3000"
+    environment:
+      - GF_SECURITY_ADMIN_USER=admin
+      - GF_SECURITY_ADMIN_PASSWORD=admin
+      - GF_USERS_ALLOW_SIGN_UP=false
+    volumes:
+      - grafana_data:/var/lib/grafana
+      - ./docker/grafana/provisioning:/etc/grafana/provisioning:ro
+    depends_on:
+      - prometheus
+    restart: unless-stopped
+    networks:
+      - valorhive-dev-network
+
+  # ============================================
+  # Adminer (Database Management UI)
+  # ============================================
+  adminer:
+    image: adminer:latest
+    container_name: valorhive-adminer
+    ports:
+      - "8080:8080"
+    depends_on:
+      - postgres
+    networks:
+      - valorhive-dev-network
+
+  # ============================================
+  # Redis Commander (Redis Management UI)
+  # ============================================
+  redis-commander:
+    image: rediscommander/redis-commander:latest
+    container_name: valorhive-redis-commander
+    environment:
+      - REDIS_HOSTS=local:redis:6379
+    ports:
+      - "8081:8081"
+    depends_on:
+      - redis
+    networks:
+      - valorhive-dev-network
+
+  # ============================================
+  # Loki (Centralized Logging)
+  # ============================================
+  loki:
+    image: grafana/loki:2.9.3
+    container_name: valorhive-loki
+    ports:
+      - "3100:3100"
+    volumes:
+      - ./docker/loki/loki-config.yaml:/etc/loki/local-config.yaml:ro
+      - loki_data:/loki
+    command: -config.file=/etc/loki/local-config.yaml
+    restart: unless-stopped
+    networks:
+      - valorhive-dev-network
+
+  # ============================================
+  # Promtail (Log Collector)
+  # ============================================
+  promtail:
+    image: grafana/promtail:2.9.3
+    container_name: valorhive-promtail
+    volumes:
+      - ./docker/promtail/promtail-config.yaml:/etc/promtail/config.yaml:ro
+      - /var/log:/var/log:ro
+      - ./logs:/app/logs:ro
+    command: -config.file=/etc/promtail/config.yaml
+    depends_on:
+      - loki
+    restart: unless-stopped
+    networks:
+      - valorhive-dev-network
+
+# ============================================
+# Volumes
+# ============================================
+volumes:
+  postgres_dev_data:
+  redis_dev_data:
+  prometheus_data:
+  grafana_data:
+  loki_data:
+
+# ============================================
+# Networks
+# ============================================
+networks:
+  valorhive-dev-network:
+    driver: bridge

@@ -1,0 +1,43 @@
+# VALORHIVE Migration Service Dockerfile
+# 
+# One-off container for running database migrations
+# Run this BEFORE deploying new app replicas
+#
+# Usage:
+#   docker build -f Dockerfile.migration -t valorhive-migration:latest .
+#   docker run --rm valorhive-migration:latest
+
+FROM node:20-alpine AS base
+
+RUN apk update && apk upgrade && \
+    apk add --no-cache libc6-compat curl dumb-init netcat-openbsd python3 make g++ && \
+    rm -rf /var/cache/apk/*
+
+FROM base AS deps
+WORKDIR /app
+
+COPY package.json package-lock.json* ./
+COPY prisma ./prisma/
+
+RUN npm ci --include=optional
+RUN npx prisma generate
+
+FROM base AS runner
+WORKDIR /app
+
+ENV NODE_ENV=production
+
+COPY --from=deps /app/node_modules ./node_modules
+COPY --from=deps /app/prisma ./prisma
+COPY --from=deps /app/node_modules/.prisma ./node_modules/.prisma
+COPY --from=deps /app/node_modules/@prisma ./node_modules/@prisma
+
+# Copy migration entrypoint
+COPY docker/entrypoints/migration-entrypoint.sh ./migration-entrypoint.sh
+RUN chmod +x ./migration-entrypoint.sh
+
+LABEL org.opencontainers.image.title="VALORHIVE Migration"
+LABEL org.opencontainers.image.description="Database migration runner"
+
+ENTRYPOINT ["/usr/bin/dumb-init", "--"]
+CMD ["./migration-entrypoint.sh"]

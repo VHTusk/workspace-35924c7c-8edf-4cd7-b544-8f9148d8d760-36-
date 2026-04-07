@@ -1,0 +1,12 @@
+# PgBouncer User List File
+# This file should be placed at /etc/pgbouncer/userlist.txt on production servers
+# Format: "username" "password"
+# Password should be in MD5 format: md5 + md5(password + username)
+
+# Example:
+# "valorhive_user" "md5xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+# "pgbouncer_admin" "md5xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+# "pgbouncer_monitor" "md5xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+
+# Generate MD5 password:
+# echo -n "passwordusername" | md5sum

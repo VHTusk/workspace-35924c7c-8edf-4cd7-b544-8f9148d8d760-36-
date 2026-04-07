@@ -1,0 +1,99 @@
+# Dependencies
+node_modules
+npm-debug.log
+yarn-debug.log
+yarn-error.log
+pnpm-debug.log
+.pnpm-debug.log
+
+# Build outputs
+.next
+out
+build
+dist
+
+# Git
+.git
+.gitignore
+
+# Docker
+Dockerfile*
+docker-compose*.yml
+.dockerignore
+
+# IDE
+.idea
+.vscode
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Documentation
+README.md
+CHANGELOG.md
+LICENSE
+docs/
+
+# Tests
+__tests__
+tests/
+test/
+*.test.ts
+*.test.tsx
+*.spec.ts
+*.spec.tsx
+coverage/
+playwright-report/
+test-results/
+e2e/
+
+# Config files not needed in container
+.env.local
+.env.*.local
+.eslintcache
+*.tsbuildinfo
+
+# Logs
+logs/
+*.log
+
+# Generated reports
+*.pdf
+*.docx
+
+# Temporary files
+tmp/
+temp/
+.cache/
+
+# Uploads (mount separately in production)
+uploads/
+upload/
+
+# Database files (mount separately)
+*.db
+*.db-journal
+*.sqlite
+*.sqlite3
+
+# Terraform
+terraform/
+
+# Scripts (not needed at runtime)
+scripts/
+
+# Examples
+examples/
+
+# AI agent artifacts
+worklog.md
+agent-ctx/
+skills/
+
+# Lock files (keep package-lock.json for npm)
+yarn.lock
+pnpm-lock.yaml
+bun.lock

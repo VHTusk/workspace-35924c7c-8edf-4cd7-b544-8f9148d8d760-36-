@@ -1,0 +1,1062 @@
+@import "tailwindcss";
+@import "tw-animate-css";
+
+@custom-variant dark (&:is(.dark *));
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --font-sans: var(--font-geist-sans);
+  --font-mono: var(--font-geist-mono);
+  --color-sidebar-ring: var(--sidebar-ring);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar: var(--sidebar);
+  --color-chart-5: var(--chart-5);
+  --color-chart-4: var(--chart-4);
+  --color-chart-3: var(--chart-3);
+  --color-chart-2: var(--chart-2);
+  --color-chart-1: var(--chart-1);
+  --color-ring: var(--ring);
+  --color-input: var(--input);
+  --color-border: var(--border);
+  --color-destructive: var(--destructive);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-accent: var(--accent);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-muted: var(--muted);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-secondary: var(--secondary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-primary: var(--primary);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-popover: var(--popover);
+  --color-card-foreground: var(--card-foreground);
+  --color-card: var(--card);
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+  
+  /* Sport-specific brand colors */
+  --color-sport-primary: var(--sport-primary);
+  --color-sport-secondary: var(--sport-secondary);
+  --color-sport-accent: var(--sport-accent);
+  
+  /* Tournament status colors */
+  --color-status-upcoming: var(--status-upcoming);
+  --color-status-live: var(--status-live);
+  --color-status-completed: var(--status-completed);
+  --color-status-cancelled: var(--status-cancelled);
+}
+
+/* ========================================
+   VALORHIVE DESIGN SYSTEM
+   Premium Sports Platform Theme
+   ======================================== */
+
+/* ========================================
+   LIGHT THEME - Clean & Professional
+   ======================================== */
+:root {
+  --radius: 0.75rem;
+  --font-geist-sans: "Segoe UI", "Helvetica Neue", Arial, system-ui, sans-serif;
+  --font-geist-mono: "Consolas", "SFMono-Regular", "Liberation Mono", monospace;
+  
+  /* Brand Colors */
+  --brand-primary: #FF6B35;
+  --brand-secondary: #1A1A2E;
+  --brand-accent: #F7C948;
+  
+  /* Background - Clean white with subtle warmth */
+  --background: #FFFFFF;
+  --background-alt: #FAFBFC;
+  --foreground: #0F172A;
+  --foreground-muted: #475569;
+  
+  /* Cards - Elevated white surfaces */
+  --card: #FFFFFF;
+  --card-hover: #F8FAFC;
+  --card-foreground: #0F172A;
+  
+  /* Popover */
+  --popover: #FFFFFF;
+  --popover-foreground: #0F172A;
+  
+  /* Primary - Vibrant coral-orange */
+  --primary: #FF6B35;
+  --primary-hover: #E85A2B;
+  --primary-active: #D14A1F;
+  --primary-foreground: #FFFFFF;
+  
+  /* Secondary - Soft slate */
+  --secondary: #F1F5F9;
+  --secondary-hover: #E2E8F0;
+  --secondary-foreground: #0F172A;
+  
+  /* Muted - Subtle gray */
+  --muted: #F1F5F9;
+  --muted-foreground: #64748B;
+  
+  /* Accent - Golden yellow for achievements */
+  --accent: #FEF3C7;
+  --accent-hover: #FDE68A;
+  --accent-foreground: #92400E;
+  
+  /* Destructive - Clear red */
+  --destructive: #DC2626;
+  --destructive-hover: #B91C1C;
+  
+  /* Border & Input - Visible but subtle */
+  --border: #E2E8F0;
+  --border-strong: #CBD5E1;
+  --input: #E2E8F0;
+  --ring: #FF6B35;
+  
+  /* Charts - Vibrant data visualization */
+  --chart-1: #FF6B35;
+  --chart-2: #F7C948;
+  --chart-3: #059669;
+  --chart-4: #0D9488;
+  --chart-5: #3B82F6;
+  
+  /* Sidebar */
+  --sidebar: #FFFFFF;
+  --sidebar-foreground: #0F172A;
+  --sidebar-primary: #FF6B35;
+  --sidebar-primary-foreground: #FFFFFF;
+  --sidebar-accent: #F1F5F9;
+  --sidebar-accent-foreground: #0F172A;
+  --sidebar-border: #E2E8F0;
+  --sidebar-ring: #FF6B35;
+  
+  /* Sport defaults */
+  --sport-primary: #FF6B35;
+  --sport-secondary: #1A1A2E;
+  --sport-accent: #F7C948;
+  
+  /* Tournament Status Colors */
+  --status-upcoming: #3B82F6;
+  --status-upcoming-bg: #DBEAFE;
+  --status-upcoming-fg: #1E40AF;
+  
+  --status-live: #22C55E;
+  --status-live-bg: #DCFCE7;
+  --status-live-fg: #166534;
+  
+  --status-completed: #6B7280;
+  --status-completed-bg: #F3F4F6;
+  --status-completed-fg: #374151;
+  
+  --status-cancelled: #EF4444;
+  --status-cancelled-bg: #FEE2E2;
+  --status-cancelled-fg: #991B1B;
+  
+  --status-registration: #F59E0B;
+  --status-registration-bg: #FEF3C7;
+  --status-registration-fg: #92400E;
+  
+  /* Semantic Colors */
+  --success: #16A34A;
+  --success-bg: #F0FDF4;
+  --success-fg: #15803D;
+  
+  --warning: #F59E0B;
+  --warning-bg: #FFFBEB;
+  --warning-fg: #92400E;
+  
+  --error: #DC2626;
+  --error-bg: #FEF2F2;
+  --error-fg: #991B1B;
+  
+  --info: #3B82F6;
+  --info-bg: #EFF6FF;
+  --info-fg: #1E40AF;
+}
+
+/* ========================================
+   CORNHOLE THEME
+   Grass Green + Warm Amber
+   Outdoor, fresh, competitive
+   ======================================== */
+.theme-cornhole {
+  --primary: #059669;
+  --primary-hover: #047857;
+  --primary-active: #065F46;
+  --primary-foreground: #FFFFFF;
+  
+  --secondary: #F0FDF4;
+  --secondary-hover: #DCFCE7;
+  --secondary-foreground: #065F46;
+  
+  --accent: #FEF3C7;
+  --accent-hover: #FDE68A;
+  --accent-foreground: #92400E;
+  
+  --ring: #059669;
+  
+  --sport-primary: #059669;
+  --sport-secondary: #065F46;
+  --sport-accent: #F59E0B;
+  
+  /* Cornhole-specific backgrounds */
+  --background: #FAFDFB;
+  --card: #FFFFFF;
+  --muted: #F0FDF4;
+  --border: #BBF7D0;
+  
+  /* Charts - Green-dominant palette */
+  --chart-1: #10B981;
+  --chart-2: #F59E0B;
+  --chart-3: #34D399;
+  --chart-4: #6EE7B7;
+  --chart-5: #FBBF24;
+  
+  /* Tournament status with green tint */
+  --status-live: #22C55E;
+  --status-live-bg: #DCFCE7;
+  --status-live-fg: #166534;
+}
+
+/* ========================================
+   DARTS THEME
+   Deep Teal + Copper/Orange
+   Indoor, pub, sophisticated, precision
+   ======================================== */
+.theme-darts {
+  --primary: #0D9488;
+  --primary-hover: #0F766E;
+  --primary-active: #115E59;
+  --primary-foreground: #FFFFFF;
+  
+  --secondary: #F0FDFA;
+  --secondary-hover: #CCFBF1;
+  --secondary-foreground: #115E59;
+  
+  --accent: #FFEDD5;
+  --accent-hover: #FED7AA;
+  --accent-foreground: #9A3412;
+  
+  --ring: #0D9488;
+  
+  --sport-primary: #0D9488;
+  --sport-secondary: #115E59;
+  --sport-accent: #EA580C;
+  
+  /* Darts-specific backgrounds */
+  --background: #FAFCFC;
+  --card: #FFFFFF;
+  --muted: #F0FDFA;
+  --border: #99F6E4;
+  
+  /* Charts - Teal-dominant palette */
+  --chart-1: #14B8A6;
+  --chart-2: #EA580C;
+  --chart-3: #2DD4BF;
+  --chart-4: #5EEAD4;
+  --chart-5: #FB923C;
+  
+  /* Tournament status with teal tint */
+  --status-live: #14B8A6;
+  --status-live-bg: #CCFBF1;
+  --status-live-fg: #115E59;
+}
+
+/* ========================================
+   DARK THEME - Rich & Immersive
+   ======================================== */
+.dark {
+  /* Background - Deep dark with slight blue tint */
+  --background: #0A0A0F;
+  --background-alt: #12121A;
+  --foreground: #F8FAFC;
+  --foreground-muted: #94A3B8;
+  
+  /* Cards - Elevated dark surfaces */
+  --card: #16161F;
+  --card-hover: #1E1E2A;
+  --card-foreground: #F8FAFC;
+  
+  /* Popover */
+  --popover: #16161F;
+  --popover-foreground: #F8FAFC;
+  
+  /* Primary - Bright coral for dark mode */
+  --primary: #FF8C5A;
+  --primary-hover: #FF6B35;
+  --primary-active: #E85A2B;
+  --primary-foreground: #0A0A0F;
+  
+  /* Secondary - Dark slate */
+  --secondary: #1E293B;
+  --secondary-hover: #334155;
+  --secondary-foreground: #F8FAFC;
+  
+  /* Muted - Darker slate */
+  --muted: #1A1A2A;
+  --muted-foreground: #94A3B8;
+  
+  /* Accent - Warm amber for dark mode */
+  --accent: #422006;
+  --accent-hover: #451A03;
+  --accent-foreground: #FCD34D;
+  
+  /* Destructive */
+  --destructive: #EF4444;
+  --destructive-hover: #DC2626;
+  
+  /* Border & Input - Visible in dark mode */
+  --border: #2A2A3A;
+  --border-strong: #3A3A4A;
+  --input: #2A2A3A;
+  --ring: #FF8C5A;
+  
+  /* Charts - Vibrant for dark mode */
+  --chart-1: #FF8C5A;
+  --chart-2: #FCD34D;
+  --chart-3: #34D399;
+  --chart-4: #2DD4BF;
+  --chart-5: #60A5FA;
+  
+  /* Sidebar */
+  --sidebar: #12121A;
+  --sidebar-foreground: #F8FAFC;
+  --sidebar-primary: #FF8C5A;
+  --sidebar-primary-foreground: #0A0A0F;
+  --sidebar-accent: #1E293B;
+  --sidebar-accent-foreground: #F8FAFC;
+  --sidebar-border: #2A2A3A;
+  --sidebar-ring: #FF8C5A;
+  
+  /* Sport defaults for dark mode */
+  --sport-primary: #FF8C5A;
+  --sport-secondary: #1A1A2E;
+  --sport-accent: #FCD34D;
+  
+  /* Tournament Status Colors - Dark Mode */
+  --status-upcoming: #60A5FA;
+  --status-upcoming-bg: #1E3A5F;
+  --status-upcoming-fg: #93C5FD;
+  
+  --status-live: #4ADE80;
+  --status-live-bg: #14532D;
+  --status-live-fg: #86EFAC;
+  
+  --status-completed: #9CA3AF;
+  --status-completed-bg: #1F2937;
+  --status-completed-fg: #D1D5DB;
+  
+  --status-cancelled: #F87171;
+  --status-cancelled-bg: #450A0A;
+  --status-cancelled-fg: #FCA5A5;
+  
+  --status-registration: #FCD34D;
+  --status-registration-bg: #451A03;
+  --status-registration-fg: #FCD34D;
+  
+  /* Semantic Colors - Dark Mode */
+  --success: #4ADE80;
+  --success-bg: #052E16;
+  --success-fg: #86EFAC;
+  
+  --warning: #FBBF24;
+  --warning-bg: #422006;
+  --warning-fg: #FCD34D;
+  
+  --error: #F87171;
+  --error-bg: #450A0A;
+  --error-fg: #FCA5A5;
+  
+  --info: #60A5FA;
+  --info-bg: #172554;
+  --info-fg: #93C5FD;
+}
+
+/* ========================================
+   DARK THEME - CORNHOLE
+   Note: Using descendant selector because .dark is on <html>
+   and .theme-cornhole is on a child <div>
+   ======================================== */
+.dark .theme-cornhole {
+  --primary: #10B981;
+  --primary-hover: #059669;
+  --primary-active: #047857;
+  --primary-foreground: #0A0F0C;
+  
+  --secondary: #0F1612;
+  --secondary-hover: #111916;
+  --secondary-foreground: #86EFAC;
+  
+  --accent: #422006;
+  --accent-hover: #451A03;
+  --accent-foreground: #FBBF24;
+  
+  --ring: #10B981;
+  
+  --sport-primary: #10B981;
+  --sport-secondary: #059669;
+  --sport-accent: #FBBF24;
+  
+  /* Cornhole dark backgrounds */
+  --background: #0A0F0C;
+  --background-alt: #0D1210;
+  --card: #0F1612;
+  --card-hover: #111916;
+  --muted: #111916;
+  --border: #1A2E23;
+  
+  /* Charts */
+  --chart-1: #34D399;
+  --chart-2: #FBBF24;
+  --chart-3: #6EE7B7;
+  --chart-4: #A7F3D0;
+  --chart-5: #FCD34D;
+}
+
+/* ========================================
+   DARK THEME - DARTS
+   Note: Using descendant selector because .dark is on <html>
+   and .theme-darts is on a child <div>
+   ======================================== */
+.dark .theme-darts {
+  --primary: #14B8A6;
+  --primary-hover: #0D9488;
+  --primary-active: #0F766E;
+  --primary-foreground: #0A0F0F;
+  
+  --secondary: #0F1515;
+  --secondary-hover: #111919;
+  --secondary-foreground: #5EEAD4;
+  
+  --accent: #431407;
+  --accent-hover: #451A03;
+  --accent-foreground: #FB923C;
+  
+  --ring: #14B8A6;
+  
+  --sport-primary: #14B8A6;
+  --sport-secondary: #0D9488;
+  --sport-accent: #FB923C;
+  
+  /* Darts dark backgrounds */
+  --background: #0A0F0F;
+  --background-alt: #0D1212;
+  --card: #0F1515;
+  --card-hover: #111919;
+  --muted: #111919;
+  --border: #1A2E2E;
+  
+  /* Charts */
+  --chart-1: #2DD4BF;
+  --chart-2: #FB923C;
+  --chart-3: #5EEAD4;
+  --chart-4: #99F6E4;
+  --chart-5: #FDBA74;
+}
+
+/* ========================================
+   BASE LAYER STYLES
+   ======================================== */
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+  body {
+    @apply bg-background text-foreground antialiased;
+    font-feature-settings: "rlig" 1, "calt" 1;
+  }
+  
+  /* Improve focus states for accessibility */
+  :focus-visible {
+    @apply outline-2 outline-offset-2 outline-ring;
+  }
+  
+  /* Smooth scrolling */
+  html {
+    scroll-behavior: smooth;
+  }
+}
+
+/* ========================================
+   GRADIENT UTILITIES
+   ======================================== */
+@layer utilities {
+  /* Brand gradient */
+  .bg-gradient-brand {
+    background: linear-gradient(135deg, var(--brand-primary) 0%, var(--brand-accent) 100%);
+  }
+  
+  /* Sport gradient text */
+  .text-gradient-sport {
+    background: linear-gradient(135deg, var(--sport-primary) 0%, var(--sport-accent) 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+  
+  /* Sport gradient background */
+  .bg-gradient-sport {
+    background: linear-gradient(135deg, var(--sport-primary) 0%, var(--sport-secondary) 100%);
+  }
+  
+  /* Sport gradient with accent */
+  .bg-gradient-sport-accent {
+    background: linear-gradient(135deg, var(--sport-primary) 0%, var(--sport-accent) 100%);
+  }
+  
+  /* Hero gradient - dramatic */
+  .bg-gradient-hero {
+    background: linear-gradient(180deg, var(--background) 0%, var(--background-alt) 50%, var(--muted) 100%);
+  }
+  
+  /* Card gradient */
+  .bg-gradient-card {
+    background: linear-gradient(135deg, var(--card) 0%, var(--card-hover) 100%);
+  }
+  
+  /* Subtle radial gradient for cards */
+  .bg-gradient-card-radial {
+    background: radial-gradient(ellipse at top, var(--card) 0%, var(--muted) 100%);
+  }
+  
+  /* Mesh gradient background */
+  .bg-gradient-mesh {
+    background: 
+      radial-gradient(at 40% 20%, color-mix(in srgb, var(--sport-primary) 8%, transparent) 0px, transparent 50%),
+      radial-gradient(at 80% 0%, color-mix(in srgb, var(--sport-accent) 6%, transparent) 0px, transparent 50%),
+      radial-gradient(at 0% 50%, color-mix(in srgb, var(--sport-primary) 4%, transparent) 0px, transparent 50%),
+      radial-gradient(at 80% 50%, color-mix(in srgb, var(--sport-accent) 4%, transparent) 0px, transparent 50%),
+      radial-gradient(at 0% 100%, color-mix(in srgb, var(--sport-primary) 6%, transparent) 0px, transparent 50%),
+      radial-gradient(at 80% 100%, color-mix(in srgb, var(--sport-accent) 5%, transparent) 0px, transparent 50%),
+      var(--background);
+  }
+  
+  /* Glow effects */
+  .glow-sport {
+    box-shadow: 0 0 20px color-mix(in srgb, var(--sport-primary) 25%, transparent),
+                0 0 40px color-mix(in srgb, var(--sport-primary) 10%, transparent);
+  }
+  
+  .glow-sport-sm {
+    box-shadow: 0 0 10px color-mix(in srgb, var(--sport-primary) 20%, transparent);
+  }
+  
+  .glow-sport-lg {
+    box-shadow: 0 0 30px color-mix(in srgb, var(--sport-primary) 30%, transparent),
+                0 0 60px color-mix(in srgb, var(--sport-primary) 15%, transparent);
+  }
+  
+  .glow-brand {
+    box-shadow: 0 0 20px color-mix(in srgb, var(--brand-primary) 25%, transparent),
+                0 0 40px color-mix(in srgb, var(--brand-primary) 10%, transparent);
+  }
+  
+  .glow-accent {
+    box-shadow: 0 0 20px color-mix(in srgb, var(--sport-accent) 25%, transparent);
+  }
+  
+  /* Card styling */
+  .card-subtle {
+    background: var(--card);
+    border: 1px solid var(--border);
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+  }
+  
+  .card-elevated {
+    background: var(--card);
+    border: 1px solid var(--border);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+  }
+  
+  .card-glass {
+    background: color-mix(in srgb, var(--card) 80%, transparent);
+    backdrop-filter: blur(12px);
+    border: 1px solid color-mix(in srgb, var(--border) 50%, transparent);
+  }
+  
+  /* Hover effects */
+  .hover-lift {
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+  }
+  .hover-lift:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 12px 24px rgba(0, 0, 0, 0.12);
+  }
+  
+  .hover-glow {
+    transition: box-shadow 0.3s ease;
+  }
+  .hover-glow:hover {
+    box-shadow: 0 0 20px color-mix(in srgb, var(--sport-primary) 20%, transparent);
+  }
+  
+  .hover-scale {
+    transition: transform 0.2s ease;
+  }
+  .hover-scale:hover {
+    transform: scale(1.02);
+  }
+  
+  /* Focus ring utility */
+  .focus-ring {
+    @apply focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background;
+  }
+}
+
+/* ========================================
+   TOURNAMENT STATUS BADGES
+   ======================================== */
+@layer components {
+  /* Base status badge */
+  .status-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.375rem;
+    padding: 0.25rem 0.75rem;
+    border-radius: 9999px;
+    font-size: 0.75rem;
+    font-weight: 500;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    transition: all 0.2s ease;
+  }
+  
+  /* Status dot */
+  .status-badge::before {
+    content: '';
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: currentColor;
+  }
+  
+  /* Upcoming - Blue */
+  .status-upcoming {
+    background: var(--status-upcoming-bg);
+    color: var(--status-upcoming-fg);
+    border: 1px solid var(--status-upcoming);
+  }
+  .status-upcoming::before {
+    background: var(--status-upcoming);
+  }
+  
+  /* Live - Green with pulse */
+  .status-live {
+    background: var(--status-live-bg);
+    color: var(--status-live-fg);
+    border: 1px solid var(--status-live);
+  }
+  .status-live::before {
+    background: var(--status-live);
+    animation: pulse-dot 2s ease-in-out infinite;
+  }
+  
+  /* Completed - Gray */
+  .status-completed {
+    background: var(--status-completed-bg);
+    color: var(--status-completed-fg);
+    border: 1px solid var(--status-completed);
+  }
+  .status-completed::before {
+    background: var(--status-completed);
+  }
+  
+  /* Cancelled - Red */
+  .status-cancelled {
+    background: var(--status-cancelled-bg);
+    color: var(--status-cancelled-fg);
+    border: 1px solid var(--status-cancelled);
+  }
+  .status-cancelled::before {
+    background: var(--status-cancelled);
+  }
+  
+  /* Registration Open - Amber */
+  .status-registration {
+    background: var(--status-registration-bg);
+    color: var(--status-registration-fg);
+    border: 1px solid var(--status-registration);
+  }
+  .status-registration::before {
+    background: var(--status-registration);
+  }
+  
+  /* Full - Red variant */
+  .status-full {
+    background: var(--status-cancelled-bg);
+    color: var(--status-cancelled-fg);
+    border: 1px solid var(--status-cancelled);
+  }
+  
+  /* Larger status badges */
+  .status-badge-lg {
+    padding: 0.375rem 1rem;
+    font-size: 0.875rem;
+  }
+  
+  .status-badge-lg::before {
+    width: 8px;
+    height: 8px;
+  }
+}
+
+/* ========================================
+   SEMANTIC ALERTS
+   ======================================== */
+@layer components {
+  .alert-success {
+    background: var(--success-bg);
+    color: var(--success-fg);
+    border: 1px solid var(--success);
+  }
+  
+  .alert-warning {
+    background: var(--warning-bg);
+    color: var(--warning-fg);
+    border: 1px solid var(--warning);
+  }
+  
+  .alert-error {
+    background: var(--error-bg);
+    color: var(--error-fg);
+    border: 1px solid var(--error);
+  }
+  
+  .alert-info {
+    background: var(--info-bg);
+    color: var(--info-fg);
+    border: 1px solid var(--info);
+  }
+}
+
+/* ========================================
+   ANIMATIONS
+   ======================================== */
+@keyframes fade-in {
+  from { 
+    opacity: 0; 
+    transform: translateY(8px); 
+  }
+  to { 
+    opacity: 1; 
+    transform: translateY(0); 
+  }
+}
+
+@keyframes fade-in-up {
+  from { 
+    opacity: 0; 
+    transform: translateY(16px); 
+  }
+  to { 
+    opacity: 1; 
+    transform: translateY(0); 
+  }
+}
+
+@keyframes fade-in-down {
+  from { 
+    opacity: 0; 
+    transform: translateY(-16px); 
+  }
+  to { 
+    opacity: 1; 
+    transform: translateY(0); 
+  }
+}
+
+@keyframes slide-in-right {
+  from { 
+    opacity: 0; 
+    transform: translateX(16px); 
+  }
+  to { 
+    opacity: 1; 
+    transform: translateX(0); 
+  }
+}
+
+@keyframes slide-in-left {
+  from { 
+    opacity: 0; 
+    transform: translateX(-16px); 
+  }
+  to { 
+    opacity: 1; 
+    transform: translateX(0); 
+  }
+}
+
+@keyframes scale-in {
+  from { 
+    opacity: 0; 
+    transform: scale(0.95); 
+  }
+  to { 
+    opacity: 1; 
+    transform: scale(1); 
+  }
+}
+
+@keyframes float {
+  0%, 100% { 
+    transform: translateY(0px); 
+  }
+  50% { 
+    transform: translateY(-10px); 
+  }
+}
+
+@keyframes pulse-dot {
+  0%, 100% { 
+    opacity: 1; 
+    transform: scale(1);
+  }
+  50% { 
+    opacity: 0.5; 
+    transform: scale(1.2);
+  }
+}
+
+@keyframes pulse-glow {
+  0%, 100% { 
+    box-shadow: 0 0 15px color-mix(in srgb, var(--sport-primary) 25%, transparent); 
+  }
+  50% { 
+    box-shadow: 0 0 30px color-mix(in srgb, var(--sport-primary) 40%, transparent); 
+  }
+}
+
+@keyframes shimmer {
+  0% { 
+    background-position: -200% 0; 
+  }
+  100% { 
+    background-position: 200% 0; 
+  }
+}
+
+@keyframes glow {
+  0%, 100% { 
+    box-shadow: 0 0 10px color-mix(in srgb, var(--sport-primary) 20%, transparent); 
+  }
+  50% { 
+    box-shadow: 0 0 25px color-mix(in srgb, var(--sport-primary) 35%, transparent); 
+  }
+}
+
+@keyframes bounce-subtle {
+  0%, 100% { 
+    transform: translateY(0); 
+  }
+  50% { 
+    transform: translateY(-4px); 
+  }
+}
+
+/* Animation classes */
+.animate-fade-in {
+  animation: fade-in 0.3s ease-out;
+}
+
+.animate-fade-in-up {
+  animation: fade-in-up 0.4s ease-out;
+}
+
+.animate-fade-in-down {
+  animation: fade-in-down 0.4s ease-out;
+}
+
+.animate-slide-in-right {
+  animation: slide-in-right 0.3s ease-out;
+}
+
+.animate-slide-in-left {
+  animation: slide-in-left 0.3s ease-out;
+}
+
+.animate-scale-in {
+  animation: scale-in 0.2s ease-out;
+}
+
+.animate-float {
+  animation: float 6s ease-in-out infinite;
+}
+
+.animate-pulse-glow {
+  animation: pulse-glow 2s ease-in-out infinite;
+}
+
+.animate-shimmer {
+  background: linear-gradient(90deg, transparent 0%, rgba(255, 255, 255, 0.4) 50%, transparent 100%);
+  background-size: 200% 100%;
+  animation: shimmer 2s infinite;
+}
+
+.animate-glow {
+  animation: glow 2s ease-in-out infinite;
+}
+
+.animate-bounce-subtle {
+  animation: bounce-subtle 2s ease-in-out infinite;
+}
+
+/* Staggered animation delays */
+.stagger-1 { animation-delay: 0.1s; }
+.stagger-2 { animation-delay: 0.2s; }
+.stagger-3 { animation-delay: 0.3s; }
+.stagger-4 { animation-delay: 0.4s; }
+.stagger-5 { animation-delay: 0.5s; }
+
+/* ========================================
+   SCROLLBAR STYLING
+   ======================================== */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--muted);
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--border-strong);
+  border-radius: 4px;
+  transition: background 0.2s ease;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--muted-foreground);
+}
+
+/* Sport-specific scrollbar */
+.theme-cornhole::-webkit-scrollbar-thumb {
+  background: #86EFAC;
+}
+
+.theme-cornhole::-webkit-scrollbar-thumb:hover {
+  background: #4ADE80;
+}
+
+.theme-darts::-webkit-scrollbar-thumb {
+  background: #5EEAD4;
+}
+
+.theme-darts::-webkit-scrollbar-thumb:hover {
+  background: #2DD4BF;
+}
+
+/* ========================================
+   SELECTION STYLING
+   ======================================== */
+::selection {
+  background: var(--sport-primary);
+  color: #FFFFFF;
+}
+
+.theme-cornhole ::selection {
+  background: #059669;
+}
+
+.theme-darts ::selection {
+  background: #0D9488;
+}
+
+/* ========================================
+   DARK MODE SPECIFIC OVERRIDES
+   ======================================== */
+.dark ::selection {
+  background: var(--sport-primary);
+  color: var(--background);
+}
+
+/* Dark mode scrollbar */
+.dark::-webkit-scrollbar-track {
+  background: var(--background);
+}
+
+.dark::-webkit-scrollbar-thumb {
+  background: var(--border-strong);
+}
+
+.dark::-webkit-scrollbar-thumb:hover {
+  background: var(--muted-foreground);
+}
+
+/* Dark mode sport scrollbar */
+/* Note: Using descendant selector because .dark is on <html> and .theme-* is on a child <div> */
+.dark .theme-cornhole::-webkit-scrollbar-thumb {
+  background: #166534;
+}
+
+.dark .theme-cornhole::-webkit-scrollbar-thumb:hover {
+  background: #22C55E;
+}
+
+.dark .theme-darts::-webkit-scrollbar-thumb {
+  background: #0F766E;
+}
+
+.dark .theme-darts::-webkit-scrollbar-thumb:hover {
+  background: #14B8A6;
+}
+
+/* ========================================
+   RESPONSIVE UTILITIES
+   ======================================== */
+@layer utilities {
+  /* Hide scrollbar but keep functionality */
+  .scrollbar-hide {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+  .scrollbar-hide::-webkit-scrollbar {
+    display: none;
+  }
+  
+  /* Custom scrollable containers */
+  .scroll-y-auto {
+    overflow-y: auto;
+    max-height: 24rem; /* 384px */
+  }
+  
+  .scroll-y-lg {
+    overflow-y: auto;
+    max-height: 36rem; /* 576px */
+  }
+  
+  /* Text truncation */
+  .truncate-2 {
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+  
+  .truncate-3 {
+    display: -webkit-box;
+    -webkit-line-clamp: 3;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+}
+
+/* ========================================
+   PRINT STYLES
+   ======================================== */
+@media print {
+  :root {
+    --background: #FFFFFF !important;
+    --foreground: #000000 !important;
+  }
+  
+  .no-print {
+    display: none !important;
+  }
+}

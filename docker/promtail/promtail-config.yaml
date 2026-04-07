@@ -1,0 +1,52 @@
+server:
+  http_listen_port: 9080
+  grpc_listen_port: 0
+
+positions:
+  filename: /tmp/positions.yaml
+
+clients:
+  - url: http://loki:3100/loki/api/v1/push
+
+scrape_configs:
+  # Docker container logs
+  - job_name: docker
+    docker_sd_configs:
+      - host: unix:///var/run/docker.sock
+        refresh_interval: 5s
+    relabel_configs:
+      - source_labels: ['__meta_docker_container_name']
+        target_label: container
+      - source_labels: ['__meta_docker_container_log_stream']
+        target_label: stream
+      - source_labels: ['__meta_docker_container_label_com_docker_compose_service']
+        target_label: service
+
+  # Application logs
+  - job_name: valorhive-app
+    static_configs:
+      - targets:
+          - localhost
+        labels:
+          job: valorhive
+          __path__: /var/log/valorhive/*.log
+    pipeline_stages:
+      - match:
+          selector: '{job="valorhive"}'
+          stages:
+            - regex:
+                expression: '^\[(?P<timestamp>[^\]]+)\]\s+\[(?P<level>[^\]]+)\]\s+(?P<message>.*)$'
+            - labels:
+                level:
+            - timestamp:
+                source: timestamp
+                format: "2006-01-02 15:04:05"
+
+  # Nginx/Apache style logs
+  - job_name: nginx
+    static_configs:
+      - targets:
+          - localhost
+        labels:
+          job: nginx
+          __path__: /var/log/nginx/*.log

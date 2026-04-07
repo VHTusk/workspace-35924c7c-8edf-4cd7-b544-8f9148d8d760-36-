@@ -1,0 +1,67 @@
+# PgBouncer Configuration for VALORHIVE Production
+# This file should be placed at /etc/pgbouncer/pgbouncer.ini on production servers
+
+[databases]
+; Main database connection
+; Format: db_name = host=HOST port=PORT dbname=DBNAME user=USER password=PASSWORD
+valorhive = host=localhost port=5432 dbname=valorhive user=valorhive_user password=${POSTGRES_PASSWORD}
+
+; Pool size per database
+valorhive_pool_size = 20
+valorhive_reserve_pool = 5
+valorhive_reserve_pool_timeout = 3
+
+[pgbouncer]
+; Connection pool settings
+listen_addr = 0.0.0.0
+listen_port = 6432
+
+; Authentication
+auth_type = md5
+auth_file = /etc/pgbouncer/userlist.txt
+
+; Pool mode: session, transaction, or statement
+; - session: Keep connection for entire session (safest, but less efficient)
+; - transaction: Return connection after each transaction (recommended for web apps)
+; - statement: Return connection after each statement (most efficient, but limited)
+pool_mode = transaction
+
+; Connection limits
+max_client_conn = 500
+max_db_connections = 50
+default_pool_size = 25
+
+; Timeouts
+server_connect_timeout = 15
+server_idle_timeout = 600
+server_lifetime = 3600
+server_check_delay = 30
+server_check_query = SELECT 1
+
+client_idle_timeout = 0
+client_login_timeout = 60
+
+; Logging
+log_connections = 1
+log_disconnections = 1
+log_pooler_errors = 1
+log_stats = 1
+stats_period = 60
+stats_users = pgbouncer_monitor
+
+; Security
+admin_users = pgbouncer_admin
+stats_users = pgbouncer_monitor
+
+; Ignore startup parameters
+ignore_startup_parameters = extra_float_digits
+
+; DNS settings
+dns_max_ttl = 15
+
+; Health check
+server_check_query = SELECT 1
+
+[users]
+; User mapping (if needed)
+; user1 = user1_pool_size = 10

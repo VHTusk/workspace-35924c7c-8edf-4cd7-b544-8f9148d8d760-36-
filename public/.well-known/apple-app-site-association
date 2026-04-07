@@ -1,0 +1,51 @@
+{
+  "applinks": {
+    "details": [
+      {
+        "appIDs": [
+          "TEAM_ID.com.valorhive.app"
+        ],
+        "components": [
+          {
+            "/": "/tournaments/*",
+            "comment": "Tournament details - opens in app"
+          },
+          {
+            "/": "/t/",
+            "comment": "Short tournament links - opens in app"
+          },
+          {
+            "/": "/players/*",
+            "comment": "Player profiles - opens in app"
+          },
+          {
+            "/": "/organizations/*",
+            "comment": "Organization profiles - opens in app"
+          },
+          {
+            "/": "/leaderboard*",
+            "comment": "Leaderboard - opens in app"
+          },
+          {
+            "/": "/cornhole/*",
+            "exclude": true,
+            "comment": "Cornhole section - open in browser for full experience"
+          },
+          {
+            "/": "/darts/*",
+            "exclude": true,
+            "comment": "Darts section - open in browser for full experience"
+          }
+        ]
+      }
+    ]
+  },
+  "webcredentials": {
+    "apps": [
+      "TEAM_ID.com.valorhive.app"
+    ]
+  },
+  "appclips": {
+    "apps": []
+  }
+}

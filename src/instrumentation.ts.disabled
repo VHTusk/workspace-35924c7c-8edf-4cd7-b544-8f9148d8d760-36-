@@ -1,0 +1,70 @@
+/**
+ * Next.js Instrumentation for Production Infrastructure
+ * 
+ * This file is automatically loaded by Next.js during server startup.
+ * It initializes:
+ * - OpenTelemetry tracing
+ * - Event Bus and Workers
+ * - Background services
+ * 
+ * The instrumentation runs in a Node.js environment (not Edge Runtime).
+ * 
+ * @see https://nextjs.org/docs/app/building-your-application/optimizing/instrumentation
+ */
+
+import { initializeTracing, shutdownTracing } from '@/lib/tracing';
+import { initializeEventBus, startEventWorkers, stopEventBus } from '@/lib/event-bus';
+
+/**
+ * Register function called by Next.js during startup
+ * This is where we initialize OpenTelemetry tracing
+ */
+export async function register() {
+  if (process.env.NEXT_RUNTIME === 'nodejs') {
+    // Initialize OpenTelemetry tracing
+    await initializeTracing();
+    console.log('[Instrumentation] OpenTelemetry tracing registered');
+    
+    // Initialize Event Bus (for domain events)
+    if (process.env.EVENT_BUS_ENABLED !== 'false') {
+      try {
+        await initializeEventBus();
+        console.log('[Instrumentation] Event bus initialized');
+        
+        // Start event workers in background (non-blocking)
+        startEventWorkers().then(() => {
+          console.log('[Instrumentation] Event workers started');
+        }).catch(err => {
+          console.error('[Instrumentation] Failed to start event workers:', err);
+        });
+      } catch (error) {
+        console.error('[Instrumentation] Failed to initialize event bus:', error);
+      }
+    }
+    
+    // Register shutdown handler for graceful teardown
+    process.on('SIGTERM', async () => {
+      console.log('[Instrumentation] Received SIGTERM, shutting down...');
+      await stopEventBus();
+      await shutdownTracing();
+    });
+    
+    process.on('SIGINT', async () => {
+      console.log('[Instrumentation] Received SIGINT, shutting down...');
+      await stopEventBus();
+      await shutdownTracing();
+    });
+    
+    console.log('[Instrumentation] Production infrastructure registered');
+  }
+}
+
+/**
+ * Unregister function for cleanup (optional)
+ * Called during hot reload in development
+ */
+export async function unregister() {
+  await stopEventBus();
+  await shutdownTracing();
+  console.log('[Instrumentation] Production infrastructure unregistered');
+}

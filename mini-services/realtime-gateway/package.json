@@ -1,0 +1,24 @@
+{
+  "name": "valorhive-realtime-gateway",
+  "version": "1.0.0",
+  "description": "VALORHIVE Unified Realtime Gateway - Tournament updates + Court status tracking",
+  "main": "index.ts",
+  "scripts": {
+    "dev": "node --import tsx --watch index.ts",
+    "start": "node --import tsx index.ts",
+    "build": "tsc"
+  },
+  "dependencies": {
+    "@socket.io/redis-adapter": "^8.3.0",
+    "@valorhive/auth": "file:../../packages/auth",
+    "@valorhive/db": "file:../../packages/db",
+    "@valorhive/contracts": "file:../../packages/contracts",
+    "ioredis": "^5.3.2",
+    "socket.io": "^4.7.2"
+  },
+  "devDependencies": {
+    "@types/node": "^20.10.0",
+    "tsx": "^4.6.0",
+    "typescript": "^5.3.0"
+  }
+}

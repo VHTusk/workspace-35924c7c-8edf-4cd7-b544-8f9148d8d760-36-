@@ -1,0 +1,30 @@
+# VALORHIVE Railway Configuration
+# 
+# Single service deployment (simpler for first deploy)
+# Add WebSocket and Cron as separate services later
+
+[build]
+builder = "nixpacks"
+
+[deploy]
+startCommand = "npm run start"
+healthcheckPath = "/api/health/live"
+healthcheckTimeout = 300
+restartPolicyType = "on_failure"
+restartPolicyMaxRetries = 3
+
+# Environment variables (set in Railway dashboard):
+# Required:
+# - DATABASE_URL (PostgreSQL - add PostgreSQL plugin)
+# - SESSION_SECRET (32+ character secret)
+# - NEXTAUTH_SECRET (32+ character secret)
+# - NEXT_PUBLIC_APP_URL
+# - NEXT_PUBLIC_API_URL
+#
+# Recommended:
+# - CRON_SECRET
+# - REDIS_URL (add Redis plugin for stronger rate limiting/cache)
+# - RAZORPAY_KEY_ID, RAZORPAY_KEY_SECRET, RAZORPAY_WEBHOOK_SECRET
+# - GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET (Google OAuth)
+# - SMTP_HOST, SMTP_USER, SMTP_PASS (email)
+# - AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY, AWS_S3_BUCKET (file storage)

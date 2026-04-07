@@ -1,0 +1,6 @@
+# PgBouncer userlist file
+# Format: "username" "password"
+# Password should be MD5 hash: md5<md5hash(password+username)>
+# 
+# This file is generated at deployment time from secrets
+# Example: "valorhive_user" "md5hash"

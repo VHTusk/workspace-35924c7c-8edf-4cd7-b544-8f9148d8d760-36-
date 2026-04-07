@@ -1,0 +1,471 @@
+# VALORHIVE Production Docker Compose
+# 
+# Full production stack with:
+# - Node.js Application (horizontal scaling via replicas)
+# - PostgreSQL with connection pooling via PgBouncer
+# - Redis with persistence
+# - Background Workers
+# - WebSocket Services (Redis REQUIRED for horizontal scaling)
+# - Cron Service (decoupled - uses HTTP API calls)
+# - Migration Service (one-off job)
+# - Prometheus + Grafana for monitoring
+# 
+# DEPLOYMENT MODEL:
+# This compose file is designed for deployment on a single VM with Docker.
+# For horizontal scaling across multiple hosts, use:
+# - Docker Swarm with `docker stack deploy`
+# - Kubernetes with Helm charts
+# - AWS ECS with task definitions
+# 
+# The `deploy:` settings below are informational hints for Swarm/Kubernetes.
+# With plain `docker compose up`, replicas and resource limits are NOT enforced.
+# 
+# Usage:
+#   docker compose up -d
+#   docker compose run --rm migration  # Run migrations before deploying
+#
+# Secrets:
+#   Create ./secrets/ directory with required secret files
+#   See docker/entrypoints/*.sh for required secrets
+
+# ============================================
+# Secrets
+# ============================================
+secrets:
+  db_password:
+    file: ./secrets/db_password.txt
+  db_user:
+    file: ./secrets/db_user.txt
+  db_name:
+    file: ./secrets/db_name.txt
+  session_secret:
+    file: ./secrets/session_secret.txt
+  redis_password:
+    file: ./secrets/redis_password.txt
+  aws_access_key:
+    file: ./secrets/aws_access_key.txt
+  aws_secret_key:
+    file: ./secrets/aws_secret_key.txt
+  cron_secret:
+    file: ./secrets/cron_secret.txt
+
+# ============================================
+# Services
+# ============================================
+services:
+  # ============================================
+  # PostgreSQL Database (Primary)
+  # ============================================
+  postgres:
+    image: postgres:15-alpine
+    container_name: valorhive-postgres
+    environment:
+      POSTGRES_USER_FILE: /run/secrets/db_user
+      POSTGRES_PASSWORD_FILE: /run/secrets/db_password
+      POSTGRES_DB_FILE: /run/secrets/db_name
+      POSTGRES_MAX_CONNECTIONS: 200
+    secrets:
+      - db_password
+      - db_user
+      - db_name
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d valorhive"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+    networks:
+      - valorhive-network
+    # Resource hints for Swarm/Kubernetes (ignored by plain Docker Compose)
+    # deploy:
+    #   resources:
+    #     limits:
+    #       cpus: '2'
+    #       memory: 2G
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  # ============================================
+  # PgBouncer (Connection Pooling)
+  # ============================================
+  pgbouncer:
+    image: edoburu/pgbouncer:1.23.0-p0
+    container_name: valorhive-pgbouncer
+    environment:
+      - DATABASE_URL=postgres://postgres:5432/valorhive
+      - POOL_MODE=transaction
+      - MAX_CLIENT_CONN=1000
+      - DEFAULT_POOL_SIZE=25
+      - MIN_POOL_SIZE=5
+      - RESERVE_POOL_SIZE=5
+      - MAX_DB_CONNECTIONS=50
+      - ADMIN_USERS=postgres
+    secrets:
+      - db_password
+      - db_user
+      - db_name
+    depends_on:
+      postgres:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "pg_isready", "-h", "pgbouncer", "-p", "6432"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+    networks:
+      - valorhive-network
+    logging:
+      driver: json-file
+      options:
+        max-size: "5m"
+        max-file: "2"
+
+  # ============================================
+  # Redis Cache (REQUIRED for WebSocket services)
+  # ============================================
+  redis:
+    image: redis:7-alpine
+    container_name: valorhive-redis
+    command: >
+      sh -c "redis-server 
+      --requirepass $$(cat /run/secrets/redis_password)
+      --appendonly yes
+      --maxmemory 1gb
+      --maxmemory-policy allkeys-lru
+      --save 60 1000"
+    secrets:
+      - redis_password
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "sh", "-c", "redis-cli -a $$(cat /run/secrets/redis_password) ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+    networks:
+      - valorhive-network
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  # ============================================
+  # Migration Service (One-off)
+  # Run: docker compose run --rm migration
+  # ============================================
+  migration:
+    build:
+      context: .
+      dockerfile: Dockerfile.migration
+    container_name: valorhive-migration
+    secrets:
+      - db_password
+      - db_user
+      - db_name
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - valorhive-network
+    restart: "no"
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "1"
+
+  # ============================================
+  # Main Application
+  # For horizontal scaling, run multiple containers behind a load balancer
+  # ============================================
+  app:
+    image: ${ECR_REGISTRY}/valorhive:latest
+    container_name: valorhive-app
+    ports:
+      - "3000:3000"
+    environment:
+      - NODE_ENV=production
+      - AWS_REGION=${AWS_REGION:-ap-south-1}
+      - S3_BUCKET_NAME=${S3_BUCKET_NAME}
+      - CDN_BASE_URL=${CDN_BASE_URL}
+      - WS_USE_REDIS=true
+      - REDIS_URL=redis://:password@redis:6379
+    secrets:
+      - db_password
+      - db_user
+      - db_name
+      - session_secret
+      - redis_password
+      - aws_access_key
+      - aws_secret_key
+    depends_on:
+      pgbouncer:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3000/api/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+    restart: unless-stopped
+    networks:
+      - valorhive-network
+    # For Docker Swarm:
+    # deploy:
+    #   mode: replicated
+    #   replicas: 2
+    #   update_config:
+    #     parallelism: 1
+    #     delay: 10s
+    #     failure_action: rollback
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "5"
+
+  # ============================================
+  # Background Worker
+  # ============================================
+  worker:
+    image: ${ECR_REGISTRY}/valorhive-worker:latest
+    container_name: valorhive-worker
+    environment:
+      - NODE_ENV=production
+      - QUEUE_CONCURRENCY=10
+      - REDIS_URL=redis://:password@redis:6379
+    secrets:
+      - db_password
+      - db_user
+      - db_name
+      - redis_password
+      - aws_access_key
+      - aws_secret_key
+    depends_on:
+      pgbouncer:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    restart: unless-stopped
+    networks:
+      - valorhive-network
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  # ============================================
+  # WebSocket Service (Tournament)
+  # Redis is REQUIRED for correct operation
+  # ============================================
+  websocket:
+    image: ${ECR_REGISTRY}/valorhive-ws:latest
+    container_name: valorhive-websocket
+    ports:
+      - "3003:3003"
+    environment:
+      - NODE_ENV=production
+      - WS_USE_REDIS=true
+      - REDIS_URL=redis://:password@redis:6379
+      - INTERNAL_API_URL=http://app:3000
+    secrets:
+      - redis_password
+    depends_on:
+      redis:
+        condition: service_healthy
+      app:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3003/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    restart: unless-stopped
+    networks:
+      - valorhive-network
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  # ============================================
+  # WebSocket Service (Court Status)
+  # Redis is REQUIRED for correct operation
+  # ============================================
+  court-status-ws:
+    image: ${ECR_REGISTRY}/valorhive-court-ws:latest
+    container_name: valorhive-court-status-ws
+    ports:
+      - "3005:3005"
+    environment:
+      - NODE_ENV=production
+      - WS_USE_REDIS=true
+      - REDIS_URL=redis://:password@redis:6379
+      - INTERNAL_API_URL=http://app:3000
+    secrets:
+      - redis_password
+    depends_on:
+      redis:
+        condition: service_healthy
+      app:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3005/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    restart: unless-stopped
+    networks:
+      - valorhive-network
+    logging:
+      driver: json-file
+      options:
+        max-size: "5m"
+        max-file: "2"
+
+  # ============================================
+  # Cron Service
+  # Fully decoupled - calls main app via HTTP
+  # ============================================
+  cron:
+    image: ${ECR_REGISTRY}/valorhive-cron:latest
+    container_name: valorhive-cron
+    environment:
+      - NODE_ENV=production
+      - INTERNAL_BASE_URL=http://app:3000
+    secrets:
+      - redis_password
+      - cron_secret
+    depends_on:
+      - app
+    restart: unless-stopped
+    networks:
+      - valorhive-network
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  # ============================================
+  # Prometheus (Metrics)
+  # ============================================
+  prometheus:
+    image: prom/prometheus:v2.48.0
+    container_name: valorhive-prometheus
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./docker/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - prometheus_data:/prometheus
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--storage.tsdb.retention.time=15d'
+      - '--web.enable-lifecycle'
+      - '--web.enable-admin-api'
+    restart: unless-stopped
+    networks:
+      - valorhive-network
+    logging:
+      driver: json-file
+      options:
+        max-size: "5m"
+        max-file: "2"
+
+  # ============================================
+  # Grafana (Dashboards)
+  # ============================================
+  grafana:
+    image: grafana/grafana:10.2.2
+    container_name: valorhive-grafana
+    ports:
+      - "3001:3000"
+    environment:
+      - GF_SECURITY_ADMIN_USER=${GRAFANA_ADMIN_USER:-admin}
+      - GF_SECURITY_ADMIN_PASSWORD=${GRAFANA_ADMIN_PASSWORD:-admin}
+      - GF_USERS_ALLOW_SIGN_UP=false
+      - GF_SERVER_ROOT_URL=${GRAFANA_URL:-https://grafana.valorhive.com}
+    volumes:
+      - grafana_data:/var/lib/grafana
+      - ./docker/grafana/provisioning:/etc/grafana/provisioning:ro
+    depends_on:
+      - prometheus
+    restart: unless-stopped
+    networks:
+      - valorhive-network
+    logging:
+      driver: json-file
+      options:
+        max-size: "5m"
+        max-file: "2"
+
+  # ============================================
+  # Loki (Log Aggregation)
+  # ============================================
+  loki:
+    image: grafana/loki:2.9.0
+    container_name: valorhive-loki
+    ports:
+      - "3100:3100"
+    volumes:
+      - ./docker/loki/loki-config.yaml:/etc/loki/local-config.yaml:ro
+      - loki_data:/loki
+    command: -config.file=/etc/loki/local-config.yaml
+    restart: unless-stopped
+    networks:
+      - valorhive-network
+    logging:
+      driver: json-file
+      options:
+        max-size: "5m"
+        max-file: "2"
+
+  # ============================================
+  # Promtail (Log Collector)
+  # ============================================
+  promtail:
+    image: grafana/promtail:2.9.0
+    container_name: valorhive-promtail
+    volumes:
+      - ./docker/promtail/promtail-config.yaml:/etc/promtail/config.yaml:ro
+      - /var/log:/var/log:ro
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    command: -config.file=/etc/promtail/config.yaml
+    depends_on:
+      - loki
+    restart: unless-stopped
+    networks:
+      - valorhive-network
+
+# ============================================
+# Volumes
+# ============================================
+volumes:
+  postgres_data:
+  redis_data:
+  prometheus_data:
+  grafana_data:
+  loki_data:
+
+# ============================================
+# Networks
+# ============================================
+networks:
+  valorhive-network:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.28.0.0/16

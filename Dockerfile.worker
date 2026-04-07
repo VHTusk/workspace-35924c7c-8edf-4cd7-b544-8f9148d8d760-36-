@@ -1,0 +1,78 @@
+# VALORHIVE Background Worker Dockerfile
+# 
+# Node.js 20 LTS worker for processing background jobs
+# Handles: emails, notifications, analytics, reports, etc.
+
+# ============================================
+# Stage 1: Base
+# ============================================
+FROM node:20-alpine AS base
+
+RUN apk update && apk upgrade && \
+    apk add --no-cache libc6-compat curl dumb-init python3 make g++ && \
+    rm -rf /var/cache/apk/*
+
+# ============================================
+# Stage 2: Dependencies
+# ============================================
+FROM base AS deps
+WORKDIR /app
+
+# Copy package files
+COPY package.json package-lock.json* ./
+COPY prisma ./prisma/
+
+# Install dependencies
+RUN npm ci --include=optional
+RUN npx prisma generate
+
+# ============================================
+# Stage 3: Builder
+# ============================================
+FROM base AS builder
+WORKDIR /app
+
+COPY --from=deps /app/node_modules ./node_modules
+COPY . .
+
+ENV NODE_ENV=production
+
+# Build TypeScript workers
+RUN npm run build:worker
+
+# Verify build output exists
+RUN test -f dist/workers/index.js || (echo "ERROR: Worker build output not found at dist/workers/index.js" && exit 1)
+
+# ============================================
+# Stage 4: Runner
+# ============================================
+FROM base AS runner
+WORKDIR /app
+
+ENV NODE_ENV=production
+ENV WORKER_MODE=true
+
+RUN addgroup --system --gid 1001 worker && \
+    adduser --system --uid 1001 worker
+
+# Copy built files
+COPY --from=builder /app/dist ./dist
+COPY --from=builder /app/node_modules ./node_modules
+COPY --from=builder /app/prisma ./prisma
+COPY --from=builder /app/package.json ./
+COPY docker/entrypoints/worker-entrypoint.sh /entrypoint.sh
+RUN chmod +x /entrypoint.sh
+
+RUN chown -R worker:worker /app
+
+USER worker
+
+HEALTHCHECK --interval=30s --timeout=10s --start-period=10s --retries=3 \
+    CMD curl -f http://localhost:3001/health || exit 1
+
+LABEL org.opencontainers.image.title="VALORHIVE Worker"
+LABEL org.opencontainers.image.description="Background job processor"
+LABEL org.opencontainers.image.version="3.80.0"
+
+ENTRYPOINT ["/usr/bin/dumb-init", "--"]
+CMD ["/entrypoint.sh"]
