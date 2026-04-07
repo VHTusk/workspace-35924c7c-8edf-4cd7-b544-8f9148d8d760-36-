@@ -123,6 +123,10 @@ const PORT = process.env.PORT || 3003;
 const NODE_ENV = process.env.NODE_ENV || 'development';
 const REDIS_URL = process.env.REDIS_URL;
 const USE_REDIS = NODE_ENV === 'production' || REDIS_URL;
+const INTERNAL_API_URL =
+  process.env.INTERNAL_API_URL ||
+  process.env.NEXT_PUBLIC_APP_URL ||
+  process.env.NEXT_PUBLIC_BASE_URL;
 
 // ============================================
 // Types
@@ -461,12 +465,10 @@ const httpServer = createServer((req, res) => {
 // ============================================
 
 const ALLOWED_ORIGINS = [
-  process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000',
+  process.env.NEXT_PUBLIC_APP_URL,
   process.env.NEXT_PUBLIC_BASE_URL,
   'https://valorhive.com',
   'https://www.valorhive.com',
-  'http://localhost:3000',
-  'http://127.0.0.1:3000',
 ].filter(Boolean) as string[];
 
 const io = new Server(httpServer, {
@@ -558,7 +560,12 @@ io.use(async (socket: AuthenticatedSocket, next) => {
 
   try {
     // Validate session - use fetch to API endpoint
-    const apiUrl = process.env.INTERNAL_API_URL || 'http://localhost:3000';
+    const apiUrl = INTERNAL_API_URL;
+    if (!apiUrl) {
+      logger.warn('Skipping session validation because INTERNAL_API_URL/NEXT_PUBLIC_APP_URL is not configured');
+      return next();
+    }
+
     const response = await fetch(`${apiUrl}/api/auth/check`, {
       headers: {
         'Cookie': `session_token=${sessionToken}`,
@@ -813,7 +820,7 @@ async function start() {
     logger.info('Authentication required for score updates');
     logger.info(`Connection limits: ${CONNECTION_LIMITS.MAX_CONNECTIONS_PER_USER}/user, ${CONNECTION_LIMITS.MAX_CONNECTIONS_PER_IP}/IP`);
     logger.info(`Heartbeat: ${HEARTBEAT_CONFIG.PING_INTERVAL}ms interval`);
-    logger.info(`Health endpoint: http://localhost:${PORT}/health`);
+    logger.info(`Health endpoint: /health (port ${PORT})`);
   });
 }
 

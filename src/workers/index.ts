@@ -28,7 +28,7 @@ const CONCURRENCY = parseInt(process.env.QUEUE_CONCURRENCY || '10', 10);
 
 // Parse Redis URL safely
 function parseRedisUrl(): { host: string; port: number; password?: string } {
-  const defaults = { host: 'localhost', port: 6379 };
+  const defaults = { host: process.env.REDIS_HOST || 'redis', port: 6379 };
   
   if (!REDIS_URL) {
     return defaults;

@@ -5,6 +5,7 @@ import { SportType } from '@prisma/client';
 import { setCsrfCookie } from '@/lib/csrf';
 import { setSessionCookie } from '@/lib/session-helpers';
 import { withRateLimit } from '@/lib/rate-limit';
+import { normalizeSport } from '@/lib/sports';
 
 // Password validation function
 function validatePassword(password: string): { valid: boolean; errors: string[] } {
@@ -53,7 +54,8 @@ async function orgRegisterHandler(request: NextRequest): Promise<NextResponse> {
     } = body;
 
     // Validation
-    if (!sport || !['CORNHOLE', 'DARTS'].includes(sport)) {
+    const sportType = normalizeSport(sport);
+    if (!sportType) {
       return NextResponse.json(
         { error: 'Invalid sport' },
         { status: 400 }
@@ -95,8 +97,6 @@ async function orgRegisterHandler(request: NextRequest): Promise<NextResponse> {
         { status: 400 }
       );
     }
-
-    const sportType = sport as SportType;
 
     // Check if organization already exists by email
     if (email) {

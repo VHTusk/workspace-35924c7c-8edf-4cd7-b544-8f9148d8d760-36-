@@ -5,6 +5,7 @@ import { sendPasswordResetEmail } from '@/lib/email/service';
 import { SportType } from '@prisma/client';
 import { withRateLimit } from '@/lib/rate-limit';
 import { buildAppUrl } from '@/lib/app-url';
+import { normalizeSport } from '@/lib/sports';
 
 /**
  * Password Reset Flow:
@@ -43,11 +44,10 @@ async function resetPasswordHandler(request: NextRequest): Promise<NextResponse>
     const { email, phone, sport, action, token, newPassword } = body;
 
     // Validate sport
-    if (!sport || !['CORNHOLE', 'DARTS'].includes(sport)) {
+    const sportType = normalizeSport(sport);
+    if (!sportType) {
       return NextResponse.json({ error: 'Invalid sport' }, { status: 400 });
     }
-
-    const sportType = sport as SportType;
 
     // =========================================
     // ACTION: REQUEST RESET TOKEN

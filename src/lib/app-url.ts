@@ -33,6 +33,20 @@ export function getApiUrl(): string {
   return trimTrailingSlash(process.env.NEXT_PUBLIC_API_URL ?? getAppUrl());
 }
 
+export function getAuthUrl(headers?: Pick<Headers, "get">): string {
+  const configuredUrl = process.env.NEXTAUTH_URL;
+
+  if (configuredUrl) {
+    return trimTrailingSlash(configuredUrl);
+  }
+
+  if (headers) {
+    return getRequestOrigin(headers);
+  }
+
+  return getAppUrl();
+}
+
 export function buildAppUrl(path: string, baseUrl = getAppUrl()): string {
   if (/^https?:\/\//.test(path)) {
     return path;

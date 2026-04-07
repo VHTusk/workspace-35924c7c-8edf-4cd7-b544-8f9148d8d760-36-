@@ -4,6 +4,8 @@ import { createSession, generateReferralCode } from '@/lib/auth';
 import { SportType, Role } from '@prisma/client';
 import { setCsrfCookie } from '@/lib/csrf';
 import { setSessionCookie } from '@/lib/session-helpers';
+import { buildAppUrl, getAuthUrl } from '@/lib/app-url';
+import { getSportSlug, normalizeSport } from '@/lib/sports';
 
 // Google OAuth 2.0 endpoints
 const GOOGLE_TOKEN_URL = 'https://oauth2.googleapis.com/token';
@@ -29,6 +31,7 @@ interface StateData {
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
+    const authUrl = getAuthUrl(request.headers);
     const code = searchParams.get('code');
     const state = searchParams.get('state');
     const error = searchParams.get('error');
@@ -36,38 +39,38 @@ export async function GET(request: NextRequest) {
     // Handle OAuth errors from Google
     if (error) {
       console.error('Google OAuth error:', error);
-      return NextResponse.redirect(new URL(`/?error=${encodeURIComponent(error)}`, request.url));
+      return NextResponse.redirect(buildAppUrl(`/?error=${encodeURIComponent(error)}`, authUrl));
     }
 
     // Validate required parameters
     if (!code || !state) {
-      return NextResponse.redirect(new URL('/?error=invalid_oauth_response', request.url));
+      return NextResponse.redirect(buildAppUrl('/?error=invalid_oauth_response', authUrl));
     }
 
     // Parse and validate state
     const stateData = parseState(state);
     if (!stateData) {
-      return NextResponse.redirect(new URL('/?error=invalid_state', request.url));
+      return NextResponse.redirect(buildAppUrl('/?error=invalid_state', authUrl));
     }
 
     // Check state timestamp (valid for 10 minutes)
     const stateAge = Date.now() - stateData.timestamp;
     if (stateAge > 10 * 60 * 1000) {
-      return NextResponse.redirect(new URL('/?error=expired_state', request.url));
+      return NextResponse.redirect(buildAppUrl('/?error=expired_state', authUrl));
     }
 
     const { sport, type } = stateData;
 
     // Exchange authorization code for access token
-    const tokens = await exchangeCodeForTokens(code);
+    const tokens = await exchangeCodeForTokens(code, authUrl);
     if (!tokens.access_token) {
-      return NextResponse.redirect(new URL('/?error=token_exchange_failed', request.url));
+      return NextResponse.redirect(buildAppUrl('/?error=token_exchange_failed', authUrl));
     }
 
     // Get user info from Google
     const googleUser = await getUserInfo(tokens.access_token);
     if (!googleUser || !googleUser.email) {
-      return NextResponse.redirect(new URL('/?error=no_email_from_google', request.url));
+      return NextResponse.redirect(buildAppUrl('/?error=no_email_from_google', authUrl));
     }
 
     // For organization registration, store data in a temporary token instead of URL params
@@ -83,7 +86,7 @@ export async function GET(request: NextRequest) {
       })).toString('base64url');
       
       // Redirect with only the token - sensitive data is not in URL
-      const redirectUrl = new URL(`/${sport.toLowerCase()}/org/register`, request.url);
+      const redirectUrl = new URL(buildAppUrl(`/${getSportSlug(sport)}/org/register`, authUrl));
       redirectUrl.searchParams.set('google_token', tempToken);
       return NextResponse.redirect(redirectUrl);
     }
@@ -168,7 +171,7 @@ export async function GET(request: NextRequest) {
 
     // Set cookie and redirect to dashboard
     const response = NextResponse.redirect(
-      new URL(`/${sport.toLowerCase()}/dashboard`, request.url)
+      buildAppUrl(`/${getSportSlug(sport)}/dashboard`, authUrl)
     );
     
     // OVERRIDE: sameSite: 'lax' required for OAuth callbacks
@@ -183,7 +186,7 @@ export async function GET(request: NextRequest) {
     return response;
   } catch (error) {
     console.error('Google OAuth callback error:', error);
-    return NextResponse.redirect(new URL('/?error=oauth_callback_failed', request.url));
+    return NextResponse.redirect(buildAppUrl('/?error=oauth_callback_failed', getAuthUrl(request.headers)));
   }
 }
 
@@ -193,7 +196,7 @@ export async function GET(request: NextRequest) {
 function parseState(state: string): StateData | null {
   try {
     const decoded = Buffer.from(state, 'base64url').toString('utf-8');
-    const parsed = JSON.parse(decoded) as StateData;
+    const parsed = JSON.parse(decoded) as Partial<StateData>;
     
     // Validate required fields
     if (!parsed.sport || !parsed.type || !parsed.timestamp || !parsed.random) {
@@ -201,7 +204,8 @@ function parseState(state: string): StateData | null {
     }
     
     // Validate sport
-    if (!['CORNHOLE', 'DARTS'].includes(parsed.sport)) {
+    const sport = normalizeSport(parsed.sport);
+    if (!sport) {
       return null;
     }
     
@@ -210,7 +214,12 @@ function parseState(state: string): StateData | null {
       return null;
     }
     
-    return parsed;
+    return {
+      sport,
+      type: parsed.type,
+      timestamp: parsed.timestamp,
+      random: parsed.random,
+    };
   } catch {
     return null;
   }
@@ -219,7 +228,7 @@ function parseState(state: string): StateData | null {
 /**
  * Exchange authorization code for access token
  */
-async function exchangeCodeForTokens(code: string): Promise<{
+async function exchangeCodeForTokens(code: string, authUrl: string): Promise<{
   access_token: string;
   expires_in: number;
   refresh_token?: string;
@@ -227,9 +236,9 @@ async function exchangeCodeForTokens(code: string): Promise<{
 }> {
   const clientId = process.env.GOOGLE_CLIENT_ID;
   const clientSecret = process.env.GOOGLE_CLIENT_SECRET;
-  const redirectUri = process.env.GOOGLE_REDIRECT_URI;
+  const redirectUri = process.env.GOOGLE_REDIRECT_URI || buildAppUrl('/api/auth/google/callback', authUrl);
 
-  if (!clientId || !clientSecret || !redirectUri) {
+  if (!clientId || !clientSecret) {
     throw new Error('Google OAuth credentials not configured');
   }
 

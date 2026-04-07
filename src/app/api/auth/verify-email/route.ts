@@ -9,6 +9,12 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { verifyEmailToken } from '@/lib/email-verification';
+import { getSportSlug, normalizeSport } from '@/lib/sports';
+
+function buildLoginUrl(request: NextRequest, sport?: string | null): URL {
+  const normalizedSport = normalizeSport(sport) ?? 'CORNHOLE';
+  return new URL(`/${getSportSlug(normalizedSport)}/login`, request.url);
+}
 
 export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url);
@@ -16,7 +22,7 @@ export async function GET(request: NextRequest) {
   
   // Validate token presence
   if (!token) {
-    const loginUrl = new URL(`/${encodeURIComponent('CORNHOLE')}/login`, request.url);
+    const loginUrl = buildLoginUrl(request, 'CORNHOLE');
     loginUrl.searchParams.set('error', 'missing_token');
     loginUrl.searchParams.set('message', 'Verification token is missing. Please request a new verification email.');
     return NextResponse.redirect(loginUrl);
@@ -27,7 +33,7 @@ export async function GET(request: NextRequest) {
   
   if (!result.success) {
     // Redirect to login with error
-    const loginUrl = new URL(`/${encodeURIComponent(result.sport || 'CORNHOLE')}/login`, request.url);
+    const loginUrl = buildLoginUrl(request, result.sport);
     loginUrl.searchParams.set('error', 'verification_failed');
     loginUrl.searchParams.set('message', result.error || 'Email verification failed. Please try again.');
     loginUrl.searchParams.set('email', result.email || '');
@@ -35,7 +41,7 @@ export async function GET(request: NextRequest) {
   }
   
   // Success - redirect to login with success message
-  const loginUrl = new URL(`/${encodeURIComponent(result.sport || 'CORNHOLE')}/login`, request.url);
+  const loginUrl = buildLoginUrl(request, result.sport);
   loginUrl.searchParams.set('verified', 'true');
   loginUrl.searchParams.set('message', 'Your email has been verified successfully! You can now log in.');
   

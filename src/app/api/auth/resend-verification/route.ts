@@ -14,6 +14,7 @@ import {
   createAndSendVerificationToken, 
   canResendVerification 
 } from '@/lib/email-verification';
+import { normalizeSport } from '@/lib/sports';
 
 export async function POST(request: NextRequest) {
   try {
@@ -28,14 +29,13 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    if (!sport || !['CORNHOLE', 'DARTS'].includes(sport)) {
+    const sportType = normalizeSport(sport);
+    if (!sportType) {
       return NextResponse.json(
         { error: 'Invalid sport', code: 'INVALID_SPORT' },
         { status: 400 }
       );
     }
-
-    const sportType = sport as SportType;
 
     // Find the user
     const user = await db.user.findUnique({

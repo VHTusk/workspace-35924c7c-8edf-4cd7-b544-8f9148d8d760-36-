@@ -111,6 +111,10 @@ const PORT = process.env.PORT || 3005;
 const NODE_ENV = process.env.NODE_ENV || 'development';
 const REDIS_URL = process.env.REDIS_URL;
 const USE_REDIS = NODE_ENV === 'production' || REDIS_URL;
+const INTERNAL_API_URL =
+  process.env.INTERNAL_API_URL ||
+  process.env.NEXT_PUBLIC_APP_URL ||
+  process.env.NEXT_PUBLIC_BASE_URL;
 
 // ============================================
 // In-Memory State (Development Fallback)
@@ -366,12 +370,10 @@ const httpServer = createServer((req, res) => {
 // ============================================
 
 const ALLOWED_ORIGINS = [
-  process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000',
+  process.env.NEXT_PUBLIC_APP_URL,
   process.env.NEXT_PUBLIC_BASE_URL,
   'https://valorhive.com',
   'https://www.valorhive.com',
-  'http://localhost:3000',
-  'http://127.0.0.1:3000',
 ].filter(Boolean) as string[];
 
 const io = new Server(httpServer, {
@@ -434,7 +436,12 @@ io.use(async (socket: AuthenticatedSocket, next) => {
 
   try {
     // Validate session via API
-    const apiUrl = process.env.INTERNAL_API_URL || 'http://localhost:3000';
+    const apiUrl = INTERNAL_API_URL;
+    if (!apiUrl) {
+      logger.warn('Skipping session validation because INTERNAL_API_URL/NEXT_PUBLIC_APP_URL is not configured');
+      return next();
+    }
+
     const response = await fetch(`${apiUrl}/api/auth/check`, {
       headers: {
         'Cookie': `session_token=${sessionToken}`,
@@ -820,7 +827,7 @@ async function start() {
     logger.info(`Mode: ${USE_REDIS ? 'production (Redis)' : 'development (in-memory)'}`);
     logger.info('Real-time court status updates enabled');
     logger.info('Authentication required for updates');
-    logger.info(`Health endpoint: http://localhost:${PORT}/health`);
+    logger.info(`Health endpoint: /health (port ${PORT})`);
   });
 }
 

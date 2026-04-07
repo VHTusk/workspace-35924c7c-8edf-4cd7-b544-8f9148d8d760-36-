@@ -10,7 +10,7 @@
  * - Health check integration
  * 
  * Environment Variables:
- * - REDIS_URL: Redis connection string (optional, e.g., redis://localhost:6379)
+ * - REDIS_URL: Redis connection string (optional, e.g., redis://REDIS_HOST:6379)
  * - RATE_LIMIT_PREFIX: Key prefix for rate limit keys (default: 'vh:rl:')
  * - REDIS_CLUSTER_NODES: Comma-separated cluster nodes (for cluster mode)
  * - REDIS_SENTINEL_HOSTS: Comma-separated sentinel hosts (for HA)
@@ -245,7 +245,7 @@ async function initializeClusterRedis(clusterConfig: ClusterConfig): Promise<imp
 
     const nodes = clusterConfig.nodes.map(node => {
       const [host, port] = node.split(':');
-      return { host: host || 'localhost', port: port ? parseInt(port, 10) : 6379 };
+      return { host: host || process.env.REDIS_HOST || 'redis', port: port ? parseInt(port, 10) : 6379 };
     });
 
     const client = new Redis.Cluster(nodes, {

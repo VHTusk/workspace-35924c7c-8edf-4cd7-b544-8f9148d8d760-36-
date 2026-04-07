@@ -87,7 +87,7 @@ export function parseRedisUrl(url: string): { host: string; port: number; passwo
       password: parsed.password || undefined,
     };
   } catch {
-    return { host: 'localhost', port: 6379 };
+    return { host: process.env.REDIS_HOST || 'redis', port: 6379 };
   }
 }
 

@@ -4,6 +4,7 @@
  */
 
 import { z } from 'zod';
+import { SUPPORTED_SPORTS } from './constants';
 
 // Common pagination schema
 export const paginationSchema = z.object({
@@ -16,7 +17,7 @@ export const idSchema = z.string().cuid();
 export const idParamSchema = z.object({ id: z.string().cuid() });
 
 // Sport type validation
-export const sportSchema = z.enum(['CORNHOLE', 'DARTS']);
+export const sportSchema = z.enum(SUPPORTED_SPORTS);
 
 // Safe parseInt with validation
 export function safeParseInt(value: string | null, defaultValue: number, min?: number, max?: number): number {

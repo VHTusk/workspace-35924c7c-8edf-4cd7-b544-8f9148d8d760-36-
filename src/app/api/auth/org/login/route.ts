@@ -5,6 +5,7 @@ import { SportType } from '@prisma/client';
 import { setCsrfCookie } from '@/lib/csrf';
 import { setSessionCookie } from '@/lib/session-helpers';
 import { withRateLimit } from '@/lib/rate-limit';
+import { normalizeSport } from '@/lib/sports';
 
 // FIX: Wrap handler with distributed rate limiting
 // Uses 'LOGIN' tier: 5 requests per minute per IP
@@ -13,14 +14,13 @@ async function orgLoginHandler(request: NextRequest): Promise<NextResponse> {
     const body = await request.json();
     const { email, phone, password, sport } = body;
 
-    if (!sport || !['CORNHOLE', 'DARTS'].includes(sport)) {
+    const sportType = normalizeSport(sport);
+    if (!sportType) {
       return NextResponse.json(
         { error: 'Invalid sport' },
         { status: 400 }
       );
     }
-
-    const sportType = sport as SportType;
 
     // Find organization by email or phone
     let org;

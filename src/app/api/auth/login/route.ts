@@ -18,6 +18,7 @@ import {
   getUserAgent,
   getAbuseRiskScore,
 } from '@/lib/abuse-detection';
+import { normalizeSport } from '@/lib/sports';
 
 // Input validation helpers
 function validateEmail(email: string): boolean {
@@ -51,14 +52,13 @@ async function loginHandler(request: NextRequest): Promise<NextResponse> {
     const deviceFingerprint = generateDeviceFingerprint(deviceData);
 
     // Sport validation
-    if (!sport || !['CORNHOLE', 'DARTS'].includes(sport)) {
+    const sportType = normalizeSport(sport);
+    if (!sportType) {
       return NextResponse.json(
         { error: 'Invalid sport', code: 'INVALID_SPORT' },
         { status: 400 }
       );
     }
-
-    const sportType = sport as SportType;
 
     // Validate email format if provided
     if (email) {

@@ -48,10 +48,10 @@ if (process.env.NODE_ENV !== 'production') globalForPrisma.prisma = db;
  * ### 1. Connection Pooling with PgBouncer
  * 
  * Set DATABASE_URL to PgBouncer port (6432):
- *    DATABASE_URL="postgresql://user:password@localhost:6432/valorhive?schema=public&pgbouncer=true"
+ *    DATABASE_URL="postgresql://user:password@DB_HOST:6432/valorhive?schema=public&pgbouncer=true"
  * 
  * Set DIRECT_URL for migrations (bypasses PgBouncer):
- *    DIRECT_URL="postgresql://user:password@localhost:5432/valorhive?schema=public"
+ *    DIRECT_URL="postgresql://user:password@DB_HOST:5432/valorhive?schema=public"
  * 
  * Update prisma/schema.prisma:
  *    datasource db {

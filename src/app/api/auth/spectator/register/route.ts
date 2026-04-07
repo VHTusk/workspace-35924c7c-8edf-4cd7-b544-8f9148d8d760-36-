@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 import { createUser, createSession } from '@/lib/auth';
 import { SportType } from '@prisma/client';
+import { normalizeSport } from '@/lib/sports';
 
 /**
  * Spectator Registration Endpoint
@@ -22,7 +23,8 @@ export async function POST(request: NextRequest) {
     } = body;
 
     // Validation
-    if (!sport || !['CORNHOLE', 'DARTS'].includes(sport)) {
+    const sportType = normalizeSport(sport);
+    if (!sportType) {
       return NextResponse.json(
         { error: 'Invalid sport' },
         { status: 400 }
@@ -42,8 +44,6 @@ export async function POST(request: NextRequest) {
         { status: 400 }
       );
     }
-
-    const sportType = sport as SportType;
 
     // Check if user already exists
     if (email) {

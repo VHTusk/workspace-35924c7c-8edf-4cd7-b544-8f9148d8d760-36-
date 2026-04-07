@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
-import { SportType } from '@prisma/client';
+import { normalizeSport } from '@/lib/sports';
 
 // GET /api/auth/check-email - Check if email/phone exists
 export async function GET(request: NextRequest) {
@@ -8,13 +8,11 @@ export async function GET(request: NextRequest) {
     const { searchParams } = new URL(request.url);
     const email = searchParams.get('email');
     const phone = searchParams.get('phone');
-    const sport = searchParams.get('sport') as SportType;
+    const sportType = normalizeSport(searchParams.get('sport'));
 
-    if (!sport || !['CORNHOLE', 'DARTS'].includes(sport)) {
+    if (!sportType) {
       return NextResponse.json({ error: 'Invalid sport' }, { status: 400 });
     }
-
-    const sportType = sport as SportType;
     let exists = false;
 
     if (email) {

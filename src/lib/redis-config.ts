@@ -13,7 +13,7 @@
  * - Health check functions
  * 
  * Environment Variables:
- * - REDIS_URL: Redis connection string (e.g., redis://localhost:6379)
+ * - REDIS_URL: Redis connection string (e.g., redis://REDIS_HOST:6379)
  * - REDIS_READONLY_URL: Read replica connection string for read operations
  * - REDIS_TLS_ENABLED: Enable TLS for production (default: false)
  * - REDIS_MAX_RETRIES: Maximum retry attempts (default: 5)
@@ -437,7 +437,7 @@ export function parseRedisUrl(url: string): Partial<RedisConnectionConfig> {
   try {
     const parsed = new URL(url);
     const config: Partial<RedisConnectionConfig> = {
-      host: parsed.hostname || 'localhost',
+      host: parsed.hostname || process.env.REDIS_HOST || 'redis',
       port: parsed.port ? parseInt(parsed.port, 10) : 6379,
       password: parsed.password || undefined,
       db: parsed.pathname && parsed.pathname !== '/' 

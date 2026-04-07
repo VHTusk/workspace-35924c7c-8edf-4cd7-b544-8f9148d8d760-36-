@@ -572,12 +572,10 @@ const httpServer = createServer((req, res) => {
 // ============================================
 
 const ALLOWED_ORIGINS = [
-  process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000',
+  process.env.NEXT_PUBLIC_APP_URL,
   process.env.NEXT_PUBLIC_BASE_URL,
   'https://valorhive.com',
   'https://www.valorhive.com',
-  'http://localhost:3000',
-  'http://127.0.0.1:3000',
 ].filter(Boolean) as string[];
 
 const io = new Server(httpServer, {
@@ -1238,7 +1236,7 @@ async function start() {
     console.log(`🛡️ Connection limits: ${CONNECTION_LIMITS.MAX_CONNECTIONS_PER_USER}/user, ${CONNECTION_LIMITS.MAX_CONNECTIONS_PER_IP}/IP`);
     console.log(`💓 Heartbeat: ${HEARTBEAT_CONFIG.PING_INTERVAL}ms interval, ${HEARTBEAT_CONFIG.PING_TIMEOUT}ms timeout`);
     console.log(`🔄 Redis: ${redisConnected ? 'enabled (adapter + state)' : 'disabled'}${DEV_ALLOW_IN_MEMORY ? ' (DEV in-memory mode)' : ''}`);
-    console.log(`🏥 Health endpoints: http://localhost:${PORT}/health, http://localhost:${PORT}/ready`);
+    console.log(`🏥 Health endpoints: /health and /ready (port ${PORT})`);
     console.log(`🌍 Environment: ${NODE_ENV}${IS_PRODUCTION ? ' (PRODUCTION - Redis mandatory)' : ''}`);
   });
 

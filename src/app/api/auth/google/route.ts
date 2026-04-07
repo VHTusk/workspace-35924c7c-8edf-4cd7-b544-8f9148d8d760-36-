@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { SportType } from '@prisma/client';
+import type { SportType } from '@prisma/client';
+import { buildAppUrl, getAuthUrl } from '@/lib/app-url';
+import { normalizeSport } from '@/lib/sports';
 
 // Google OAuth 2.0 Configuration
 const GOOGLE_AUTH_URL = 'https://accounts.google.com/o/oauth2/v2/auth';
@@ -8,21 +10,22 @@ const SCOPES = ['email', 'profile'].join(' ');
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
-    const sport = searchParams.get('sport') as SportType;
-    const type = searchParams.get('type') as 'player' | 'org';
+    const sport = normalizeSport(searchParams.get('sport'));
+    const type = searchParams.get('type') === 'org' ? 'org' : 'player';
+    const authUrl = getAuthUrl(request.headers);
 
     // Validate sport parameter
-    if (!sport || !['CORNHOLE', 'DARTS'].includes(sport)) {
-      return NextResponse.redirect(new URL('/?error=invalid_sport', request.url));
+    if (!sport) {
+      return NextResponse.redirect(buildAppUrl('/?error=invalid_sport', authUrl));
     }
 
     // Get Google OAuth credentials from environment
     const clientId = process.env.GOOGLE_CLIENT_ID;
-    const redirectUri = process.env.GOOGLE_REDIRECT_URI;
+    const redirectUri = process.env.GOOGLE_REDIRECT_URI || buildAppUrl('/api/auth/google/callback', authUrl);
 
-    if (!clientId || !redirectUri) {
+    if (!clientId) {
       console.error('Google OAuth credentials not configured');
-      return NextResponse.redirect(new URL('/?error=oauth_not_configured', request.url));
+      return NextResponse.redirect(buildAppUrl('/?error=oauth_not_configured', authUrl));
     }
 
     // Generate a secure state parameter to prevent CSRF
@@ -42,7 +45,7 @@ export async function GET(request: NextRequest) {
     return NextResponse.redirect(googleAuthUrl.toString());
   } catch (error) {
     console.error('Google OAuth initiation error:', error);
-    return NextResponse.redirect(new URL('/?error=oauth_failed', request.url));
+    return NextResponse.redirect(buildAppUrl('/?error=oauth_failed', getAuthUrl(request.headers)));
   }
 }
 

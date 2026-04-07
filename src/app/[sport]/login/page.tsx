@@ -180,7 +180,7 @@ function LoginForm() {
 
   const handleGoogleLogin = async () => {
     setGoogleLoading(true);
-    window.location.href = `/api/auth/google?sport=${sport}`;
+    window.location.href = `/api/auth/google?sport=${sport}&type=player`;
   };
 
   return (

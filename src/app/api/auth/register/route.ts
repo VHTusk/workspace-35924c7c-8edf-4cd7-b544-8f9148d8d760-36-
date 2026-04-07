@@ -20,6 +20,7 @@ import {
   getUserAgent,
   shouldBlockAction,
 } from '@/lib/abuse-detection';
+import { normalizeSport } from '@/lib/sports';
 
 // Password validation function
 function validatePassword(password: string): { valid: boolean; errors: string[] } {
@@ -71,7 +72,8 @@ async function registerHandler(request: NextRequest): Promise<NextResponse> {
     } = body;
 
     // Validation
-    if (!sport || !['CORNHOLE', 'DARTS'].includes(sport)) {
+    const sportType = normalizeSport(sport);
+    if (!sportType) {
       return NextResponse.json(
         { error: 'Invalid sport' },
         { status: 400 }
@@ -146,8 +148,6 @@ async function registerHandler(request: NextRequest): Promise<NextResponse> {
         );
       }
     }
-
-    const sportType = sport as SportType;
 
     // Get client info for abuse detection
     const ipAddress = getClientIpAddress(request);

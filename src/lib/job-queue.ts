@@ -155,14 +155,14 @@ class QueueManager {
     const config = QUEUE_CONFIGS[name];
     
     // Parse Redis URL safely
-    let redisHost = 'localhost';
+    let redisHost = process.env.REDIS_HOST || 'redis';
     let redisPort = 6379;
     let redisPassword: string | undefined = undefined;
     
     if (process.env.REDIS_URL) {
       try {
         const redisUrl = new URL(process.env.REDIS_URL);
-        redisHost = redisUrl.hostname || 'localhost';
+        redisHost = redisUrl.hostname || process.env.REDIS_HOST || 'redis';
         // Safe port parsing - default to 6379 if port is empty or invalid
         redisPort = redisUrl.port ? parseInt(redisUrl.port, 10) : 6379;
         if (isNaN(redisPort)) {
@@ -223,14 +223,14 @@ class QueueManager {
     const processor = this.processors.get(name)!;
 
     // Parse Redis URL safely (same logic as createQueue)
-    let redisHost = 'localhost';
+    let redisHost = process.env.REDIS_HOST || 'redis';
     let redisPort = 6379;
     let redisPassword: string | undefined = undefined;
     
     if (process.env.REDIS_URL) {
       try {
         const redisUrl = new URL(process.env.REDIS_URL);
-        redisHost = redisUrl.hostname || 'localhost';
+        redisHost = redisUrl.hostname || process.env.REDIS_HOST || 'redis';
         redisPort = redisUrl.port ? parseInt(redisUrl.port, 10) : 6379;
         if (isNaN(redisPort)) {
           redisPort = 6379;

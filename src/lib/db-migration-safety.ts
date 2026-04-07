@@ -170,7 +170,7 @@ export async function runProductionMigration(
     if (createBackup && !dryRun) {
       console.log('[DB Migration] Step 4: Creating backup...');
       // Note: For production with PostgreSQL, use pg_dump
-      // Example: pg_dump -h localhost -U postgres valorhive > backup_$(date +%Y%m%d).sql
+  // Example: pg_dump -h DB_HOST -U postgres valorhive > backup_$(date +%Y%m%d).sql
       result.warnings.push('Backup creation should be handled by infrastructure (pg_dump or managed service backup)');
       result.backupCreated = true;
     }
