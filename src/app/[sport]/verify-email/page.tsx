@@ -14,6 +14,7 @@ import {
   RefreshCw,
   AlertCircle,
 } from "lucide-react";
+import { parseAuthResponse } from "@/lib/auth-client";
 
 function VerifyEmailContent() {
   const params = useParams();
@@ -99,16 +100,22 @@ function VerifyEmailContent() {
         }),
       });
 
-      const data = await response.json();
+      const { data, error: authError } = await parseAuthResponse(
+        response,
+        "We could not resend the verification email right now. Please try again.",
+      );
 
-      if (response.ok) {
+      if (!authError) {
         setResendSuccess(true);
-        setCountdown(60); // 60 second cooldown
+        setCountdown(typeof data.retryAfterSeconds === "number" ? data.retryAfterSeconds : 60);
       } else {
-        setError(data.error || "Failed to resend verification email");
+        setError(authError.message);
+        if (authError.retryAfterSeconds) {
+          setCountdown(authError.retryAfterSeconds);
+        }
       }
-    } catch (err) {
-      setError("An error occurred. Please try again.");
+    } catch {
+      setError("We could not resend the verification email right now. Please try again.");
     } finally {
       setLoading(false);
     }

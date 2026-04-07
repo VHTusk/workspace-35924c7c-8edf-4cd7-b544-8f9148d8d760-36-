@@ -1,90 +1,118 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { otpStore } from '../send-otp/route';
+import { NextRequest } from 'next/server';
 import { cache } from '@/lib/cache';
+import { AUTH_CODES } from '@/lib/auth-contract';
+import { authError, authSuccess } from '@/lib/auth-response';
+import {
+  isValidEmailAddress,
+  isValidPhoneNumber,
+  normalizeEmail,
+  normalizePhone,
+} from '@/lib/auth-validation';
+import { OTP_TTL, otpStore, usedOtpStore, OTP_USED_PREFIX } from '../send-otp/route';
 
-// OTP Configuration
 const OTP_CACHE_PREFIX = 'otp';
 const MAX_OTP_ATTEMPTS = 5;
-const OTP_ATTEMPTS_TTL = 600; // 10 minutes in seconds
+const OTP_ATTEMPTS_TTL = 600;
 
-// Build cache key for OTP
 function buildOtpCacheKey(identifier: string): string {
   return `${OTP_CACHE_PREFIX}:${identifier}`;
 }
 
-// Build cache key for attempt tracking
 function buildAttemptsKey(identifier: string): string {
   return `${OTP_CACHE_PREFIX}:attempts:${identifier}`;
 }
 
-// Get OTP from cache or memory
+function buildUsedOtpKey(identifier: string): string {
+  return `${OTP_USED_PREFIX}:${identifier}`;
+}
+
 async function getOtp(identifier: string): Promise<{ otp: string; createdAt: number } | null> {
   const key = buildOtpCacheKey(identifier);
-  
+
   try {
     const cachedOtp = await cache.get<{ otp: string; createdAt: number }>(key);
     if (cachedOtp) {
       return cachedOtp;
     }
-  } catch {
-    // Cache failed, continue to memory fallback
-  }
-  
-  // Fallback to in-memory store
+  } catch {}
+
   const storedData = otpStore.get(identifier);
   if (storedData && storedData.expiresAt > new Date()) {
-    return { otp: storedData.otp, createdAt: storedData.expiresAt.getTime() - 600000 };
+    return { otp: storedData.otp, createdAt: storedData.createdAt };
   }
-  
+
   return null;
 }
 
-// Delete OTP from cache and memory
 async function deleteOtp(identifier: string): Promise<void> {
   const key = buildOtpCacheKey(identifier);
-  
+
   try {
     await cache.delete(key);
-  } catch {
-    // Cache failed, continue to memory fallback
-  }
-  
+  } catch {}
+
   otpStore.delete(identifier);
 }
 
-// Check and increment OTP attempts
+async function getUsedOtp(identifier: string): Promise<string | null> {
+  const key = buildUsedOtpKey(identifier);
+
+  try {
+    const cached = await cache.get<{ otp: string }>(key);
+    if (cached?.otp) {
+      return cached.otp;
+    }
+  } catch {}
+
+  const used = usedOtpStore.get(identifier);
+  if (used && used.expiresAt > new Date()) {
+    return used.otp;
+  }
+
+  return null;
+}
+
+async function markOtpUsed(identifier: string, otp: string): Promise<void> {
+  const key = buildUsedOtpKey(identifier);
+
+  try {
+    await cache.set(key, { otp }, OTP_TTL);
+  } catch {}
+
+  usedOtpStore.set(identifier, {
+    otp,
+    expiresAt: new Date(Date.now() + OTP_TTL * 1000),
+  });
+}
+
 async function checkAndIncrementAttempts(identifier: string): Promise<{ allowed: boolean; remaining: number }> {
   const key = buildAttemptsKey(identifier);
-  
+
   try {
     const attempts = await cache.get<number>(key);
-    
+
     if (attempts === null) {
       await cache.set(key, 1, OTP_ATTEMPTS_TTL);
       return { allowed: true, remaining: MAX_OTP_ATTEMPTS - 1 };
     }
-    
+
     if (attempts >= MAX_OTP_ATTEMPTS) {
       return { allowed: false, remaining: 0 };
     }
-    
+
     await cache.set(key, attempts + 1, OTP_ATTEMPTS_TTL);
     return { allowed: true, remaining: MAX_OTP_ATTEMPTS - attempts - 1 };
   } catch {
-    // If cache fails, allow the verification
     return { allowed: true, remaining: MAX_OTP_ATTEMPTS };
   }
 }
 
-// Reset attempts after successful verification
 async function resetAttempts(identifier: string): Promise<void> {
   const key = buildAttemptsKey(identifier);
-  
+
   try {
     await cache.delete(key);
-  } catch {
-    // Cache failed, ignore
-  }
+  } catch {}
 }
 
 export async function POST(request: NextRequest) {
@@ -92,68 +120,125 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
     const { email, phone, otp } = body;
 
-    if (!email && !phone) {
-      return NextResponse.json(
-        { error: 'Email or phone is required' },
-        { status: 400 }
-      );
-    }
+    const normalizedEmail = normalizeEmail(email);
+    const normalizedPhone = normalizePhone(phone);
 
-    if (!otp || otp.length !== 6) {
-      return NextResponse.json(
-        { error: 'Valid 6-digit OTP is required' },
-        { status: 400 }
-      );
-    }
-
-    const identifier = email || phone;
-    
-    // Check attempt limit
-    const attemptCheck = await checkAndIncrementAttempts(identifier);
-    if (!attemptCheck.allowed) {
-      return NextResponse.json(
-        { 
-          error: 'Too many failed attempts. Please request a new OTP.',
-          retryAfter: OTP_ATTEMPTS_TTL,
+    if (!normalizedEmail && !normalizedPhone) {
+      return authError(
+        AUTH_CODES.REQUIRED_FIELD_MISSING,
+        'Please enter your email address or mobile number.',
+        400,
+        {
+          field: 'identifier',
+          fieldErrors: { email: 'Email or phone is required.', phone: 'Email or phone is required.' },
         },
-        { status: 429 }
       );
     }
 
-    // Get stored OTP
+    if (email && (!normalizedEmail || !isValidEmailAddress(normalizedEmail))) {
+      return authError(
+        AUTH_CODES.INVALID_EMAIL_FORMAT,
+        'Please enter a valid email address.',
+        400,
+        {
+          field: 'email',
+          fieldErrors: { email: 'Please enter a valid email address.' },
+        },
+      );
+    }
+
+    if (phone && (!normalizedPhone || !isValidPhoneNumber(normalizedPhone))) {
+      return authError(
+        AUTH_CODES.INVALID_PHONE_FORMAT,
+        'Please enter a valid 10-digit mobile number.',
+        400,
+        {
+          field: 'phone',
+          fieldErrors: { phone: 'Please enter a valid 10-digit mobile number.' },
+        },
+      );
+    }
+
+    if (!otp || !/^\d{6}$/.test(String(otp))) {
+      return authError(AUTH_CODES.INVALID_OTP, 'Please enter a valid 6-digit OTP.', 400, {
+        field: 'otp',
+        fieldErrors: { otp: 'Please enter a valid 6-digit OTP.' },
+      });
+    }
+
+    const identifier = normalizedEmail ?? normalizedPhone!;
+    const attemptCheck = await checkAndIncrementAttempts(identifier);
+
+    if (!attemptCheck.allowed) {
+      return authError(
+        AUTH_CODES.TOO_MANY_ATTEMPTS,
+        'Too many failed attempts. Please request a new OTP.',
+        429,
+        {
+          retryAfterSeconds: OTP_ATTEMPTS_TTL,
+        },
+      );
+    }
+
     const storedData = await getOtp(identifier);
+    const usedOtp = await getUsedOtp(identifier);
 
     if (!storedData) {
-      return NextResponse.json(
-        { error: 'OTP not found or expired. Please request a new one.' },
-        { status: 400 }
-      );
-    }
+      if (usedOtp === otp) {
+        return authError(
+          AUTH_CODES.OTP_ALREADY_USED,
+          'This OTP has already been used. Please request a new one.',
+          400,
+          {
+            field: 'otp',
+            fieldErrors: { otp: 'This OTP has already been used. Please request a new one.' },
+          },
+        );
+      }
 
-    // Verify OTP
-    if (storedData.otp !== otp) {
-      return NextResponse.json(
-        { 
-          error: 'Invalid OTP. Please try again.',
-          remainingAttempts: attemptCheck.remaining,
+      return authError(
+        AUTH_CODES.OTP_EXPIRED,
+        'OTP expired. Please request a new one.',
+        400,
+        {
+          field: 'otp',
+          fieldErrors: { otp: 'OTP expired. Please request a new one.' },
         },
-        { status: 400 }
       );
     }
 
-    // OTP verified, clean up
+    const otpAgeMs = Date.now() - storedData.createdAt;
+    if (otpAgeMs > OTP_TTL * 1000) {
+      await deleteOtp(identifier);
+      return authError(
+        AUTH_CODES.OTP_EXPIRED,
+        'OTP expired. Please request a new one.',
+        400,
+        {
+          field: 'otp',
+          fieldErrors: { otp: 'OTP expired. Please request a new one.' },
+        },
+      );
+    }
+
+    if (storedData.otp !== otp) {
+      return authError(AUTH_CODES.INVALID_OTP, 'Invalid OTP. Please try again.', 400, {
+        field: 'otp',
+        fieldErrors: { otp: 'Invalid OTP. Please try again.' },
+        retryAfterSeconds: attemptCheck.remaining > 0 ? undefined : OTP_ATTEMPTS_TTL,
+      });
+    }
+
     await deleteOtp(identifier);
+    await markOtpUsed(identifier, otp);
     await resetAttempts(identifier);
 
-    return NextResponse.json({
-      success: true,
-      message: 'OTP verified successfully',
-    });
-  } catch (error) {
-    console.error('Verify OTP error:', error);
-    return NextResponse.json(
-      { error: 'Failed to verify OTP' },
-      { status: 500 }
+    return authSuccess(AUTH_CODES.OTP_VERIFIED, 'OTP verified successfully.');
+  } catch {
+    return authError(
+      AUTH_CODES.SERVER_ERROR,
+      'We could not verify the OTP right now. Please try again.',
+      500,
     );
   }
 }

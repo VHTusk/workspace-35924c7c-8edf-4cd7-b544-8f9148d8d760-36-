@@ -12,7 +12,7 @@
   ],
   "scripts": {
     "dev": "next dev --webpack -p 3000",
-    "build": "next build",
+    "build": "node --max-old-space-size=4096 ./node_modules/next/dist/bin/next build",
     "build:worker": "tsc -p tsconfig.worker.json",
     "start": "next start",
     "start:worker": "NODE_ENV=production node dist/workers/index.js",

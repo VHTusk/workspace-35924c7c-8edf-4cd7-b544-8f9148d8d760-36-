@@ -11,6 +11,7 @@ import {
   CheckCircle2,
   RefreshCw,
 } from "lucide-react";
+import { parseAuthResponse } from "@/lib/auth-client";
 
 interface WhatsAppRegisterProps {
   sport: string;
@@ -85,22 +86,28 @@ export function WhatsAppRegister({
         body: JSON.stringify({ phone, type: "whatsapp" }),
       });
 
-      const data = await response.json();
+      const { data, error: authError } = await parseAuthResponse(
+        response,
+        "We could not send the verification code right now. Please try again.",
+      );
 
-      if (!response.ok) {
-        setError(data.error || "Failed to send OTP");
+      if (authError) {
+        setError(authError.message);
+        if (authError.retryAfterSeconds) {
+          setCountdown(authError.retryAfterSeconds);
+        }
         return;
       }
 
       setStep("otp");
-      setCountdown(60); // 60 second countdown
+      setCountdown(typeof data.retryAfterSeconds === "number" ? data.retryAfterSeconds : 60);
 
       // In development, auto-fill OTP for testing
       if (data.devOtp) {
         console.log(`[DEV] OTP for testing: ${data.devOtp}`);
       }
     } catch (err) {
-      setError("Failed to send OTP. Please try again.");
+      setError("We could not send the verification code right now. Please try again.");
       console.error(err);
     } finally {
       setLoading(false);
@@ -125,17 +132,20 @@ export function WhatsAppRegister({
         body: JSON.stringify({ phone, otp }),
       });
 
-      const data = await response.json();
+      const { error: authError } = await parseAuthResponse(
+        response,
+        "We could not verify the OTP right now. Please try again.",
+      );
 
-      if (!response.ok) {
-        setError(data.error || "Invalid OTP");
+      if (authError) {
+        setError(authError.message);
         return;
       }
 
       // Success!
       onSuccess({ phone });
     } catch (err) {
-      setError("Failed to verify OTP. Please try again.");
+      setError("We could not verify the OTP right now. Please try again.");
       console.error(err);
     } finally {
       setLoading(false);

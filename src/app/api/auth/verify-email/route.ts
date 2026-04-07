@@ -10,6 +10,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { verifyEmailToken } from '@/lib/email-verification';
 import { getSportSlug, normalizeSport } from '@/lib/sports';
+import { AUTH_CODES } from '@/lib/auth-contract';
+import { authError, authSuccess } from '@/lib/auth-response';
 
 function buildLoginUrl(request: NextRequest, sport?: string | null): URL {
   const normalizedSport = normalizeSport(sport) ?? 'CORNHOLE';
@@ -62,24 +64,33 @@ export async function POST(request: NextRequest) {
     const { token } = body;
     
     if (!token) {
-      return NextResponse.json(
-        { success: false, error: 'Verification token is required' },
-        { status: 400 }
+      return authError(
+        AUTH_CODES.REQUIRED_FIELD_MISSING,
+        'Verification token is required.',
+        400,
+        {
+          field: 'token',
+          fieldErrors: { token: 'Verification token is required.' },
+        },
       );
     }
     
     const result = await verifyEmailToken(token);
     
     if (!result.success) {
-      return NextResponse.json(
-        { success: false, error: result.error },
-        { status: 400 }
+      const isExpired = result.error?.toLowerCase().includes('expired');
+      return authError(
+        isExpired ? AUTH_CODES.RESET_LINK_EXPIRED : AUTH_CODES.INVALID_RESET_TOKEN,
+        result.error || 'Email verification failed.',
+        400,
+        {
+          field: 'token',
+          fieldErrors: { token: result.error || 'Email verification failed.' },
+        },
       );
     }
     
-    return NextResponse.json({
-      success: true,
-      message: 'Email verified successfully',
+    return authSuccess(AUTH_CODES.EMAIL_VERIFIED, 'Email verified successfully.', {
       user: {
         id: result.userId,
         email: result.email,
@@ -88,9 +99,10 @@ export async function POST(request: NextRequest) {
     });
   } catch (error) {
     console.error('Email verification error:', error);
-    return NextResponse.json(
-      { success: false, error: 'An error occurred during verification' },
-      { status: 500 }
+    return authError(
+      AUTH_CODES.SERVER_ERROR,
+      'We could not verify your email right now. Please try again.',
+      500,
     );
   }
 }

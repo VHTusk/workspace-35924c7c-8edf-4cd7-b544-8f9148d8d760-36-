@@ -19,7 +19,7 @@ export const PASSWORD_REQUIREMENTS = {
   requireUppercase: true,
   requireLowercase: true,
   requireNumber: true,
-  requireSpecialChar: false, // Optional per spec
+  requireSpecialChar: true,
 };
 
 export interface PasswordValidationResult {
@@ -52,6 +52,13 @@ export function validatePassword(password: string): PasswordValidationResult {
   
   if (PASSWORD_REQUIREMENTS.requireNumber && !/[0-9]/.test(password)) {
     errors.push('Password must contain at least one number');
+  }
+
+  if (
+    PASSWORD_REQUIREMENTS.requireSpecialChar &&
+    !/[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>/?]/.test(password)
+  ) {
+    errors.push('Password must contain at least one special character');
   }
   
   return {

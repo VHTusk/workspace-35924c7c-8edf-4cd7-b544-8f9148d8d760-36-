@@ -1,105 +1,137 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { db } from '@/lib/db';
-import { hashPassword, validatePassword, hashToken } from '@/lib/auth';
-import { sendPasswordResetEmail } from '@/lib/email/service';
-import { SportType } from '@prisma/client';
+import { NextRequest } from 'next/server';
 import { withRateLimit } from '@/lib/rate-limit';
+import { db } from '@/lib/db';
 import { buildAppUrl } from '@/lib/app-url';
+import { hashPassword, hashToken, validatePassword, verifyPassword } from '@/lib/auth';
+import { sendPasswordResetEmail } from '@/lib/email/service';
 import { normalizeSport } from '@/lib/sports';
+import { AUTH_CODES } from '@/lib/auth-contract';
+import { authError, authSuccess } from '@/lib/auth-response';
+import {
+  isValidEmailAddress,
+  isValidPhoneNumber,
+  normalizeEmail,
+  normalizePhone,
+} from '@/lib/auth-validation';
 
-/**
- * Password Reset Flow:
- * 
- * Step 1: Request reset token
- * POST /api/auth/reset-password
- * Body: { email, sport, action: 'request' }
- * - Generates a reset token (valid for 1 hour)
- * - Sends token via email (for production)
- * - Returns success message (in dev, also returns token for testing)
- * 
- * Step 2: Verify and reset
- * POST /api/auth/reset-password
- * Body: { email, sport, action: 'reset', token, newPassword }
- * - Validates token
- * - Updates password
- * - Invalidates all existing sessions
- */
-
-// Password reset token expiry (1 hour)
 const RESET_TOKEN_EXPIRY = 60 * 60 * 1000;
 
-// Generate a secure reset token
 function generateResetToken(): string {
   const bytes = new Uint8Array(32);
   crypto.getRandomValues(bytes);
-  return Array.from(bytes).map(b => b.toString(16).padStart(2, '0')).join('');
+  return Array.from(bytes)
+    .map((byte) => byte.toString(16).padStart(2, '0'))
+    .join('');
 }
 
-// FIX: Wrap handler with distributed rate limiting to prevent abuse
-// Uses 'PASSWORD_RESET' tier: 3 requests per hour per IP
-// This is more restrictive due to the sensitive nature of password resets
-async function resetPasswordHandler(request: NextRequest): Promise<NextResponse> {
+async function resetPasswordHandler(request: NextRequest) {
   try {
     const body = await request.json();
     const { email, phone, sport, action, token, newPassword } = body;
 
-    // Validate sport
     const sportType = normalizeSport(sport);
     if (!sportType) {
-      return NextResponse.json({ error: 'Invalid sport' }, { status: 400 });
+      return authError(AUTH_CODES.INVALID_SPORT, 'Please choose a valid sport.', 400, {
+        field: 'sport',
+      });
     }
 
-    // =========================================
-    // ACTION: REQUEST RESET TOKEN
-    // =========================================
+    const normalizedEmail = normalizeEmail(email);
+    const normalizedPhone = normalizePhone(phone);
+
     if (action === 'request') {
-      if (!email && !phone) {
-        return NextResponse.json({ error: 'Email or phone is required' }, { status: 400 });
+      if (!normalizedEmail && !normalizedPhone) {
+        return authError(
+          AUTH_CODES.REQUIRED_FIELD_MISSING,
+          'Please enter your email address or mobile number.',
+          400,
+          {
+            field: 'identifier',
+            fieldErrors: { email: 'Email or phone is required.', phone: 'Email or phone is required.' },
+          },
+        );
       }
 
-      // Find user
-      const user = email
+      if (email && (!normalizedEmail || !isValidEmailAddress(normalizedEmail))) {
+        return authError(
+          AUTH_CODES.INVALID_EMAIL_FORMAT,
+          'Please enter a valid email address.',
+          400,
+          {
+            field: 'email',
+            fieldErrors: { email: 'Please enter a valid email address.' },
+          },
+        );
+      }
+
+      if (phone && (!normalizedPhone || !isValidPhoneNumber(normalizedPhone))) {
+        return authError(
+          AUTH_CODES.INVALID_PHONE_FORMAT,
+          'Please enter a valid 10-digit mobile number.',
+          400,
+          {
+            field: 'phone',
+            fieldErrors: { phone: 'Please enter a valid 10-digit mobile number.' },
+          },
+        );
+      }
+
+      const user = normalizedEmail
         ? await db.user.findUnique({
-            where: { email_sport: { email, sport: sportType } }
+            where: { email_sport: { email: normalizedEmail, sport: sportType } },
           })
         : await db.user.findUnique({
-            where: { phone_sport: { phone: phone!, sport: sportType } }
+            where: { phone_sport: { phone: normalizedPhone!, sport: sportType } },
           });
 
       if (!user) {
-        // Don't reveal whether user exists or not (security)
-        return NextResponse.json({
-          success: true,
-          message: 'If an account exists with this email/phone, a reset token has been sent.'
-        });
+        return authSuccess(
+          AUTH_CODES.PASSWORD_RESET_REQUESTED,
+          'If an account exists with that email or mobile number, a reset link has been sent.',
+        );
       }
 
-      // Generate reset token
+      if (normalizedEmail && !user.emailVerified) {
+        return authError(
+          AUTH_CODES.EMAIL_NOT_VERIFIED,
+          'Your email is not verified yet. Please verify it before resetting your password.',
+          403,
+          {
+            email: user.email || undefined,
+            requiresVerification: true,
+          },
+        );
+      }
+
+      if (normalizedPhone && user.verified === false) {
+        return authError(
+          AUTH_CODES.PHONE_NOT_VERIFIED,
+          'Your mobile number is not verified yet. Please verify it before resetting your password.',
+          403,
+          {
+            phone: user.phone || undefined,
+            requiresVerification: true,
+          },
+        );
+      }
+
       const resetToken = generateResetToken();
+      const hashedResetToken = await hashToken(resetToken);
       const resetTokenExpiry = new Date(Date.now() + RESET_TOKEN_EXPIRY);
 
-      // SECURITY: Hash the token before storage to prevent misuse if database is compromised
-      // The plaintext token is only sent via email and never stored
-      const hashedResetToken = await hashToken(resetToken);
-
-      // Store hashed token in user record
       await db.user.update({
         where: { id: user.id },
         data: {
-          emailVerifyToken: hashedResetToken, // Store hashed token, NOT plaintext
+          emailVerifyToken: hashedResetToken,
           emailVerifyExpiry: resetTokenExpiry,
-        }
+        },
       });
 
-      // In production, send email with reset link
-      // For development, log to console only - NEVER return token in response
-      const isProduction = process.env.NODE_ENV === 'production';
-      
       if (user.email) {
         const resetUrl = buildAppUrl(
-          `/reset-password?token=${resetToken}&email=${encodeURIComponent(user.email)}&sport=${sport}`
+          `/${sportType.toLowerCase()}/forgot-password?token=${resetToken}&email=${encodeURIComponent(user.email)}`,
         );
-        
+
         try {
           await sendPasswordResetEmail({
             to: user.email,
@@ -108,92 +140,133 @@ async function resetPasswordHandler(request: NextRequest): Promise<NextResponse>
             resetUrl,
             expiresIn: '1 hour',
           });
-        } catch (emailError) {
-          console.error('Failed to send password reset email:', emailError);
-          // Don't fail the request - user can still request another reset
+        } catch {
+          return authError(
+            AUTH_CODES.PROVIDER_ERROR,
+            'We could not send the password reset email right now. Please try again.',
+            500,
+          );
         }
-      }
-      
-      // Log for phone-based users (would need SMS integration)
-      if (!user.email && user.phone) {
-        // SECURITY: Only log in development, never expose in production
-        if (process.env.NODE_ENV === 'development') {
-          console.log(`[Password Reset - DEV ONLY] Token for ${user.phone}: ${resetToken}`);
-        }
-        // FUTURE: Integrate with SMS provider for phone-based reset
       }
 
-      // SECURITY: Never return the token in the HTTP response
-      // In development, log to console for testing - but don't expose via API
+      if (!user.email && process.env.NODE_ENV === 'development') {
+        console.log(`[Password Reset - DEV ONLY] Token for ${user.phone}: ${resetToken}`);
+      }
+
       if (process.env.NODE_ENV === 'development') {
-        const devIdentifier = email || phone || 'unknown';
-        console.log(`[Password Reset - DEV ONLY] Token for ${devIdentifier}: ${resetToken}`);
+        console.log(
+          `[Password Reset - DEV ONLY] Token for ${normalizedEmail || normalizedPhone || 'unknown'}: ${resetToken}`,
+        );
       }
 
-      return NextResponse.json({
-        success: true,
-        message: 'If an account exists with this email/phone, a reset token has been sent.',
-        // DO NOT return devToken - this is a security risk
-        // Testing should be done via console logs or email inbox
-      });
+      return authSuccess(
+        AUTH_CODES.PASSWORD_RESET_REQUESTED,
+        'If an account exists with that email or mobile number, a reset link has been sent.',
+      );
     }
 
-    // =========================================
-    // ACTION: RESET PASSWORD WITH TOKEN
-    // =========================================
     if (action === 'reset') {
-      if (!email && !phone) {
-        return NextResponse.json({ error: 'Email or phone is required' }, { status: 400 });
+      if (!normalizedEmail && !normalizedPhone) {
+        return authError(
+          AUTH_CODES.REQUIRED_FIELD_MISSING,
+          'Please enter your email address or mobile number.',
+          400,
+          {
+            field: 'identifier',
+            fieldErrors: { email: 'Email or phone is required.', phone: 'Email or phone is required.' },
+          },
+        );
       }
 
       if (!token) {
-        return NextResponse.json({ error: 'Reset token is required' }, { status: 400 });
+        return authError(AUTH_CODES.INVALID_RESET_TOKEN, 'Reset token is required.', 400, {
+          field: 'token',
+          fieldErrors: { token: 'Reset token is required.' },
+        });
       }
 
       if (!newPassword) {
-        return NextResponse.json({ error: 'New password is required' }, { status: 400 });
+        return authError(AUTH_CODES.PASSWORD_REQUIRED, 'New password is required.', 400, {
+          field: 'password',
+          fieldErrors: { password: 'New password is required.' },
+        });
       }
 
-      // Validate password strength
       const passwordValidation = validatePassword(newPassword);
       if (!passwordValidation.valid) {
-        return NextResponse.json({ 
-          error: 'Password does not meet requirements', 
-          details: passwordValidation.errors 
-        }, { status: 400 });
+        return authError(
+          AUTH_CODES.PASSWORD_TOO_WEAK,
+          passwordValidation.errors[0] || 'Password does not meet the requirements.',
+          400,
+          {
+            field: 'password',
+            fieldErrors: {
+              password: passwordValidation.errors[0] || 'Password does not meet the requirements.',
+            },
+          },
+        );
       }
 
-      // Find user
-      const user = email
+      const user = normalizedEmail
         ? await db.user.findUnique({
-            where: { email_sport: { email, sport: sportType } }
+            where: { email_sport: { email: normalizedEmail, sport: sportType } },
           })
         : await db.user.findUnique({
-            where: { phone_sport: { phone: phone!, sport: sportType } }
+            where: { phone_sport: { phone: normalizedPhone!, sport: sportType } },
           });
 
       if (!user) {
-        return NextResponse.json({ error: 'Invalid or expired reset token' }, { status: 400 });
+        return authError(
+          AUTH_CODES.INVALID_RESET_TOKEN,
+          'Invalid reset token.',
+          400,
+          {
+            field: 'token',
+            fieldErrors: { token: 'Invalid reset token.' },
+          },
+        );
       }
 
-      // Validate token - compare hashed value
-      // SECURITY: Hash the provided token and compare with stored hash
       const hashedProvidedToken = await hashToken(token);
       if (user.emailVerifyToken !== hashedProvidedToken) {
-        return NextResponse.json({ error: 'Invalid reset token' }, { status: 400 });
+        return authError(
+          AUTH_CODES.INVALID_RESET_TOKEN,
+          'Invalid reset token.',
+          400,
+          {
+            field: 'token',
+            fieldErrors: { token: 'Invalid reset token.' },
+          },
+        );
       }
 
-      // Check token expiry
       if (!user.emailVerifyExpiry || user.emailVerifyExpiry < new Date()) {
-        return NextResponse.json({ error: 'Reset token has expired. Please request a new one.' }, { status: 400 });
+        return authError(
+          AUTH_CODES.RESET_LINK_EXPIRED,
+          'Reset link expired. Please request a new one.',
+          400,
+          {
+            field: 'token',
+            fieldErrors: { token: 'Reset link expired. Please request a new one.' },
+          },
+        );
       }
 
-      // Hash new password
+      if (user.password && (await verifyPassword(newPassword, user.password))) {
+        return authError(
+          AUTH_CODES.PASSWORD_REUSE_NOT_ALLOWED,
+          'Please choose a new password different from your current one.',
+          400,
+          {
+            field: 'password',
+            fieldErrors: { password: 'Please choose a new password different from your current one.' },
+          },
+        );
+      }
+
       const hashedPassword = await hashPassword(newPassword);
 
-      // Update password and clear reset token in transaction
       await db.$transaction([
-        // Update password and clear token
         db.user.update({
           where: { id: user.id },
           data: {
@@ -202,30 +275,31 @@ async function resetPasswordHandler(request: NextRequest): Promise<NextResponse>
             emailVerifyExpiry: null,
             failedLoginAttempts: 0,
             lockedUntil: null,
-          }
+          },
         }),
-        // Invalidate all existing sessions (force re-login)
         db.session.deleteMany({
-          where: { userId: user.id }
-        })
+          where: { userId: user.id },
+        }),
       ]);
 
-      return NextResponse.json({
-        success: true,
-        message: 'Password reset successfully. Please login with your new password.'
-      });
+      return authSuccess(
+        AUTH_CODES.PASSWORD_RESET_SUCCESS,
+        'Password reset successfully. Please log in with your new password.',
+      );
     }
 
-    // Invalid action
-    return NextResponse.json({ 
-      error: 'Invalid action. Use "request" to get a reset token or "reset" to set new password.' 
-    }, { status: 400 });
-
-  } catch (error) {
-    console.error('Reset password error:', error);
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+    return authError(
+      AUTH_CODES.VALIDATION_ERROR,
+      'Invalid reset password action.',
+      400,
+    );
+  } catch {
+    return authError(
+      AUTH_CODES.SERVER_ERROR,
+      'We could not process the password reset right now. Please try again.',
+      500,
+    );
   }
 }
 
-// Export the rate-limited handler
 export const POST = withRateLimit(resetPasswordHandler, 'PASSWORD_RESET');

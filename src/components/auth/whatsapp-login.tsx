@@ -11,6 +11,8 @@ import {
   CheckCircle2,
   RefreshCw,
 } from "lucide-react";
+import { AUTH_CODES } from "@/lib/auth-contract";
+import { parseAuthResponse } from "@/lib/auth-client";
 
 interface WhatsAppLoginProps {
   sport: string;
@@ -83,22 +85,28 @@ export function WhatsAppLogin({
         body: JSON.stringify({ phone, type: "whatsapp_login", sport }),
       });
 
-      const data = await response.json();
+      const { data, error: authError } = await parseAuthResponse(
+        response,
+        "We could not send the verification code right now. Please try again.",
+      );
 
-      if (!response.ok) {
-        setError(data.error || "Failed to send OTP");
+      if (authError) {
+        setError(authError.message);
+        if (authError.retryAfterSeconds) {
+          setCountdown(authError.retryAfterSeconds);
+        }
         return;
       }
 
       setStep("otp");
-      setCountdown(60); // 60 second countdown
+      setCountdown(typeof data.retryAfterSeconds === "number" ? data.retryAfterSeconds : 60);
 
       // In development, auto-fill OTP for testing
       if (data.devOtp) {
         console.log(`[DEV] OTP for testing: ${data.devOtp}`);
       }
     } catch (err) {
-      setError("Failed to send OTP. Please try again.");
+      setError("We could not send the verification code right now. Please try again.");
       console.error(err);
     } finally {
       setLoading(false);
@@ -124,10 +132,13 @@ export function WhatsAppLogin({
         body: JSON.stringify({ phone, otp }),
       });
 
-      const verifyData = await verifyResponse.json();
+      const { error: verifyError } = await parseAuthResponse(
+        verifyResponse,
+        "We could not verify the OTP right now. Please try again.",
+      );
 
-      if (!verifyResponse.ok) {
-        setError(verifyData.error || "Invalid OTP");
+      if (verifyError) {
+        setError(verifyError.message);
         return;
       }
 
@@ -142,21 +153,24 @@ export function WhatsAppLogin({
         }),
       });
 
-      const loginData = await loginResponse.json();
+      const { error: loginError } = await parseAuthResponse(
+        loginResponse,
+        "We could not sign you in right now. Please try again.",
+      );
 
-      if (!loginResponse.ok) {
-        if (loginData.code === 'USER_NOT_FOUND') {
-          setError("Account not found. Please register first.");
-        } else {
-          setError(loginData.error || "Login failed");
-        }
+      if (loginError) {
+        setError(
+          loginError.code === AUTH_CODES.USER_NOT_FOUND
+            ? "No account found with this mobile number. Please register first."
+            : loginError.message,
+        );
         return;
       }
 
       // Success!
       onSuccess({ phone });
     } catch (err) {
-      setError("Failed to verify. Please try again.");
+      setError("We could not verify the OTP right now. Please try again.");
       console.error(err);
     } finally {
       setLoading(false);

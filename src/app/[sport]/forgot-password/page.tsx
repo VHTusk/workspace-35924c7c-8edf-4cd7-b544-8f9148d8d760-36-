@@ -1,61 +1,56 @@
 "use client";
 
-import { useState } from "react";
+import { Suspense, useState } from "react";
 import Link from "next/link";
-import { useParams, useRouter, useSearchParams } from "next/navigation";
+import { useParams, useSearchParams } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
-import { 
-  Mail, Lock, ArrowLeft, CheckCircle, Loader2, Eye, EyeOff, 
-  KeyRound, ArrowRight, ShieldCheck 
+import {
+  Mail,
+  Lock,
+  ArrowLeft,
+  CheckCircle,
+  Loader2,
+  Eye,
+  EyeOff,
+  KeyRound,
+  ArrowRight,
+  ShieldCheck,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { Suspense } from "react";
+import { AUTH_CODES, type AuthFieldErrors } from "@/lib/auth-contract";
+import { parseAuthResponse } from "@/lib/auth-client";
 
 type Step = "request" | "verify" | "success";
 
 function ForgotPasswordForm() {
   const params = useParams();
-  const router = useRouter();
   const searchParams = useSearchParams();
   const sport = params.sport as string;
   const isCornhole = sport === "cornhole";
-
-  // Get token from URL if coming from email link
   const urlToken = searchParams.get("token");
   const urlEmail = searchParams.get("email");
 
-  const primaryTextClass = isCornhole 
-    ? "text-green-500 dark:text-green-400" 
-    : "text-teal-500 dark:text-teal-400";
-  const primaryBorderClass = isCornhole 
-    ? "border-green-500/30" 
-    : "border-teal-500/30";
-  const primaryBgClass = isCornhole 
-    ? "bg-green-500/10 dark:bg-green-500/20" 
-    : "bg-teal-500/10 dark:bg-teal-500/20";
-  const primaryBtnClass = isCornhole 
-    ? "bg-green-600 hover:bg-green-700 dark:bg-green-500 dark:hover:bg-green-600" 
-    : "bg-teal-600 hover:bg-teal-700 dark:bg-teal-500 dark:hover:bg-teal-600";
+  const primaryTextClass = isCornhole ? "text-green-500 dark:text-green-400" : "text-teal-500 dark:text-teal-400";
+  const primaryBorderClass = isCornhole ? "border-green-500/30" : "border-teal-500/30";
+  const primaryBgClass = isCornhole ? "bg-green-500/10 dark:bg-green-500/20" : "bg-teal-500/10 dark:bg-teal-500/20";
+  const primaryBtnClass = isCornhole ? "bg-green-600 hover:bg-green-700 dark:bg-green-500 dark:hover:bg-green-600" : "bg-teal-600 hover:bg-teal-700 dark:bg-teal-500 dark:hover:bg-teal-600";
 
   const [step, setStep] = useState<Step>(urlToken ? "verify" : "request");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
-  
-  // Step 1: Request
+  const [successMessage, setSuccessMessage] = useState("");
+  const [fieldErrors, setFieldErrors] = useState<AuthFieldErrors>({});
   const [email, setEmail] = useState(urlEmail || "");
-  
-  // Step 2: Verify
   const [token, setToken] = useState(urlToken || "");
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
-  
-  // Password validation
+
   const passwordRules = {
     minLength: newPassword.length >= 8,
     hasUppercase: /[A-Z]/.test(newPassword),
@@ -65,11 +60,19 @@ function ForgotPasswordForm() {
   };
   const allPasswordRulesMet = Object.values(passwordRules).every(Boolean);
 
-  // Step 1: Request reset token
   const handleRequestReset = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
     setError("");
+    setSuccessMessage("");
+    setFieldErrors({});
+
+    if (!email.trim()) {
+      setFieldErrors({ email: "Email is required." });
+      setError("Email is required.");
+      setLoading(false);
+      return;
+    }
 
     try {
       const response = await fetch("/api/auth/reset-password", {
@@ -78,45 +81,62 @@ function ForgotPasswordForm() {
         body: JSON.stringify({
           email,
           sport: sport.toUpperCase(),
-          action: "request"
-        })
+          action: "request",
+        }),
       });
 
-      const data = await response.json();
+      const { error: authError } = await parseAuthResponse(
+        response,
+        "We could not process your request right now. Please try again.",
+      );
 
-      if (!response.ok) {
-        setError(data.error || "Failed to request reset");
+      if (authError) {
+        setError(authError.message);
+        setFieldErrors(authError.fieldErrors);
         return;
       }
 
-      // In development, token is returned - auto-fill it
-      if (data.devToken) {
-        setToken(data.devToken);
-      }
-
+      setSuccessMessage("If an account exists with that email, a reset link has been sent.");
       setStep("verify");
     } catch (err) {
-      setError("An error occurred. Please try again.");
+      setError("We could not process your request right now. Please try again.");
       console.error(err);
     } finally {
       setLoading(false);
     }
   };
 
-  // Step 2: Reset password with token
   const handleResetPassword = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
     setError("");
+    setSuccessMessage("");
+    setFieldErrors({});
+
+    if (!token.trim()) {
+      setFieldErrors({ token: "Reset token is required." });
+      setError("Reset token is required.");
+      setLoading(false);
+      return;
+    }
+
+    if (!newPassword) {
+      setFieldErrors({ password: "New password is required." });
+      setError("New password is required.");
+      setLoading(false);
+      return;
+    }
 
     if (!allPasswordRulesMet) {
-      setError("Password does not meet all requirements");
+      setFieldErrors({ password: "Password does not meet the requirements." });
+      setError("Password does not meet the requirements.");
       setLoading(false);
       return;
     }
 
     if (newPassword !== confirmPassword) {
-      setError("Passwords do not match");
+      setFieldErrors({ confirmPassword: "Password and confirm password do not match." });
+      setError("Password and confirm password do not match.");
       setLoading(false);
       return;
     }
@@ -130,20 +150,24 @@ function ForgotPasswordForm() {
           sport: sport.toUpperCase(),
           action: "reset",
           token,
-          newPassword
-        })
+          newPassword,
+        }),
       });
 
-      const data = await response.json();
+      const { error: authError } = await parseAuthResponse(
+        response,
+        "We could not reset your password right now. Please try again.",
+      );
 
-      if (!response.ok) {
-        setError(data.error || "Failed to reset password");
+      if (authError) {
+        setError(authError.message);
+        setFieldErrors(authError.fieldErrors);
         return;
       }
 
       setStep("success");
     } catch (err) {
-      setError("An error occurred. Please try again.");
+      setError("We could not reset your password right now. Please try again.");
       console.error(err);
     } finally {
       setLoading(false);
@@ -153,16 +177,11 @@ function ForgotPasswordForm() {
   return (
     <div className="min-h-screen flex items-center justify-center py-12 px-4 bg-muted/30">
       <div className="w-full max-w-md space-y-6">
-        {/* Back Link */}
-        <Link 
-          href={`/${sport}/login`} 
-          className="inline-flex items-center gap-2 text-muted-foreground hover:text-foreground transition-colors"
-        >
+        <Link href={`/${sport}/login`} className="inline-flex items-center gap-2 text-muted-foreground hover:text-foreground transition-colors">
           <ArrowLeft className="w-4 h-4" />
           Back to Login
         </Link>
 
-        {/* Header */}
         <div className="text-center">
           <Link href="/" className="inline-flex items-center gap-2 mb-4">
             <img src="/logo.png" alt="VALORHIVE" className="h-10 w-auto" />
@@ -173,13 +192,9 @@ function ForgotPasswordForm() {
           </Badge>
         </div>
 
-        {/* Card */}
         <Card className="bg-card border-border/50 shadow-sm">
           <CardHeader className="text-center pb-2">
-            <div className={cn(
-              "w-12 h-12 rounded-full mx-auto mb-3 flex items-center justify-center",
-              primaryBgClass
-            )}>
+            <div className={cn("w-12 h-12 rounded-full mx-auto mb-3 flex items-center justify-center", primaryBgClass)}>
               {step === "request" && <Mail className={cn("w-6 h-6", primaryTextClass)} />}
               {step === "verify" && <KeyRound className={cn("w-6 h-6", primaryTextClass)} />}
               {step === "success" && <ShieldCheck className={cn("w-6 h-6", primaryTextClass)} />}
@@ -203,7 +218,14 @@ function ForgotPasswordForm() {
               </Alert>
             )}
 
-            {/* Step 1: Request Reset */}
+            {successMessage && (
+              <Alert className="mb-4 border-green-500/40 bg-green-500/10">
+                <AlertDescription className="text-green-700 dark:text-green-300">
+                  {successMessage}
+                </AlertDescription>
+              </Alert>
+            )}
+
             {step === "request" && (
               <form onSubmit={handleRequestReset} className="space-y-4">
                 <div className="space-y-2">
@@ -215,18 +237,20 @@ function ForgotPasswordForm() {
                       type="email"
                       placeholder="you@example.com"
                       value={email}
-                      onChange={(e) => setEmail(e.target.value)}
+                      onChange={(e) => {
+                        setEmail(e.target.value);
+                        setFieldErrors((current) => ({ ...current, email: undefined }));
+                        setError("");
+                      }}
                       className="pl-10"
+                      aria-invalid={Boolean(fieldErrors.email)}
                       required
                     />
                   </div>
+                  {fieldErrors.email && <p className="text-xs text-red-500">{fieldErrors.email}</p>}
                 </div>
 
-                <Button
-                  type="submit"
-                  className={cn("w-full text-white gap-2 h-11", primaryBtnClass)}
-                  disabled={loading}
-                >
+                <Button type="submit" className={cn("w-full text-white gap-2 h-11", primaryBtnClass)} disabled={loading}>
                   {loading ? (
                     <>
                       <Loader2 className="w-4 h-4 animate-spin" />
@@ -242,10 +266,8 @@ function ForgotPasswordForm() {
               </form>
             )}
 
-            {/* Step 2: Verify & Reset */}
             {step === "verify" && (
               <form onSubmit={handleResetPassword} className="space-y-4">
-                {/* Token Input */}
                 <div className="space-y-2">
                   <Label htmlFor="token" className="text-foreground">Reset Code</Label>
                   <Input
@@ -253,16 +275,19 @@ function ForgotPasswordForm() {
                     type="text"
                     placeholder="Enter code from email"
                     value={token}
-                    onChange={(e) => setToken(e.target.value)}
+                    onChange={(e) => {
+                      setToken(e.target.value);
+                      setFieldErrors((current) => ({ ...current, token: undefined }));
+                      setError("");
+                    }}
                     className="font-mono text-center tracking-widest"
+                    aria-invalid={Boolean(fieldErrors.token)}
                     required
                   />
-                  <p className="text-xs text-muted-foreground">
-                    Check your email for the reset code
-                  </p>
+                  {fieldErrors.token && <p className="text-xs text-red-500">{fieldErrors.token}</p>}
+                  <p className="text-xs text-muted-foreground">Check your email for the reset code</p>
                 </div>
 
-                {/* New Password */}
                 <div className="space-y-2">
                   <Label htmlFor="newPassword" className="text-foreground">New Password</Label>
                   <div className="relative">
@@ -272,8 +297,13 @@ function ForgotPasswordForm() {
                       type={showPassword ? "text" : "password"}
                       placeholder="Enter new password"
                       value={newPassword}
-                      onChange={(e) => setNewPassword(e.target.value)}
+                      onChange={(e) => {
+                        setNewPassword(e.target.value);
+                        setFieldErrors((current) => ({ ...current, password: undefined }));
+                        setError("");
+                      }}
                       className="pl-10 pr-10"
+                      aria-invalid={Boolean(fieldErrors.password)}
                       required
                     />
                     <button
@@ -285,8 +315,8 @@ function ForgotPasswordForm() {
                       {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                     </button>
                   </div>
-                  
-                  {/* Password Requirements */}
+                  {fieldErrors.password && <p className="text-xs text-red-500">{fieldErrors.password}</p>}
+
                   {newPassword && (
                     <div className="mt-2 space-y-1.5 p-3 bg-muted/30 rounded-lg border border-border/50">
                       <p className="text-xs font-medium text-muted-foreground mb-2">Password must contain:</p>
@@ -297,10 +327,10 @@ function ForgotPasswordForm() {
                           { rule: passwordRules.hasLowercase, text: "At least 1 lowercase letter" },
                           { rule: passwordRules.hasNumber, text: "At least 1 number" },
                           { rule: passwordRules.hasSpecial, text: "At least 1 special character" },
-                        ].map((item, idx) => (
-                          <div key={idx} className="flex items-center gap-2 text-xs">
+                        ].map((item) => (
+                          <div key={item.text} className="flex items-center gap-2 text-xs">
                             <span className={item.rule ? "text-green-500" : "text-red-500"}>
-                              {item.rule ? "✓" : "✗"}
+                              {item.rule ? "✓" : "✕"}
                             </span>
                             <span className={item.rule ? "text-green-600 dark:text-green-400" : "text-red-600 dark:text-red-400"}>
                               {item.text}
@@ -312,7 +342,6 @@ function ForgotPasswordForm() {
                   )}
                 </div>
 
-                {/* Confirm Password */}
                 <div className="space-y-2">
                   <Label htmlFor="confirmPassword" className="text-foreground">Confirm Password</Label>
                   <div className="relative">
@@ -322,15 +351,21 @@ function ForgotPasswordForm() {
                       type={showPassword ? "text" : "password"}
                       placeholder="Confirm new password"
                       value={confirmPassword}
-                      onChange={(e) => setConfirmPassword(e.target.value)}
+                      onChange={(e) => {
+                        setConfirmPassword(e.target.value);
+                        setFieldErrors((current) => ({ ...current, confirmPassword: undefined }));
+                        setError("");
+                      }}
                       className="pl-10"
+                      aria-invalid={Boolean(fieldErrors.confirmPassword)}
                       required
                     />
                   </div>
-                  {confirmPassword && newPassword !== confirmPassword && (
-                    <p className="text-xs text-red-500">Passwords do not match</p>
+                  {fieldErrors.confirmPassword && <p className="text-xs text-red-500">{fieldErrors.confirmPassword}</p>}
+                  {!fieldErrors.confirmPassword && confirmPassword && newPassword !== confirmPassword && (
+                    <p className="text-xs text-red-500">Password and confirm password do not match.</p>
                   )}
-                  {confirmPassword && newPassword === confirmPassword && allPasswordRulesMet && (
+                  {!fieldErrors.confirmPassword && confirmPassword && newPassword === confirmPassword && allPasswordRulesMet && (
                     <p className="text-xs text-green-500 flex items-center gap-1">
                       <CheckCircle className="w-3 h-3" />
                       Passwords match
@@ -356,34 +391,23 @@ function ForgotPasswordForm() {
                   )}
                 </Button>
 
-                <Button
-                  type="button"
-                  variant="ghost"
-                  className="w-full"
-                  onClick={() => setStep("request")}
-                >
-                  Didn't receive the code? Request again
+                <Button type="button" variant="ghost" className="w-full" onClick={() => setStep("request")}>
+                  Didn&apos;t receive the code? Request again
                 </Button>
               </form>
             )}
 
-            {/* Step 3: Success */}
             {step === "success" && (
               <div className="text-center py-4">
-                <div className={cn(
-                  "w-16 h-16 rounded-full mx-auto mb-4 flex items-center justify-center",
-                  "bg-green-500/10 dark:bg-green-500/20"
-                )}>
+                <div className={cn("w-16 h-16 rounded-full mx-auto mb-4 flex items-center justify-center", "bg-green-500/10 dark:bg-green-500/20")}>
                   <CheckCircle className="w-8 h-8 text-green-500" />
                 </div>
                 <p className="text-foreground font-medium mb-2">Password Reset Successfully!</p>
                 <p className="text-sm text-muted-foreground mb-4">
-                  You've been logged out of all devices. Please login with your new password.
+                  You&apos;ve been logged out of all devices. Please log in with your new password.
                 </p>
                 <Link href={`/${sport}/login`}>
-                  <Button className={cn("text-white", primaryBtnClass)}>
-                    Go to Login
-                  </Button>
+                  <Button className={cn("text-white", primaryBtnClass)}>Go to Login</Button>
                 </Link>
               </div>
             )}
@@ -396,11 +420,13 @@ function ForgotPasswordForm() {
 
 export default function ForgotPasswordPage() {
   return (
-    <Suspense fallback={
-      <div className="min-h-screen flex items-center justify-center bg-background">
-        <Loader2 className="w-8 h-8 animate-spin text-muted-foreground" />
-      </div>
-    }>
+    <Suspense
+      fallback={
+        <div className="min-h-screen flex items-center justify-center bg-background">
+          <Loader2 className="w-8 h-8 animate-spin text-muted-foreground" />
+        </div>
+      }
+    >
       <ForgotPasswordForm />
     </Suspense>
   );

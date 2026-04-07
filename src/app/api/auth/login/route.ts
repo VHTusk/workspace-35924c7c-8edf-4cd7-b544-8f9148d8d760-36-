@@ -1,123 +1,151 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { AbusePattern, AbuseSeverity } from '@prisma/client';
 import { db } from '@/lib/db';
-import { verifyPassword, createSession } from '@/lib/auth';
-import { SportType, AbusePattern, AbuseSeverity } from '@prisma/client';
-import { log, authLog } from '@/lib/logger';
+import { createSession, verifyPassword } from '@/lib/auth';
+import { log } from '@/lib/logger';
 import { setCsrfCookie } from '@/lib/csrf';
 import { setSessionCookie } from '@/lib/session-helpers';
-import { logLoginEvent, AuditEventType } from '@/lib/audit-logger';
+import { logLoginEvent } from '@/lib/audit-logger';
 import { withRateLimit } from '@/lib/rate-limit';
 import {
   detectDeviceFingerprint,
   generateDeviceFingerprint,
   storeDeviceFingerprint,
   detectCredentialStuffing,
-  detectImpossibleTravel,
   recordAbuseEvent,
   getClientIpAddress,
   getUserAgent,
   getAbuseRiskScore,
 } from '@/lib/abuse-detection';
 import { normalizeSport } from '@/lib/sports';
+import { AUTH_CODES } from '@/lib/auth-contract';
+import { authError, authSuccess } from '@/lib/auth-response';
+import {
+  isValidEmailAddress,
+  isValidPhoneNumber,
+  normalizeEmail,
+  normalizePhone,
+} from '@/lib/auth-validation';
 
-// Input validation helpers
-function validateEmail(email: string): boolean {
-  const emailRegex = /^[a-zA-Z0-9.!#$%&'*+/=?^_`{|}~-]+@[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(?:\.[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)*$/;
-  return emailRegex.test(email) && email.length <= 255;
-}
+const MAX_FAILED_ATTEMPTS = 5;
+const LOCK_DURATION_MS = 30 * 60 * 1000;
 
-function validatePhone(phone: string): boolean {
-  // Indian phone numbers: 10 digits, optionally starting with +91
-  const cleanPhone = phone.replace(/[\s-]/g, '');
-  const phoneRegex = /^(\+91)?[6-9]\d{9}$/;
-  return phoneRegex.test(cleanPhone);
-}
-
-function sanitizeInput(input: string): string {
-  return input.toLowerCase().trim();
-}
-
-// FIX: Wrap handler with distributed rate limiting to prevent brute force attacks
-// Uses 'LOGIN' tier: 5 requests per minute per IP
-// With 2 replicas, this rate limit is now distributed via Redis
 async function loginHandler(request: NextRequest): Promise<NextResponse> {
   try {
     const body = await request.json();
     const { email, phone, password, sport, otpLogin } = body;
 
-    // Get client info for abuse detection
     const ipAddress = getClientIpAddress(request);
     const userAgent = getUserAgent(request);
     const deviceData = detectDeviceFingerprint(request);
     const deviceFingerprint = generateDeviceFingerprint(deviceData);
 
-    // Sport validation
     const sportType = normalizeSport(sport);
     if (!sportType) {
-      return NextResponse.json(
-        { error: 'Invalid sport', code: 'INVALID_SPORT' },
-        { status: 400 }
-      );
-    }
-
-    // Validate email format if provided
-    if (email) {
-      if (!validateEmail(email)) {
-        return NextResponse.json(
-          { error: 'Invalid email format', code: 'INVALID_EMAIL' },
-          { status: 400 }
-        );
-      }
-    }
-
-    // Validate phone format if provided
-    if (phone) {
-      if (!validatePhone(phone)) {
-        return NextResponse.json(
-          { error: 'Invalid phone number format. Please enter a valid 10-digit Indian mobile number', code: 'INVALID_PHONE' },
-          { status: 400 }
-        );
-      }
-    }
-
-    // Validate password length if provided
-    if (password && password.length > 128) {
-      return NextResponse.json(
-        { error: 'Password is too long', code: 'PASSWORD_TOO_LONG' },
-        { status: 400 }
-      );
-    }
-
-    // Find user by email or phone
-    let user;
-    const normalizedEmail = email ? sanitizeInput(email) : null;
-    const normalizedPhone = phone ? phone.replace(/[\s-]/g, '').replace(/^\+91/, '') : null;
-    
-    if (normalizedEmail) {
-      user = await db.user.findUnique({
-        where: { email_sport: { email: normalizedEmail, sport: sportType } },
+      return authError(AUTH_CODES.INVALID_SPORT, 'Please choose a valid sport.', 400, {
+        field: 'sport',
       });
-    } else if (normalizedPhone) {
-      user = await db.user.findUnique({
-        where: { phone_sport: { phone: normalizedPhone, sport: sportType } },
-      });
-    } else {
-      return NextResponse.json(
-        { error: 'Email or phone is required', code: 'IDENTIFIER_REQUIRED' },
-        { status: 400 }
+    }
+
+    const normalizedEmail = normalizeEmail(email);
+    const normalizedPhone = normalizePhone(phone);
+    const trimmedPassword = typeof password === 'string' ? password : '';
+
+    if (!normalizedEmail && !normalizedPhone) {
+      return authError(
+        AUTH_CODES.REQUIRED_FIELD_MISSING,
+        'Please enter your email address or mobile number.',
+        400,
+        {
+          field: 'identifier',
+          fieldErrors: { email: 'Email or mobile number is required.', phone: 'Email or mobile number is required.' },
+        },
       );
     }
+
+    if (email && !normalizedEmail) {
+      return authError(
+        AUTH_CODES.INVALID_EMAIL_FORMAT,
+        'Please enter a valid email address.',
+        400,
+        {
+          field: 'email',
+          fieldErrors: { email: 'Please enter a valid email address.' },
+        },
+      );
+    }
+
+    if (phone && !normalizedPhone) {
+      return authError(
+        AUTH_CODES.INVALID_PHONE_FORMAT,
+        'Please enter a valid 10-digit mobile number.',
+        400,
+        {
+          field: 'phone',
+          fieldErrors: { phone: 'Please enter a valid 10-digit mobile number.' },
+        },
+      );
+    }
+
+    if (normalizedEmail && !isValidEmailAddress(normalizedEmail)) {
+      return authError(
+        AUTH_CODES.INVALID_EMAIL_FORMAT,
+        'Please enter a valid email address.',
+        400,
+        {
+          field: 'email',
+          fieldErrors: { email: 'Please enter a valid email address.' },
+        },
+      );
+    }
+
+    if (normalizedPhone && !isValidPhoneNumber(normalizedPhone)) {
+      return authError(
+        AUTH_CODES.INVALID_PHONE_FORMAT,
+        'Please enter a valid 10-digit mobile number.',
+        400,
+        {
+          field: 'phone',
+          fieldErrors: { phone: 'Please enter a valid 10-digit mobile number.' },
+        },
+      );
+    }
+
+    if (!otpLogin && !trimmedPassword) {
+      return authError(AUTH_CODES.PASSWORD_REQUIRED, 'Password is required.', 400, {
+        field: 'password',
+        fieldErrors: { password: 'Password is required.' },
+      });
+    }
+
+    if (trimmedPassword.length > 128) {
+      return authError(
+        AUTH_CODES.PASSWORD_TOO_WEAK,
+        'Password is too long.',
+        400,
+        {
+          field: 'password',
+          fieldErrors: { password: 'Password is too long.' },
+        },
+      );
+    }
+
+    const user = normalizedEmail
+      ? await db.user.findUnique({
+          where: { email_sport: { email: normalizedEmail, sport: sportType } },
+        })
+      : await db.user.findUnique({
+          where: { phone_sport: { phone: normalizedPhone!, sport: sportType } },
+        });
 
     if (!user) {
-      // FIX: Use generic message to prevent user enumeration
-      // Log the attempt for security monitoring but don't reveal if email exists
       const stuffingCheck = await detectCredentialStuffing(
-        email || phone || '',
+        normalizedEmail || normalizedPhone || '',
         ipAddress || 'unknown',
         deviceFingerprint,
-        sportType
+        sportType,
       );
-      
+
       if (stuffingCheck.detected) {
         await recordAbuseEvent(
           AbusePattern.CREDENTIAL_STUFFING,
@@ -126,33 +154,33 @@ async function loginHandler(request: NextRequest): Promise<NextResponse> {
           undefined,
           ipAddress,
           userAgent,
-          stuffingCheck.metadata || {}
+          stuffingCheck.metadata || {},
         );
       }
-      
-      // FIX: Return generic "Invalid credentials" message
-      // This prevents attackers from knowing which emails are registered
-      return NextResponse.json(
-        { error: 'Invalid credentials', code: 'INVALID_CREDENTIALS' },
-        { status: 401 }
+
+      return authError(
+        AUTH_CODES.USER_NOT_FOUND,
+        normalizedEmail
+          ? 'No account found with this email address.'
+          : 'No account found with this mobile number.',
+        401,
       );
     }
 
-    // Check if account is locked due to unverified email (24-hour window expired)
-    if (!user.isActive && user.deactivationReason?.includes('Email not verified')) {
-      return NextResponse.json(
-        {
-          error: 'Your account has been locked because your email was not verified within 24 hours. Please contact support to unlock your account.',
-          code: 'ACCOUNT_LOCKED_UNVERIFIED',
-          canContactSupport: true,
-        },
-        { status: 403 }
-      );
+    if (!user.isActive) {
+      const code =
+        user.deactivationReason?.toLowerCase().includes('blocked')
+          ? AUTH_CODES.ACCOUNT_BLOCKED
+          : AUTH_CODES.ACCOUNT_SUSPENDED;
+      const message =
+        code === AUTH_CODES.ACCOUNT_BLOCKED
+          ? 'Your account has been blocked. Please contact support.'
+          : 'Your account is currently suspended. Please contact support.';
+
+      return authError(code, message, 403);
     }
 
-    // Check if account is locked
     if (user.lockedUntil && user.lockedUntil > new Date()) {
-      // Check device risk score for additional security
       const riskScore = await getAbuseRiskScore(user.id, deviceFingerprint, ipAddress);
       if (riskScore.overallScore >= 70) {
         await recordAbuseEvent(
@@ -162,64 +190,67 @@ async function loginHandler(request: NextRequest): Promise<NextResponse> {
           undefined,
           ipAddress,
           userAgent,
-          { riskScore: riskScore.overallScore }
+          { riskScore: riskScore.overallScore },
         );
       }
-      
-      return NextResponse.json(
-        { error: 'Account is temporarily locked. Please try again later.' },
-        { status: 423 }
+
+      const retryAfterSeconds = Math.max(
+        1,
+        Math.ceil((user.lockedUntil.getTime() - Date.now()) / 1000),
+      );
+
+      return authError(
+        AUTH_CODES.TOO_MANY_ATTEMPTS,
+        'Too many failed attempts. Please try again later.',
+        429,
+        { retryAfterSeconds },
       );
     }
 
-    // If OTP login, skip password verification (OTP was already verified)
     if (otpLogin) {
-      // For email-based OTP logins, check email verification
-      // Phone-based OTP logins are considered verified via OTP
-      if (user.email && !user.phone && !user.emailVerified) {
-        return NextResponse.json(
-          { 
-            error: 'Please verify your email address before logging in. Check your inbox for the verification link.',
-            code: 'EMAIL_NOT_VERIFIED',
-            email: user.email,
+      if (normalizedEmail && !user.emailVerified) {
+        return authError(
+          AUTH_CODES.EMAIL_NOT_VERIFIED,
+          'Your email is not verified yet. Please verify your email first.',
+          403,
+          {
+            email: user.email || undefined,
             canResendVerification: true,
+            requiresVerification: true,
           },
-          { status: 403 }
         );
       }
-      
-      // Reset failed attempts on successful login
+
       await db.user.update({
         where: { id: user.id },
         data: { failedLoginAttempts: 0, lockedUntil: null },
       });
 
-      // Store device fingerprint for this login
       await storeDeviceFingerprint(user.id, deviceData, ipAddress);
 
-      // SECURITY: Session Fixation Prevention
-      // Delete any existing sessions for this user before creating a new one
       try {
-        await db.session.deleteMany({
-          where: { userId: user.id }
-        });
-      } catch {
-        // Ignore errors - session might not exist
+        await db.session.deleteMany({ where: { userId: user.id } });
+      } catch {}
+
+      let session;
+      try {
+        session = await createSession(user.id, sportType);
+      } catch (error) {
+        log.error('Failed to create session after OTP login', { error, userId: user.id });
+        return authError(
+          AUTH_CODES.SESSION_CREATE_FAILED,
+          'We verified your credentials, but could not start your session. Please try again.',
+          500,
+        );
       }
 
-      // Create session
-      const session = await createSession(user.id, sportType);
-
-      // Log successful login
       logLoginEvent(user.id, sportType, request, {
         role: user.role,
         loginMethod: 'otp',
         success: true,
-      }).catch(err => log.error('Failed to log login event', { error: err }));
+      }).catch((error) => log.error('Failed to log login event', { error }));
 
-      // Set cookie
-      const response = NextResponse.json({
-        success: true,
+      const response = authSuccess(AUTH_CODES.LOGIN_SUCCESS, 'Login successful.', {
         user: {
           id: user.id,
           email: user.email,
@@ -228,133 +259,133 @@ async function loginHandler(request: NextRequest): Promise<NextResponse> {
           lastName: user.lastName,
           sport: user.sport,
           role: user.role,
-          tier: user.hiddenElo >= 1900 ? 'DIAMOND' : 
-               user.hiddenElo >= 1700 ? 'PLATINUM' :
-               user.hiddenElo >= 1500 ? 'GOLD' :
-               user.hiddenElo >= 1300 ? 'SILVER' : 'BRONZE',
+          tier:
+            user.hiddenElo >= 1900
+              ? 'DIAMOND'
+              : user.hiddenElo >= 1700
+                ? 'PLATINUM'
+                : user.hiddenElo >= 1500
+                  ? 'GOLD'
+                  : user.hiddenElo >= 1300
+                    ? 'SILVER'
+                    : 'BRONZE',
           points: user.visiblePoints,
         },
       });
 
       setSessionCookie(response, session.token);
-
-      // Set CSRF token cookie for subsequent requests
       setCsrfCookie(response);
-
       return response;
     }
 
-    // Verify password
-    if (password && user.password) {
-      const isValid = await verifyPassword(password, user.password);
-      if (!isValid) {
-        // Increment failed attempts
-        const attempts = user.failedLoginAttempts + 1;
-        const updates: Record<string, unknown> = { failedLoginAttempts: attempts };
-        
-        if (attempts >= 5) {
-          updates.lockedUntil = new Date(Date.now() + 30 * 60 * 1000); // 30 min lock
-          
-          // Update user with lock info
-          await db.user.update({
-            where: { id: user.id },
-            data: updates,
-          });
-          
-          // Log failed login with account lock
-          logLoginEvent(user.id, sportType, request, {
-            role: user.role,
-            loginMethod: 'password',
-            success: false,
-          }).catch(err => log.error('Failed to log login event', { error: err }));
-          
-          return NextResponse.json(
-            { error: 'Account locked due to too many failed attempts. Please try again in 30 minutes.', code: 'ACCOUNT_LOCKED' },
-            { status: 423 }
-          );
-        }
+    if (normalizedEmail && !user.emailVerified) {
+      return authError(
+        AUTH_CODES.EMAIL_NOT_VERIFIED,
+        'Your email is not verified yet.',
+        403,
+        {
+          email: user.email || undefined,
+          canResendVerification: true,
+          requiresVerification: true,
+        },
+      );
+    }
 
-        await db.user.update({
-          where: { id: user.id },
-          data: updates,
-        });
+    if (normalizedPhone && user.verified === false) {
+      return authError(
+        AUTH_CODES.PHONE_NOT_VERIFIED,
+        'Your mobile number is not verified yet. Please verify it first.',
+        403,
+        {
+          phone: user.phone || undefined,
+          requiresVerification: true,
+        },
+      );
+    }
 
-        // Log failed login attempt
-        logLoginEvent(user.id, sportType, request, {
-          role: user.role,
-          loginMethod: 'password',
-          success: false,
-        }).catch(err => log.error('Failed to log login event', { error: err }));
-
-        // FIX: Return generic "Invalid credentials" to prevent user enumeration
-        // Don't reveal remaining attempts to prevent brute force optimization
-        return NextResponse.json(
-          { error: 'Invalid credentials', code: 'INVALID_CREDENTIALS' },
-          { status: 401 }
+    if (!user.password) {
+      if (user.googleId) {
+        return authError(
+          AUTH_CODES.SOCIAL_LOGIN_REQUIRED,
+          'This account uses Google login. Please continue with Google.',
+          401,
         );
       }
-    } else if (!user.password) {
-      // User registered with Google OAuth, no password set
-      return NextResponse.json(
-        { error: 'This account was created with Google. Please sign in with Google.', code: 'USE_GOOGLE' },
-        { status: 401 }
-      );
-    } else if (!password) {
-      return NextResponse.json(
-        { error: 'Password is required', code: 'PASSWORD_REQUIRED' },
-        { status: 400 }
+
+      return authError(
+        AUTH_CODES.PASSWORD_LOGIN_NOT_ENABLED,
+        'Password login is not enabled for this account. Please continue with OTP login.',
+        401,
       );
     }
 
-    // SECURITY: Session Fixation Prevention
-    // Delete any existing sessions for this user before creating a new one
-    // This ensures the user always gets a fresh session on login
-    try {
-      await db.session.deleteMany({
-        where: { userId: user.id }
+    const isValidPassword = await verifyPassword(trimmedPassword, user.password);
+    if (!isValidPassword) {
+      const attempts = user.failedLoginAttempts + 1;
+      const lockUntil =
+        attempts >= MAX_FAILED_ATTEMPTS ? new Date(Date.now() + LOCK_DURATION_MS) : null;
+
+      await db.user.update({
+        where: { id: user.id },
+        data: {
+          failedLoginAttempts: attempts,
+          lockedUntil: lockUntil,
+        },
       });
-    } catch {
-      // Ignore errors - session might not exist
+
+      logLoginEvent(user.id, sportType, request, {
+        role: user.role,
+        loginMethod: 'password',
+        success: false,
+      }).catch((error) => log.error('Failed to log login event', { error }));
+
+      if (lockUntil) {
+        return authError(
+          AUTH_CODES.TOO_MANY_ATTEMPTS,
+          'Too many failed attempts. Please try again later.',
+          429,
+          {
+            retryAfterSeconds: Math.ceil(LOCK_DURATION_MS / 1000),
+          },
+        );
+      }
+
+      return authError(AUTH_CODES.WRONG_PASSWORD, 'Incorrect password.', 401, {
+        field: 'password',
+        fieldErrors: { password: 'Incorrect password.' },
+      });
     }
 
-    // Check email verification for email-based accounts
-    // DISABLED FOR TESTING - User has 24 hours to verify after registration
-    // After 24 hours, account will be locked by cron job if not verified
-    // if (user.email && !user.emailVerified) {
-    //   console.log(`Login blocked for user ${user.id}: email not verified`);
-    //   return NextResponse.json(
-    //     { 
-    //       error: 'Please verify your email address before logging in. Check your inbox for the verification link.',
-    //       code: 'EMAIL_NOT_VERIFIED',
-    //       email: user.email,
-    //       canResendVerification: true,
-    //     },
-    //     { status: 403 }
-    //   );
-    // }
+    try {
+      await db.session.deleteMany({ where: { userId: user.id } });
+    } catch {}
 
-    // Reset failed attempts on successful login
     await db.user.update({
       where: { id: user.id },
       data: { failedLoginAttempts: 0, lockedUntil: null },
     });
 
-    // Store device fingerprint for this login
     await storeDeviceFingerprint(user.id, deviceData, ipAddress);
 
-    // Create session
-    const session = await createSession(user.id, sportType);
+    let session;
+    try {
+      session = await createSession(user.id, sportType);
+    } catch (error) {
+      log.error('Failed to create session after password login', { error, userId: user.id });
+      return authError(
+        AUTH_CODES.SESSION_CREATE_FAILED,
+        'We verified your credentials, but could not start your session. Please try again.',
+        500,
+      );
+    }
 
-    // Log successful login
     logLoginEvent(user.id, sportType, request, {
       role: user.role,
       loginMethod: 'password',
       success: true,
-    }).catch(err => log.error('Failed to log login event', { error: err }));
+    }).catch((error) => log.error('Failed to log login event', { error }));
 
-    // Set cookie
-    const response = NextResponse.json({
-      success: true,
+    const response = authSuccess(AUTH_CODES.LOGIN_SUCCESS, 'Login successful.', {
       user: {
         id: user.id,
         email: user.email,
@@ -363,28 +394,31 @@ async function loginHandler(request: NextRequest): Promise<NextResponse> {
         lastName: user.lastName,
         sport: user.sport,
         role: user.role,
-        tier: user.hiddenElo >= 1900 ? 'DIAMOND' : 
-             user.hiddenElo >= 1700 ? 'PLATINUM' :
-             user.hiddenElo >= 1500 ? 'GOLD' :
-             user.hiddenElo >= 1300 ? 'SILVER' : 'BRONZE',
+        tier:
+          user.hiddenElo >= 1900
+            ? 'DIAMOND'
+            : user.hiddenElo >= 1700
+              ? 'PLATINUM'
+              : user.hiddenElo >= 1500
+                ? 'GOLD'
+                : user.hiddenElo >= 1300
+                  ? 'SILVER'
+                  : 'BRONZE',
         points: user.visiblePoints,
       },
     });
 
     setSessionCookie(response, session.token);
-
-    // Set CSRF token cookie for subsequent requests
     setCsrfCookie(response);
-
     return response;
   } catch (error) {
     log.errorWithStack('Login error', error instanceof Error ? error : new Error(String(error)));
-    return NextResponse.json(
-      { error: 'Internal server error' },
-      { status: 500 }
+    return authError(
+      AUTH_CODES.SERVER_ERROR,
+      'We could not sign you in right now. Please try again.',
+      500,
     );
   }
 }
 
-// Export the rate-limited handler
 export const POST = withRateLimit(loginHandler, 'LOGIN');

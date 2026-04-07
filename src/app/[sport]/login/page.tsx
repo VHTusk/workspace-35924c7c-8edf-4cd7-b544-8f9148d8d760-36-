@@ -1,8 +1,8 @@
 "use client";
 
-import { useState, useEffect, Suspense } from "react";
+import { Suspense, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
-import { useParams, useRouter, useSearchParams } from "next/navigation";
+import { useParams, useSearchParams } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -23,61 +23,109 @@ import {
   Eye,
   EyeOff,
   AlertTriangle,
+  CheckCircle2,
 } from "lucide-react";
 import { WhatsAppLogin } from "@/components/auth/whatsapp-login";
+import { AUTH_CODES, type AuthFieldErrors } from "@/lib/auth-contract";
+import { parseAuthResponse } from "@/lib/auth-client";
 
 function LoginForm() {
   const params = useParams();
-  const router = useRouter();
   const searchParams = useSearchParams();
   const sport = params.sport as string;
   const isCornhole = sport === "cornhole";
-  
-  const primaryBgClass = isCornhole 
-    ? "bg-green-500/10 dark:bg-green-500/20" 
+
+  const primaryBgClass = isCornhole
+    ? "bg-green-500/10 dark:bg-green-500/20"
     : "bg-teal-500/10 dark:bg-teal-500/20";
-  const primaryTextClass = isCornhole 
-    ? "text-green-500 dark:text-green-400" 
+  const primaryTextClass = isCornhole
+    ? "text-green-500 dark:text-green-400"
     : "text-teal-500 dark:text-teal-400";
-  const primaryBorderClass = isCornhole 
-    ? "border-green-500/30" 
+  const primaryBorderClass = isCornhole
+    ? "border-green-500/30"
     : "border-teal-500/30";
-  const primaryBtnClass = isCornhole 
-    ? "bg-green-600 hover:bg-green-700 dark:bg-green-500 dark:hover:bg-green-600" 
+  const primaryBtnClass = isCornhole
+    ? "bg-green-600 hover:bg-green-700 dark:bg-green-500 dark:hover:bg-green-600"
     : "bg-teal-600 hover:bg-teal-700 dark:bg-teal-500 dark:hover:bg-teal-600";
 
   const [loading, setLoading] = useState(false);
   const [googleLoading, setGoogleLoading] = useState(false);
   const [error, setError] = useState("");
   const [errorCode, setErrorCode] = useState<string | null>(null);
+  const [fieldErrors, setFieldErrors] = useState<AuthFieldErrors>({});
   const [infoMessage, setInfoMessage] = useState<string | null>(null);
-
-  // Check for sport mismatch redirect
-  useEffect(() => {
-    const errorParam = searchParams.get("error");
-    if (errorParam === "sport_mismatch") {
-      setInfoMessage(
-        `You are logged in for a different sport. Please log in with your ${isCornhole ? "Cornhole" : "Darts"} account.`
-      );
-    }
-  }, [searchParams, isCornhole]);
-
-  // Form - single email or phone field
-  const [emailOrPhone, setEmailOrPhone] = useState("");
+  const [successMessage, setSuccessMessage] = useState<string | null>(null);
+  const [actionEmail, setActionEmail] = useState<string | null>(null);
+  const [emailOrPhone, setEmailOrPhone] = useState(searchParams.get("email") || "");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
-  
-  // WhatsApp login state
   const [useWhatsApp, setUseWhatsApp] = useState(false);
 
-  // Detect if input is email or phone
-  const isEmail = (value: string) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value);
-  const isPhone = (value: string) => /^[\+]?[(]?[0-9]{3}[)]?[-\s\.]?[0-9]{3}[-\s\.]?[0-9]{4,6}$/.test(value.replace(/\s/g, ''));
+  const sportLabel = isCornhole ? "Cornhole" : "Darts";
 
-  // Handle WhatsApp login success
+  useEffect(() => {
+    const errorParam = searchParams.get("error");
+    const messageParam = searchParams.get("message");
+    const verifiedParam = searchParams.get("verified");
+    const emailParam = searchParams.get("email");
+
+    if (emailParam) {
+      setEmailOrPhone(emailParam);
+      setActionEmail(emailParam);
+    }
+
+    if (verifiedParam === "true") {
+      setSuccessMessage(
+        messageParam || "Your email has been verified successfully. You can now log in.",
+      );
+      return;
+    }
+
+    if (errorParam === "sport_mismatch") {
+      setInfoMessage(
+        `You are logged in for a different sport. Please log in with your ${sportLabel} account.`,
+      );
+      return;
+    }
+
+    if (messageParam) {
+      setInfoMessage(messageParam);
+    }
+  }, [searchParams, sportLabel]);
+
+  const isEmail = (value: string) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value.trim());
+  const isPhone = (value: string) =>
+    /^[\+]?[(]?[0-9]{3}[)]?[-\s.]?[0-9]{3}[-\s.]?[0-9]{4,6}$/.test(value.replace(/\s/g, ""));
+
+  const identifierIcon = useMemo(() => {
+    return isEmail(emailOrPhone) ? (
+      <Mail className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+    ) : (
+      <Phone className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+    );
+  }, [emailOrPhone]);
+
+  const clearIdentifierErrors = () => {
+    setFieldErrors((current) => ({
+      ...current,
+      email: undefined,
+      phone: undefined,
+      identifier: undefined,
+      emailOrPhone: undefined,
+    }));
+  };
+
   const handleWhatsAppSuccess = () => {
-    // Use full page navigation to ensure header remounts with fresh auth state
     window.location.href = `/${sport}/dashboard`;
+  };
+
+  const applyErrorState = (code: string | null, message: string, nextFieldErrors: AuthFieldErrors = {}, email?: string) => {
+    setErrorCode(code);
+    setError(message);
+    setFieldErrors(nextFieldErrors);
+    if (email) {
+      setActionEmail(email);
+    }
   };
 
   const handleLogin = async (e: React.FormEvent) => {
@@ -85,19 +133,41 @@ function LoginForm() {
     setLoading(true);
     setError("");
     setErrorCode(null);
+    setFieldErrors({});
+    setSuccessMessage(null);
+    setInfoMessage(null);
+    setActionEmail(null);
 
-    const email = isEmail(emailOrPhone) ? emailOrPhone : undefined;
-    const phone = isPhone(emailOrPhone) ? emailOrPhone : undefined;
+    const trimmedIdentifier = emailOrPhone.trim();
+    const email = isEmail(trimmedIdentifier) ? trimmedIdentifier : undefined;
+    const phone = !email && isPhone(trimmedIdentifier) ? trimmedIdentifier : undefined;
+
+    if (!trimmedIdentifier) {
+      applyErrorState(AUTH_CODES.REQUIRED_FIELD_MISSING, "Please enter your email address or mobile number.", {
+        emailOrPhone: "Please enter your email address or mobile number.",
+      });
+      setLoading(false);
+      return;
+    }
 
     if (!email && !phone) {
-      setError("Please enter a valid email or phone number");
+      applyErrorState(AUTH_CODES.INVALID_IDENTIFIER_FORMAT, "Please enter a valid email address or mobile number.", {
+        emailOrPhone: "Please enter a valid email address or mobile number.",
+      });
+      setLoading(false);
+      return;
+    }
+
+    if (!password.trim()) {
+      applyErrorState(AUTH_CODES.PASSWORD_REQUIRED, "Password is required.", {
+        password: "Password is required.",
+      });
       setLoading(false);
       return;
     }
 
     try {
-      // First try player login
-      let response = await fetch("/api/auth/login", {
+      const playerResponse = await fetch("/api/auth/login", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -108,17 +178,17 @@ function LoginForm() {
         }),
       });
 
-      let data = await response.json();
+      const { data: playerData, error: playerError } = await parseAuthResponse(
+        playerResponse,
+        "We could not sign you in right now. Please try again.",
+      );
 
-      if (response.ok) {
-        // Use full page navigation to ensure header remounts with fresh auth state
+      if (!playerError) {
         window.location.href = `/${sport}/dashboard`;
         return;
       }
 
-      // Handle specific error codes
-      if (data.code === 'INVALID_CREDENTIALS') {
-        // Try org login to see if it's an org account
+      if (playerError.code === AUTH_CODES.USER_NOT_FOUND) {
         const orgResponse = await fetch("/api/auth/org/login", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -130,48 +200,37 @@ function LoginForm() {
           }),
         });
 
-        const orgData = await orgResponse.json();
+        const { data: orgData, error: orgError } = await parseAuthResponse(
+          orgResponse,
+          "We could not sign you in right now. Please try again.",
+        );
 
-        if (orgResponse.ok) {
-          // Use full page navigation to ensure header remounts with fresh auth state
+        if (!orgError) {
           window.location.href = `/${sport}/org/dashboard`;
           return;
         }
 
-        // Not found in either - check if it might be wrong password or no account
-        // We try to find if user exists by checking the password error specifically
-        if (orgData.code === 'INVALID_CREDENTIALS' && data.error?.includes('Invalid credentials')) {
-          // Check if we can determine if account exists
-          const checkResponse = await fetch(`/api/auth/check-email?${email ? `email=${email}` : `phone=${phone}`}&sport=${sport.toUpperCase()}`);
-          if (checkResponse.ok) {
-            const checkData = await checkResponse.json();
-            if (checkData.exists) {
-              // Account exists, wrong password
-              setError('Incorrect password. Please try again or reset your password.');
-              setErrorCode('WRONG_PASSWORD');
-            } else {
-              // Account doesn't exist
-              setError('No account found with this email/phone. Please register first.');
-              setErrorCode('USER_NOT_FOUND');
-            }
-          } else {
-            // Default to user not found message
-            setError('No account found with this email/phone. Please register first.');
-            setErrorCode('USER_NOT_FOUND');
-          }
-        } else {
-          setError(data.error || 'Invalid credentials');
-          setErrorCode(data.code || null);
-        }
+        applyErrorState(
+          orgError.code ?? playerError.code,
+          orgError.code === AUTH_CODES.USER_NOT_FOUND
+            ? playerError.message
+            : orgError.message,
+          orgError.fieldErrors,
+        );
         return;
       }
 
-      // For other errors (locked, use google, etc), show the message
-      setError(data.error || "Invalid credentials");
-      setErrorCode(data.code || null);
-
+      applyErrorState(
+        playerError.code,
+        playerError.message,
+        playerError.fieldErrors,
+        typeof playerData.email === "string" ? playerData.email : undefined,
+      );
     } catch (err) {
-      setError("An error occurred. Please try again.");
+      applyErrorState(
+        AUTH_CODES.NETWORK_ERROR,
+        "We could not sign you in right now. Please check your connection and try again.",
+      );
       console.error(err);
     } finally {
       setLoading(false);
@@ -183,35 +242,39 @@ function LoginForm() {
     window.location.href = `/api/auth/google?sport=${sport}&type=player`;
   };
 
+  const identifierError =
+    fieldErrors.emailOrPhone || fieldErrors.identifier || fieldErrors.email || fieldErrors.phone;
+
   return (
     <div className="min-h-screen flex items-center justify-center py-12 px-4 bg-muted/30">
       <div className="w-full max-w-md space-y-6">
-        {/* Back Link */}
-        <Link href={`/${sport}`} className="inline-flex items-center gap-2 text-muted-foreground hover:text-foreground transition-colors">
+        <Link
+          href={`/${sport}`}
+          className="inline-flex items-center gap-2 text-muted-foreground hover:text-foreground transition-colors"
+        >
           <ArrowLeft className="w-4 h-4" />
-          Back to {isCornhole ? "Cornhole" : "Darts"}
+          Back to {sportLabel}
         </Link>
 
-        {/* Header */}
         <div className="text-center">
           <Link href="/" className="inline-flex items-center gap-2 mb-4">
             <img src="/logo.png" alt="VALORHIVE" className="h-10 w-auto" />
             <span className="text-xl font-bold text-foreground">VALORHIVE</span>
           </Link>
           <Badge variant="outline" className={`${primaryBorderClass} ${primaryTextClass} ${primaryBgClass}`}>
-            {isCornhole ? "Cornhole" : "Darts"}
+            {sportLabel}
           </Badge>
         </div>
 
-        {/* Login Card */}
         <Card className="bg-card border-border/50 shadow-sm">
           <CardHeader className="text-center pb-2">
             <CardTitle className="text-foreground">Welcome Back</CardTitle>
-            <CardDescription className="text-muted-foreground">Sign in to your account</CardDescription>
+            <CardDescription className="text-muted-foreground">
+              Sign in to your account
+            </CardDescription>
           </CardHeader>
 
           <CardContent>
-            {/* Info message (sport mismatch) */}
             {infoMessage && (
               <Alert className="mb-4 border-amber-500/50 bg-amber-500/10">
                 <AlertTriangle className="w-5 h-5 text-amber-500" />
@@ -220,50 +283,70 @@ function LoginForm() {
                 </AlertDescription>
               </Alert>
             )}
-            
+
+            {successMessage && (
+              <Alert className="mb-4 border-green-500/50 bg-green-500/10">
+                <CheckCircle2 className="w-5 h-5 text-green-500" />
+                <AlertDescription className="text-green-700 dark:text-green-300">
+                  {successMessage}
+                </AlertDescription>
+              </Alert>
+            )}
+
             {error && (
               <Alert variant="destructive" className="mb-4">
                 <div className="flex items-start gap-3">
-                  {errorCode === 'USER_NOT_FOUND' ? (
+                  {errorCode === AUTH_CODES.USER_NOT_FOUND ? (
                     <UserX className="w-5 h-5 mt-0.5 flex-shrink-0" />
-                  ) : errorCode === 'WRONG_PASSWORD' ? (
+                  ) : errorCode === AUTH_CODES.WRONG_PASSWORD ? (
                     <KeyRound className="w-5 h-5 mt-0.5 flex-shrink-0" />
-                  ) : errorCode === 'ACCOUNT_LOCKED' ? (
+                  ) : errorCode === AUTH_CODES.TOO_MANY_ATTEMPTS ? (
                     <Lock className="w-5 h-5 mt-0.5 flex-shrink-0" />
-                  ) : errorCode === 'USE_GOOGLE' ? (
+                  ) : errorCode === AUTH_CODES.SOCIAL_LOGIN_REQUIRED ? (
                     <svg className="w-5 h-5 mt-0.5 flex-shrink-0" viewBox="0 0 24 24">
-                      <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
-                      <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
-                      <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/>
-                      <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>
+                      <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" />
+                      <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" />
+                      <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" />
+                      <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" />
                     </svg>
                   ) : (
                     <AlertCircle className="w-5 h-5 mt-0.5 flex-shrink-0" />
                   )}
                   <div className="flex-1">
                     <AlertDescription className="font-medium">{error}</AlertDescription>
-                    {errorCode === 'USER_NOT_FOUND' && (
+                    {errorCode === AUTH_CODES.USER_NOT_FOUND && (
                       <div className="mt-2">
                         <Link href={`/${sport}/register`} className={`text-sm font-medium ${primaryTextClass} hover:underline`}>
                           Register now →
                         </Link>
                       </div>
                     )}
-                    {errorCode === 'WRONG_PASSWORD' && (
+                    {errorCode === AUTH_CODES.WRONG_PASSWORD && (
                       <div className="mt-2">
                         <Link href={`/${sport}/forgot-password`} className={`text-sm font-medium ${primaryTextClass} hover:underline`}>
                           Reset password →
                         </Link>
                       </div>
                     )}
-                    {errorCode === 'USE_GOOGLE' && (
+                    {errorCode === AUTH_CODES.SOCIAL_LOGIN_REQUIRED && (
                       <div className="mt-2">
                         <button
+                          type="button"
                           onClick={handleGoogleLogin}
                           className={`text-sm font-medium ${primaryTextClass} hover:underline`}
                         >
-                          Sign in with Google →
+                          Continue with Google →
                         </button>
+                      </div>
+                    )}
+                    {errorCode === AUTH_CODES.EMAIL_NOT_VERIFIED && actionEmail && (
+                      <div className="mt-2">
+                        <Link
+                          href={`/${sport}/verify-email?pending=true&email=${encodeURIComponent(actionEmail)}`}
+                          className={`text-sm font-medium ${primaryTextClass} hover:underline`}
+                        >
+                          Verify email →
+                        </Link>
                       </div>
                     )}
                   </div>
@@ -271,7 +354,6 @@ function LoginForm() {
               </Alert>
             )}
 
-            {/* Google Sign In */}
             <Button
               type="button"
               variant="outline"
@@ -283,16 +365,15 @@ function LoginForm() {
                 <Loader2 className="w-5 h-5 animate-spin" />
               ) : (
                 <svg className="w-5 h-5" viewBox="0 0 24 24">
-                  <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
-                  <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
-                  <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/>
-                  <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>
+                  <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" />
+                  <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" />
+                  <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" />
+                  <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" />
                 </svg>
               )}
               Continue with Google
             </Button>
 
-            {/* WhatsApp Sign In */}
             <Button
               type="button"
               variant="outline"
@@ -312,7 +393,6 @@ function LoginForm() {
               </div>
             </div>
 
-            {/* WhatsApp Login Section */}
             {useWhatsApp ? (
               <div className="mb-4">
                 <WhatsAppLogin
@@ -331,31 +411,36 @@ function LoginForm() {
               </div>
             ) : (
               <form onSubmit={handleLogin} className="space-y-4">
-                {/* Email or Phone - Single Field */}
                 <div className="space-y-2">
-                  <Label htmlFor="emailOrPhone" className="text-foreground">Email or Phone</Label>
+                  <Label htmlFor="emailOrPhone" className="text-foreground">
+                    Email or Phone
+                  </Label>
                   <div className="relative">
-                    {isEmail(emailOrPhone) ? (
-                      <Mail className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-                    ) : (
-                      <Phone className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-                    )}
+                    {identifierIcon}
                     <Input
                       id="emailOrPhone"
                       type="text"
                       placeholder="you@example.com or +91 98765 43210"
                       value={emailOrPhone}
-                      onChange={(e) => setEmailOrPhone(e.target.value)}
+                      onChange={(e) => {
+                        setEmailOrPhone(e.target.value);
+                        clearIdentifierErrors();
+                        setError("");
+                        setErrorCode(null);
+                      }}
                       className="pl-10"
+                      aria-invalid={Boolean(identifierError)}
                       required
                     />
                   </div>
+                  {identifierError && <p className="text-xs text-red-500">{identifierError}</p>}
                 </div>
 
-                {/* Password */}
                 <div className="space-y-2">
                   <div className="flex items-center justify-between">
-                    <Label htmlFor="password" className="text-foreground">Password</Label>
+                    <Label htmlFor="password" className="text-foreground">
+                      Password
+                    </Label>
                     <Link href={`/${sport}/forgot-password`} className={`text-xs ${primaryTextClass} hover:underline`}>
                       Forgot?
                     </Link>
@@ -367,8 +452,14 @@ function LoginForm() {
                       type={showPassword ? "text" : "password"}
                       placeholder="••••••••"
                       value={password}
-                      onChange={(e) => setPassword(e.target.value)}
+                      onChange={(e) => {
+                        setPassword(e.target.value);
+                        setFieldErrors((current) => ({ ...current, password: undefined }));
+                        setError("");
+                        setErrorCode(null);
+                      }}
                       className="pl-10 pr-10"
+                      aria-invalid={Boolean(fieldErrors.password)}
                       required
                     />
                     <button
@@ -378,20 +469,13 @@ function LoginForm() {
                       tabIndex={-1}
                       aria-label={showPassword ? "Hide password" : "Show password"}
                     >
-                      {showPassword ? (
-                        <EyeOff className="h-4 w-4" />
-                      ) : (
-                        <Eye className="h-4 w-4" />
-                      )}
+                      {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                     </button>
                   </div>
+                  {fieldErrors.password && <p className="text-xs text-red-500">{fieldErrors.password}</p>}
                 </div>
 
-                <Button
-                  type="submit"
-                  className={`w-full ${primaryBtnClass} text-white gap-2 h-11`}
-                  disabled={loading}
-                >
+                <Button type="submit" className={`w-full ${primaryBtnClass} text-white gap-2 h-11`} disabled={loading}>
                   {loading ? (
                     <>
                       <Loader2 className="w-4 h-4 animate-spin" />
@@ -424,11 +508,13 @@ function LoginForm() {
 
 export default function LoginPage() {
   return (
-    <Suspense fallback={
-      <div className="min-h-screen flex items-center justify-center bg-background">
-        <Loader2 className="w-8 h-8 animate-spin text-muted-foreground" />
-      </div>
-    }>
+    <Suspense
+      fallback={
+        <div className="min-h-screen flex items-center justify-center bg-background">
+          <Loader2 className="w-8 h-8 animate-spin text-muted-foreground" />
+        </div>
+      }
+    >
       <LoginForm />
     </Suspense>
   );

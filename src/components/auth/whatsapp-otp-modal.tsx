@@ -13,6 +13,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { InputOTP, InputOTPGroup, InputOTPSlot } from "@/components/ui/input-otp";
 import { Loader2, Phone, MessageCircle, ArrowLeft, CheckCircle2 } from "lucide-react";
+import { parseAuthResponse } from "@/lib/auth-client";
 
 interface WhatsAppOTPModalProps {
   open: boolean;
@@ -94,10 +95,13 @@ export function WhatsAppOTPModal({ open, onOpenChange, onSuccess, sport }: Whats
         body: JSON.stringify({ phone: cleanPhone(phone) }),
       });
 
-      const data = await response.json();
+      const { error: authError } = await parseAuthResponse(
+        response,
+        "We could not send the verification code right now. Please try again.",
+      );
 
-      if (!response.ok) {
-        setError(data.error || "Failed to send OTP");
+      if (authError) {
+        setError(authError.message);
         return;
       }
 
@@ -106,7 +110,7 @@ export function WhatsAppOTPModal({ open, onOpenChange, onSuccess, sport }: Whats
       setCountdown(30);
       setCanResend(false);
     } catch (err) {
-      setError("An error occurred. Please try again.");
+      setError("We could not send the verification code right now. Please try again.");
       console.error(err);
     } finally {
       setLoading(false);
@@ -130,10 +134,13 @@ export function WhatsAppOTPModal({ open, onOpenChange, onSuccess, sport }: Whats
         body: JSON.stringify({ phone: cleanPhone(phone), otp }),
       });
 
-      const data = await response.json();
+      const { error: authError } = await parseAuthResponse(
+        response,
+        "We could not verify the OTP right now. Please try again.",
+      );
 
-      if (!response.ok) {
-        setError(data.error || "Invalid OTP");
+      if (authError) {
+        setError(authError.message);
         return;
       }
 
@@ -144,7 +151,7 @@ export function WhatsAppOTPModal({ open, onOpenChange, onSuccess, sport }: Whats
         onOpenChange(false);
       }, 1500);
     } catch (err) {
-      setError("An error occurred. Please try again.");
+      setError("We could not verify the OTP right now. Please try again.");
       console.error(err);
     } finally {
       setLoading(false);
@@ -165,10 +172,13 @@ export function WhatsAppOTPModal({ open, onOpenChange, onSuccess, sport }: Whats
         body: JSON.stringify({ phone: cleanPhone(phone) }),
       });
 
-      const data = await response.json();
+      const { error: authError } = await parseAuthResponse(
+        response,
+        "We could not send the verification code right now. Please try again.",
+      );
 
-      if (!response.ok) {
-        setError(data.error || "Failed to resend OTP");
+      if (authError) {
+        setError(authError.message);
         return;
       }
 
@@ -177,7 +187,7 @@ export function WhatsAppOTPModal({ open, onOpenChange, onSuccess, sport }: Whats
       setCanResend(false);
       setOtp("");
     } catch (err) {
-      setError("An error occurred. Please try again.");
+      setError("We could not send the verification code right now. Please try again.");
       console.error(err);
     } finally {
       setLoading(false);
