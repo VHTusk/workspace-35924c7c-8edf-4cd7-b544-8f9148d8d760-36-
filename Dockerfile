@@ -56,6 +56,9 @@ RUN npx prisma generate
 FROM base AS builder
 WORKDIR /app
 
+ARG DATABASE_URL=postgresql://user:pass@localhost:5432/db
+ENV DATABASE_URL=$DATABASE_URL
+
 # Copy dependencies from deps stage
 COPY --from=deps /app/node_modules ./node_modules
 
