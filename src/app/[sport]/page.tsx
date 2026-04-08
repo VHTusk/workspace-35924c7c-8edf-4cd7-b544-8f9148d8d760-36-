@@ -5,11 +5,23 @@ import { Badge } from "@/components/ui/badge";
 import { Trophy, Calendar, MapPin, TrendingUp, ChevronRight, Target, Users, Award } from "lucide-react";
 import { cn } from "@/lib/utils";
 import SiteFooter from "@/components/layout/site-footer";
+import { SportAuthOverlay } from "@/components/auth/sport-auth-overlay";
 import { db } from "@/lib/db";
 import { SportType } from "@prisma/client";
 
-export default async function SportHomePage({ params }: { params: Promise<{ sport: string }> }) {
+export default async function SportHomePage({
+  params,
+  searchParams,
+}: {
+  params: Promise<{ sport: string }>;
+  searchParams?: Promise<{ auth?: string }>;
+}) {
   const { sport } = await params;
+  const resolvedSearchParams = searchParams ? await searchParams : undefined;
+  const authView =
+    resolvedSearchParams?.auth === "login" || resolvedSearchParams?.auth === "register"
+      ? resolvedSearchParams.auth
+      : null;
   const isCornhole = sport === "cornhole";
   const sportName = isCornhole ? "Cornhole" : "Darts";
   const sportType = isCornhole ? SportType.CORNHOLE : SportType.DARTS;
@@ -115,6 +127,7 @@ export default async function SportHomePage({ params }: { params: Promise<{ spor
 
   return (
     <>
+      <SportAuthOverlay sport={sport} initialView={authView} />
       <section className="relative py-8 sm:py-12 lg:py-16 px-4">
         <div className="container mx-auto">
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 lg:gap-8 items-center">
@@ -152,7 +165,7 @@ export default async function SportHomePage({ params }: { params: Promise<{ spor
                 Track your progress with our dual rating system and climb the leaderboards.
               </p>
               <div className="flex flex-wrap gap-4">
-                <Link href={`/${sport}/register`}>
+                <Link href={`/${sport}?auth=register`}>
                   <Button size="lg" className={cn("text-white shadow-sm gap-2", primaryBtnClass)}>
                     <Trophy className="w-5 h-5" />
                     Start Competing
