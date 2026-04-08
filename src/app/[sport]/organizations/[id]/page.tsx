@@ -22,6 +22,7 @@ import {
 import { cn } from "@/lib/utils";
 import Link from "next/link";
 import FollowButton from "@/components/follow/follow-button";
+import { useFollowCountRefresh } from "@/hooks/use-follow-count";
 
 interface OrgProfile {
   organization: {
@@ -96,10 +97,11 @@ export default function PublicOrgProfilePage() {
   const [loading, setLoading] = useState(true);
   const [profile, setProfile] = useState<OrgProfile | null>(null);
   const [error, setError] = useState("");
+  const followRefreshKey = useFollowCountRefresh();
 
   useEffect(() => {
     fetchProfile();
-  }, [orgId, sport]);
+  }, [orgId, sport, followRefreshKey]);
 
   const fetchProfile = async () => {
     setLoading(true);

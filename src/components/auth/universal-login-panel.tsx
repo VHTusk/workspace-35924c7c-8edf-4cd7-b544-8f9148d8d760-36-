@@ -208,12 +208,9 @@ export function UniversalLoginPanel({
     <Card className="border-border/60 shadow-xl">
       <CardHeader className="space-y-4">
         <div className="space-y-2 text-center">
-          <Badge variant="outline" className={`${sport.accentBorder} ${sport.accentText} ${sport.accentBackground}`}>
-            One account works across all sports
-          </Badge>
           <CardTitle className="text-2xl">Log in to VALORHIVE</CardTitle>
           <CardDescription>
-            Log in once to access Cornhole, Darts, and every verified tournament flow that opens next.
+            Access your tournaments, rankings, and account settings.
           </CardDescription>
         </div>
 

@@ -26,6 +26,7 @@ import {
 import { cn } from "@/lib/utils";
 import Link from "next/link";
 import FollowButton from "@/components/follow/follow-button";
+import { useFollowCountRefresh } from "@/hooks/use-follow-count";
 
 interface PlayerProfile {
   player: {
@@ -92,10 +93,11 @@ export default function PublicPlayerProfilePage() {
   const [loading, setLoading] = useState(true);
   const [profile, setProfile] = useState<PlayerProfile | null>(null);
   const [error, setError] = useState("");
+  const followRefreshKey = useFollowCountRefresh();
 
   useEffect(() => {
     fetchProfile();
-  }, [playerId, sport]);
+  }, [playerId, sport, followRefreshKey]);
 
   const fetchProfile = async () => {
     setLoading(true);

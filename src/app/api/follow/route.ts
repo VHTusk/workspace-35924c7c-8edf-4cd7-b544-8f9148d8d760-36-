@@ -8,12 +8,28 @@ export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
     const type = searchParams.get('type'); // 'followers', 'following', 'followingOrgs', 'followersOrg'
-    const userId = searchParams.get('userId');
-    const orgId = searchParams.get('orgId');
+    let userId = searchParams.get('userId');
+    let orgId = searchParams.get('orgId');
     const sport = searchParams.get('sport') as SportType;
 
     if (!sport || !['CORNHOLE', 'DARTS'].includes(sport)) {
       return NextResponse.json({ error: 'Invalid sport' }, { status: 400 });
+    }
+
+    if (userId === 'current' || orgId === 'current') {
+      const auth = await getAuthenticatedEntity(request);
+
+      if (!auth) {
+        return NextResponse.json({ error: 'Not authenticated' }, { status: 401 });
+      }
+
+      if (userId === 'current') {
+        userId = auth.type === 'user' ? auth.user.id : null;
+      }
+
+      if (orgId === 'current') {
+        orgId = auth.type === 'org' ? auth.org.id : null;
+      }
     }
 
     if (type === 'followers' && userId) {

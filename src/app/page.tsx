@@ -34,7 +34,7 @@ const WHAT_YOU_CAN_DO = [
 ];
 
 const HOW_IT_WORKS = [
-  { step: "01", title: "Sign up", description: "Create your free universal account." },
+  { step: "01", title: "Sign up", description: "Create your account." },
   { step: "02", title: "Choose sport", description: "Start with the sport you want to play right now." },
   { step: "03", title: "Join tournament", description: "Register in the city and format that fits you." },
   { step: "04", title: "Play and get ranked", description: "Climb the leaderboard after each verified match." },
@@ -157,7 +157,7 @@ export default function HomePage() {
                   {[
                     "See your standing update after each verified result.",
                     "Track city-level consistency before the next tournament.",
-                    "Carry one account across every supported sport.",
+                    "Stay ready for the next verified competition.",
                   ].map((item) => (
                     <div key={item} className="flex items-start gap-3 rounded-xl border border-border/60 bg-background/70 p-3">
                       <Check className="mt-0.5 h-4 w-4 text-emerald-500" />
@@ -189,7 +189,7 @@ export default function HomePage() {
 
         <section className="border-y border-border/60 bg-muted/25 px-4 py-6 sm:px-6 lg:px-8">
           <div className="mx-auto grid max-w-7xl gap-4 md:grid-cols-4">
-            <TrustPill title="Universal account" text="One login works across supported sports." />
+            <TrustPill title="Player access" text="Log in quickly and pick up where you left off." />
             <TrustPill title="City-first competition" text="Find structured play closer to home." />
             <TrustPill title="Verified rankings" text="Standings move after recorded matches." />
             <TrustPill title="Organizer run" text="All tournament flows stay inside ValorHive." />
@@ -244,7 +244,7 @@ export default function HomePage() {
                             </div>
                           </div>
                           <div className="grid gap-3 sm:grid-cols-3">
-                            <GlassStat label="Account access" value="Universal" />
+                            <GlassStat label="Account access" value="Direct" />
                             <GlassStat label="Play style" value="Structured" />
                             <GlassStat label="Result flow" value="Ranked" />
                           </div>

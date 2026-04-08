@@ -442,7 +442,7 @@ export default function ProfilePage() {
     try {
       const formData = new FormData();
       formData.append('file', file);
-      formData.append('type', 'profile');
+      formData.append('type', 'profilePhoto');
 
       const response = await fetch('/api/upload', {
         method: 'POST',
@@ -500,7 +500,7 @@ export default function ProfilePage() {
     try {
       const formData = new FormData();
       formData.append('file', file);
-      formData.append('type', 'id-document');
+      formData.append('type', 'idDocument');
 
       const response = await fetch('/api/upload', {
         method: 'POST',

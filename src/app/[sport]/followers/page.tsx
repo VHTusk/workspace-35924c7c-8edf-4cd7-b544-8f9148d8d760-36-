@@ -16,6 +16,7 @@ import {
   Loader2,
   UserPlus,
 } from "lucide-react";
+import { useFollowCountRefresh } from "@/hooks/use-follow-count";
 
 interface FollowUser {
   id: string;
@@ -33,6 +34,7 @@ export default function FollowersPage() {
   const [loading, setLoading] = useState(true);
   const [followers, setFollowers] = useState<FollowUser[]>([]);
   const [following, setFollowing] = useState<FollowUser[]>([]);
+  const followRefreshKey = useFollowCountRefresh();
 
   const primaryBtnClass = isCornhole
     ? "bg-green-600 hover:bg-green-700 text-white"
@@ -40,7 +42,7 @@ export default function FollowersPage() {
 
   useEffect(() => {
     fetchFollowData();
-  }, [sport]);
+  }, [sport, followRefreshKey]);
 
   const fetchFollowData = async () => {
     try {

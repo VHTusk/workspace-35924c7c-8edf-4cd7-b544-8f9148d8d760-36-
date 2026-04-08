@@ -208,7 +208,7 @@ export function ProfessionProfileCard({ onProfessionChange }: ProfessionProfileC
       // Create form data
       const formData = new FormData();
       formData.append('file', selectedFile);
-      formData.append('type', 'profession');
+        formData.append('type', 'idDocument');
 
       // Upload to file API
       const uploadResponse = await fetch('/api/upload', {

@@ -239,12 +239,9 @@ export function UniversalRegisterPanel({
     <Card className="border-border/60 shadow-xl">
       <CardHeader className="space-y-4">
         <div className="space-y-2 text-center">
-          <Badge variant="outline" className={`${sport.accentBorder} ${sport.accentText} ${sport.accentBackground}`}>
-            One account works across all sports
-          </Badge>
           <CardTitle className="text-2xl">Create your VALORHIVE account</CardTitle>
           <CardDescription>
-            Register once and keep growing across every verified competition.
+            Set up your account to start joining tournaments and tracking results.
           </CardDescription>
         </div>
 
