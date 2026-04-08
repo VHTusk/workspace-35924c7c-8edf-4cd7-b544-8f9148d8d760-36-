@@ -22,13 +22,6 @@ import { UniversalLoginModal } from "@/components/auth/universal-login-modal";
 import { UniversalRegisterModal } from "@/components/auth/universal-register-modal";
 import { Button } from "@/components/ui/button";
 
-const NAV_ITEMS = [
-  { label: "Overview", href: "#overview" },
-  { label: "Sports", href: "#sports" },
-  { label: "Support", href: "#support" },
-  { label: "Pricing", href: "/cornhole/subscription" },
-];
-
 const HERO_OUTCOMES = [
   "Verified match results",
   "Recurring city tournaments",
@@ -139,18 +132,6 @@ export default function HomePage() {
                     <p className="text-sm font-semibold tracking-[0.18em] text-white/90">VALORHIVE</p>
                   </div>
                 </Link>
-
-                <nav className="flex flex-wrap items-center gap-2 text-sm">
-                  {NAV_ITEMS.map((item) => (
-                    <Link
-                      key={item.label}
-                      href={item.href}
-                      className="rounded-full border border-transparent px-3 py-2 text-white/66 transition-all hover:border-[#18AFCE]/30 hover:bg-[#18AFCE]/8 hover:text-[#9aefff]"
-                    >
-                      {item.label}
-                    </Link>
-                  ))}
-                </nav>
 
                 <div className="flex items-center gap-2">
                   <button
