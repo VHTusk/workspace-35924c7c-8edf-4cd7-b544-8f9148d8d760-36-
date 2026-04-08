@@ -5,6 +5,7 @@ import { getAuthenticatedEntity } from '@/lib/auth';
 import { logPaymentCreateEvent } from '@/lib/audit-logger';
 import { log } from '@/lib/logger';
 import { v4 as uuidv4 } from 'uuid';
+import { Prisma } from '@prisma/client';
 import {
   detectSuspiciousPayments,
   recordAbuseEvent,
@@ -273,10 +274,14 @@ export async function POST(request: NextRequest) {
     });
 
   } catch (error) {
-    const message =
+    let message =
       error instanceof Error && error.message
         ? error.message
         : 'Failed to create order';
+
+    if (error instanceof Prisma.PrismaClientInitializationError) {
+      message = 'Payment service is temporarily unavailable because the local database is offline.';
+    }
 
     log.error('Create order error', { error: message });
     return NextResponse.json(

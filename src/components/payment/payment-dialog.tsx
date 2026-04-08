@@ -99,6 +99,27 @@ interface PaymentOrderResponse {
   amountDisplay: string;
 }
 
+async function readApiError(response: Response, fallback: string): Promise<string> {
+  const contentType = response.headers.get('content-type') || '';
+
+  if (contentType.includes('application/json')) {
+    const data = await response.json().catch(() => null);
+    if (data?.error) {
+      return data.error;
+    }
+    if (data?.message) {
+      return data.message;
+    }
+  } else {
+    const text = await response.text().catch(() => '');
+    if (text.trim()) {
+      return text.trim();
+    }
+  }
+
+  return fallback;
+}
+
 // Helper to format paise to rupees
 const formatCurrency = (paise: number): string => {
   return new Intl.NumberFormat('en-IN', {
@@ -226,8 +247,7 @@ export function PaymentDialog({
       });
 
       if (!orderResponse.ok) {
-        const errorData = await orderResponse.json();
-        throw new Error(errorData.error || 'Failed to create order');
+        throw new Error(await readApiError(orderResponse, 'Failed to create order'));
       }
 
       const data: PaymentOrderResponse = await orderResponse.json();
@@ -268,8 +288,7 @@ export function PaymentDialog({
             });
 
             if (!verifyResponse.ok) {
-              const errorData = await verifyResponse.json();
-              throw new Error(errorData.error || 'Payment verification failed');
+              throw new Error(await readApiError(verifyResponse, 'Payment verification failed'));
             }
 
             // Record coupon usage if coupon was applied

@@ -63,6 +63,27 @@ interface PaymentOrderResponse {
   amountDisplay: string;
 }
 
+async function readApiError(response: Response, fallback: string): Promise<string> {
+  const contentType = response.headers.get('content-type') || '';
+
+  if (contentType.includes('application/json')) {
+    const data = await response.json().catch(() => null);
+    if (data?.error) {
+      return data.error;
+    }
+    if (data?.message) {
+      return data.message;
+    }
+  } else {
+    const text = await response.text().catch(() => '');
+    if (text.trim()) {
+      return text.trim();
+    }
+  }
+
+  return fallback;
+}
+
 export function useRazorpay(options: UseRazorpayOptions = {}) {
   const [loading, setLoading] = useState(false);
   const [scriptLoaded, setScriptLoaded] = useState(false);
@@ -109,8 +130,7 @@ export function useRazorpay(options: UseRazorpayOptions = {}) {
       });
 
       if (!orderResponse.ok) {
-        const error = await orderResponse.json();
-        throw new Error(error.error || 'Failed to create order');
+        throw new Error(await readApiError(orderResponse, 'Failed to create order'));
       }
 
       const data: PaymentOrderResponse = await orderResponse.json();
@@ -148,8 +168,7 @@ export function useRazorpay(options: UseRazorpayOptions = {}) {
             });
 
             if (!verifyResponse.ok) {
-              const error = await verifyResponse.json();
-              throw new Error(error.error || 'Payment verification failed');
+              throw new Error(await readApiError(verifyResponse, 'Payment verification failed'));
             }
 
             options.onSuccess?.(response);
