@@ -67,7 +67,7 @@ export default function GoogleOneTap({
   className,
   prompt = true,
   autoPrompt,
-  promptDelayMs = 5500,
+  promptDelayMs = 6000,
   anchorId,
   showButton = true,
   onLoginSuccess,
