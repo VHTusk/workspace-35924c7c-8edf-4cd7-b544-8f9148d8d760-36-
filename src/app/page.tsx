@@ -81,10 +81,35 @@ const STATS = [
   { value: "350L+", label: "Prize Pool" },
 ];
 
+const HERO_SLIDES = [
+  {
+    title: "Cornhole",
+    eyebrow: "Structured league action",
+    description: "Recurring matches, visible rankings, and verified results built around every round.",
+    image: "/images/hero/cornhole/action-shot.png",
+    accent: "text-[#cfff35]",
+  },
+  {
+    title: "Darts",
+    eyebrow: "Precision under pressure",
+    description: "City competitions where every throw counts and leaderboard movement stays visible.",
+    image: "/images/hero/darts/action-shot.png",
+    accent: "text-[#4fe2ff]",
+  },
+  {
+    title: "Slingshots",
+    eyebrow: "Fast, focused competition",
+    description: "A new format ready for repeat play, clean scorekeeping, and progression-based ranking.",
+    image: null,
+    accent: "text-[#ff8b45]",
+  },
+];
+
 export default function HomePage() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [authView, setAuthView] = useState<"login" | "register" | null>(null);
+  const [activeHeroSlide, setActiveHeroSlide] = useState(0);
 
   useEffect(() => {
     const authParam = searchParams.get("auth");
@@ -95,6 +120,14 @@ export default function HomePage() {
 
     setAuthView((current) => (current && !searchParams.get("auth") ? null : current));
   }, [searchParams]);
+
+  useEffect(() => {
+    const interval = window.setInterval(() => {
+      setActiveHeroSlide((current) => (current + 1) % HERO_SLIDES.length);
+    }, 4200);
+
+    return () => window.clearInterval(interval);
+  }, []);
 
   const openAuth = (view: "login" | "register") => {
     const params = new URLSearchParams(searchParams.toString());
@@ -113,6 +146,8 @@ export default function HomePage() {
     }
     router.replace(params.size ? `/?${params.toString()}` : "/");
   };
+
+  const heroSlide = HERO_SLIDES[activeHeroSlide];
 
   return (
     <div className="min-h-screen bg-[#050c10] text-white">
@@ -156,17 +191,69 @@ export default function HomePage() {
               <div className="grid gap-6 lg:grid-cols-[1.1fr_0.9fr]">
                 <div className="overflow-hidden rounded-[26px] border border-[#18AFCE]/28 bg-[#07131b] shadow-[0_0_30px_rgba(24,175,206,0.1)]">
                   <div className="relative aspect-[16/11]">
-                    <Image
-                      src="/images/hero/cornhole/action-shot.png"
-                      alt="ValorHive competition"
-                      fill
-                      className="object-cover"
-                      priority
-                    />
+                    {HERO_SLIDES.map((slide, index) =>
+                      slide.image ? (
+                        <Image
+                          key={slide.title}
+                          src={slide.image}
+                          alt={`${slide.title} competition`}
+                          fill
+                          priority={index === 0}
+                          className={`object-cover transition-all duration-700 ${
+                            index === activeHeroSlide ? "scale-100 opacity-100" : "scale-105 opacity-0"
+                          }`}
+                        />
+                      ) : (
+                        <div
+                          key={slide.title}
+                          className={`absolute inset-0 transition-all duration-700 ${
+                            index === activeHeroSlide ? "scale-100 opacity-100" : "scale-105 opacity-0"
+                          }`}
+                        >
+                          <div className="absolute inset-0 bg-[radial-gradient(circle_at_20%_20%,rgba(238,93,14,0.38),transparent_24%),radial-gradient(circle_at_75%_30%,rgba(24,175,206,0.32),transparent_26%),linear-gradient(145deg,#091117_0%,#10242f_52%,#180d08_100%)]" />
+                          <div className="absolute inset-0 opacity-40 [background-image:linear-gradient(rgba(24,175,206,0.12)_1px,transparent_1px),linear-gradient(90deg,rgba(24,175,206,0.12)_1px,transparent_1px)] [background-size:40px_40px]" />
+                          <div className="absolute inset-x-0 bottom-0 top-0 flex items-center justify-center">
+                            <div className="rounded-[28px] border border-white/12 bg-black/18 p-8 shadow-[0_0_40px_rgba(238,93,14,0.18)] backdrop-blur-sm">
+                              <Target className="h-20 w-20 text-[#ff8b45] drop-shadow-[0_0_22px_rgba(238,93,14,0.42)]" />
+                            </div>
+                          </div>
+                        </div>
+                      ),
+                    )}
                     <div className="absolute inset-0 bg-[linear-gradient(180deg,rgba(5,12,16,0.08),rgba(5,12,16,0.24)_38%,rgba(5,12,16,0.68)_100%)]" />
                     <div className="absolute left-4 top-4 inline-flex items-center gap-2 rounded-full border border-white/18 bg-[#09161f]/78 px-3 py-1.5 backdrop-blur">
                       <CircleCheckBig className="h-4 w-4 text-[#18AFCE]" />
                       <span className="text-xs font-medium text-white/88">VALORHIVE</span>
+                    </div>
+                    <div className="absolute inset-x-0 bottom-0 p-5 sm:p-6">
+                      <div className="rounded-[22px] border border-white/12 bg-[#07131b]/72 p-4 shadow-[0_0_24px_rgba(24,175,206,0.12)] backdrop-blur-md">
+                        <p className="text-[11px] font-semibold uppercase tracking-[0.24em] text-white/45">
+                          {heroSlide.eyebrow}
+                        </p>
+                        <div className="mt-2 flex items-center justify-between gap-4">
+                          <div>
+                            <h3 className={`text-2xl font-semibold ${heroSlide.accent}`}>{heroSlide.title}</h3>
+                            <p className="mt-1 max-w-md text-sm leading-6 text-white/72">
+                              {heroSlide.description}
+                            </p>
+                          </div>
+                          <div className="hidden items-center gap-2 sm:flex">
+                            {HERO_SLIDES.map((slide, index) => (
+                              <button
+                                key={slide.title}
+                                type="button"
+                                aria-label={`Show ${slide.title} slide`}
+                                onClick={() => setActiveHeroSlide(index)}
+                                className={`h-2.5 rounded-full transition-all ${
+                                  index === activeHeroSlide
+                                    ? "w-10 bg-[#18AFCE] shadow-[0_0_12px_rgba(24,175,206,0.62)]"
+                                    : "w-2.5 bg-white/28 hover:bg-white/48"
+                                }`}
+                              />
+                            ))}
+                          </div>
+                        </div>
+                      </div>
                     </div>
                   </div>
                 </div>
