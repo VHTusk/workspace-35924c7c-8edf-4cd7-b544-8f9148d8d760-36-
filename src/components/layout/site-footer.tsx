@@ -1,135 +1,123 @@
-import Link from "next/link";
 import Image from "next/image";
-import { Instagram, Twitter, Facebook, Youtube, Mail, Phone, Clock, Heart } from "lucide-react";
+import Link from "next/link";
+import { Clock, Facebook, Heart, Instagram, Mail, Phone, Twitter, Youtube } from "lucide-react";
 
 export default function SiteFooter() {
   return (
-    <footer className="border-t border-border bg-muted/30 shrink-0">
+    <footer className="shrink-0 border-t border-border bg-muted/30">
       <div className="container mx-auto px-4 py-10 sm:py-12">
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8 lg:gap-12">
-          {/* Brand */}
+        <div className="grid grid-cols-1 gap-8 sm:grid-cols-2 lg:grid-cols-4 lg:gap-12">
           <div className="sm:col-span-2 lg:col-span-1">
-            <Link href="/" className="flex items-center gap-2 mb-4">
+            <Link href="/" className="mb-4 flex items-center gap-2">
               <Image src="/logo.png" alt="VALORHIVE" width={32} height={32} className="h-8 w-auto" />
               <span className="text-xl font-bold text-foreground">VALORHIVE</span>
             </Link>
-            <p className="text-sm text-muted-foreground mb-4">
-              India&apos;s premier inclusive sports ecosystem. Building stages for every sport to
-              shine.
+            <p className="mb-4 text-sm text-muted-foreground">
+              Structured tournaments, verified results, and rankings that help every supported sport grow.
             </p>
             <div className="flex gap-3">
-              <a
-                href="#"
-                className="w-9 h-9 rounded-full bg-muted flex items-center justify-center text-muted-foreground hover:text-primary hover:bg-primary/10 transition-colors"
-              >
-                <Instagram className="w-4 h-4" />
-              </a>
-              <a
-                href="#"
-                className="w-9 h-9 rounded-full bg-muted flex items-center justify-center text-muted-foreground hover:text-primary hover:bg-primary/10 transition-colors"
-              >
-                <Twitter className="w-4 h-4" />
-              </a>
-              <a
-                href="#"
-                className="w-9 h-9 rounded-full bg-muted flex items-center justify-center text-muted-foreground hover:text-primary hover:bg-primary/10 transition-colors"
-              >
-                <Facebook className="w-4 h-4" />
-              </a>
-              <a
-                href="#"
-                className="w-9 h-9 rounded-full bg-muted flex items-center justify-center text-muted-foreground hover:text-primary hover:bg-primary/10 transition-colors"
-              >
-                <Youtube className="w-4 h-4" />
-              </a>
+              {[Instagram, Twitter, Facebook, Youtube].map((Icon, index) => (
+                <a
+                  key={index}
+                  href="#"
+                  className="flex h-9 w-9 items-center justify-center rounded-full bg-muted text-muted-foreground transition-colors hover:bg-primary/10 hover:text-primary"
+                >
+                  <Icon className="h-4 w-4" />
+                </a>
+              ))}
             </div>
           </div>
 
-          {/* Quick Links */}
           <div>
-            <h4 className="font-semibold text-foreground mb-4">Quick Links</h4>
+            <h4 className="mb-4 font-semibold text-foreground">Quick Links</h4>
             <ul className="space-y-2">
               <li>
-                <Link href="/cornhole" className="text-sm text-muted-foreground hover:text-primary transition-colors">
+                <Link href="/cornhole" className="text-sm text-muted-foreground transition-colors hover:text-primary">
                   Cornhole
                 </Link>
               </li>
               <li>
-                <Link href="/darts" className="text-sm text-muted-foreground hover:text-primary transition-colors">
+                <Link href="/darts" className="text-sm text-muted-foreground transition-colors hover:text-primary">
                   Darts
                 </Link>
               </li>
               <li>
-                <Link href="/cornhole/tournaments" className="text-sm text-muted-foreground hover:text-primary transition-colors">
-                  Tournaments
+                <Link href="/login" className="text-sm text-muted-foreground transition-colors hover:text-primary">
+                  Log in
                 </Link>
               </li>
               <li>
-                <Link href="/cornhole/leaderboard" className="text-sm text-muted-foreground hover:text-primary transition-colors">
-                  Leaderboard
+                <Link href="/register" className="text-sm text-muted-foreground transition-colors hover:text-primary">
+                  Register
                 </Link>
               </li>
             </ul>
           </div>
 
-          {/* Support */}
           <div>
-            <h4 className="font-semibold text-foreground mb-4">Support</h4>
+            <h4 className="mb-4 font-semibold text-foreground">Support</h4>
             <ul className="space-y-3">
               <li className="flex items-center gap-2 text-sm text-muted-foreground">
-                <Mail className="w-4 h-4" />
+                <Mail className="h-4 w-4" />
                 <span>support@valorhive.com</span>
               </li>
               <li className="flex items-center gap-2 text-sm text-muted-foreground">
-                <Phone className="w-4 h-4" />
+                <Phone className="h-4 w-4" />
                 <span>+91 98765 43210</span>
               </li>
               <li className="flex items-center gap-2 text-sm text-muted-foreground">
-                <Clock className="w-4 h-4" />
+                <Clock className="h-4 w-4" />
                 <span>Mon-Sat, 9AM-6PM</span>
               </li>
             </ul>
           </div>
 
-          {/* Legal */}
           <div>
-            <h4 className="font-semibold text-foreground mb-4">Legal</h4>
+            <h4 className="mb-4 font-semibold text-foreground">Legal</h4>
             <ul className="space-y-2">
               <li>
-                <a href="#" className="text-sm text-muted-foreground hover:text-primary transition-colors">
+                <Link href="/legal/privacy" className="text-sm text-muted-foreground transition-colors hover:text-primary">
                   Privacy Policy
-                </a>
+                </Link>
               </li>
               <li>
-                <a href="#" className="text-sm text-muted-foreground hover:text-primary transition-colors">
+                <Link href="/legal/terms" className="text-sm text-muted-foreground transition-colors hover:text-primary">
                   Terms of Service
-                </a>
+                </Link>
               </li>
               <li>
-                <a href="#" className="text-sm text-muted-foreground hover:text-primary transition-colors">
-                  Refund Policy
-                </a>
+                <Link href="/legal/liability-waiver" className="text-sm text-muted-foreground transition-colors hover:text-primary">
+                  Liability Waiver
+                </Link>
               </li>
               <li>
-                <a href="#" className="text-sm text-muted-foreground hover:text-primary transition-colors">
-                  Cookie Policy
-                </a>
+                <Link href="/legal/tournament-agreement" className="text-sm text-muted-foreground transition-colors hover:text-primary">
+                  Tournament Agreement
+                </Link>
               </li>
             </ul>
           </div>
         </div>
 
-        {/* Bottom bar */}
-        <div className="mt-10 pt-6 border-t border-border flex flex-col sm:flex-row items-center justify-between gap-4">
+        <div className="mt-10 flex flex-col items-center justify-between gap-4 border-t border-border pt-6 sm:flex-row">
           <div className="flex items-center gap-2">
             <Image src="/logo.png" alt="VALORHIVE" width={20} height={20} className="h-5 w-auto" />
             <span className="text-sm text-muted-foreground">
-              © {new Date().getFullYear()} VALORHIVE. All rights reserved.
+              Copyright {new Date().getFullYear()} VALORHIVE. All rights reserved.
             </span>
           </div>
-          <p className="flex items-center gap-1 text-sm text-muted-foreground">
-            Made with <Heart className="w-4 h-4 text-red-500" /> in India
-          </p>
+          <div className="flex items-center gap-4">
+            <p className="flex items-center gap-1 text-sm text-muted-foreground">
+              Made with <Heart className="h-4 w-4 text-red-500" /> in India
+            </p>
+            <Link
+              href="/admin/login"
+              className="text-xs text-muted-foreground/50 transition-colors hover:text-muted-foreground"
+              aria-label="Admin login (office use only)"
+            >
+              Office Use Only
+            </Link>
+          </div>
         </div>
       </div>
     </footer>
