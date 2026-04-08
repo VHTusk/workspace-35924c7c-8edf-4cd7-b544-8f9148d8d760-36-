@@ -6,14 +6,13 @@ import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import {
   ArrowRight,
-  BadgeCheck,
-  BarChart3,
-  Flag,
-  Globe2,
-  MapPin,
-  Medal,
+  ChartNoAxesColumn,
+  CircleCheckBig,
+  MapPinned,
+  Search,
   ShieldCheck,
-  Star,
+  Swords,
+  Target,
   Trophy,
   Users,
 } from "lucide-react";
@@ -22,64 +21,71 @@ import { AUTH_SPORTS } from "@/components/auth/auth-sport-config";
 import { UniversalLoginModal } from "@/components/auth/universal-login-modal";
 import { UniversalRegisterModal } from "@/components/auth/universal-register-modal";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+
+const NAV_ITEMS = [
+  { label: "Overview", href: "#overview" },
+  { label: "Sports", href: "#sports" },
+  { label: "Support", href: "#support" },
+  { label: "Pricing", href: "/cornhole/subscription" },
+];
+
+const HERO_OUTCOMES = [
+  "Verified match results",
+  "Recurring city tournaments",
+  "Rankings that keep moving",
+];
 
 const HOW_IT_WORKS = [
   {
     title: "Register",
-    description: "Create your account and get ready to compete.",
+    description: "Create an account and start your first competition journey.",
     icon: Users,
   },
   {
     title: "Find Tournaments",
-    description: "Discover recurring competitions in your city.",
-    icon: MapPin,
+    description: "Browse formats, cities, and upcoming match schedules.",
+    icon: Search,
   },
   {
     title: "Compete",
-    description: "Play in structured formats with verified results.",
+    description: "Play in structured competition with recorded outcomes.",
     icon: Trophy,
   },
   {
-    title: "Earn Points",
-    description: "Watch your standing improve after every match.",
-    icon: Medal,
-  },
-  {
     title: "Rise Up",
-    description: "Progress through stronger competition over time.",
-    icon: Flag,
+    description: "Track progress as your rank evolves over time.",
+    icon: ChartNoAxesColumn,
   },
 ];
 
-const FEATURE_CARDS = [
+const BUILT_FOR_CHAMPIONS = [
   {
     title: "Tournament Management",
-    description: "Structured scheduling, organized registration, and smoother match-day flow.",
-    icon: BadgeCheck,
+    description: "Structured operations built for recurring competitive formats.",
+    icon: Trophy,
   },
   {
     title: "Dual Rating System",
-    description: "Track consistency and movement with results that update your ranking.",
-    icon: BarChart3,
+    description: "Rank movement and visible points that reflect performance.",
+    icon: Target,
   },
   {
     title: "Geographic Tiers",
-    description: "District, state, and national pathways that connect local play to bigger stages.",
-    icon: Globe2,
+    description: "District-to-national progression with clearer competition stages.",
+    icon: MapPinned,
   },
   {
     title: "Fair Play System",
-    description: "Verified outcomes, transparent progression, and repeatable competition standards.",
+    description: "Verified results, transparent standards, and match integrity.",
     icon: ShieldCheck,
   },
 ];
 
 const STATS = [
-  { value: "500+", label: "Competitions", color: "text-emerald-500", icon: Trophy },
-  { value: "10,000+", label: "Players", color: "text-cyan-500", icon: Users },
-  { value: "50+", label: "Cities", color: "text-amber-500", icon: MapPin },
-  { value: "350L+", label: "Prize Pool", color: "text-violet-500", icon: Star },
+  { value: "500+", label: "Competitions" },
+  { value: "10,000+", label: "Players" },
+  { value: "50+", label: "Cities" },
+  { value: "350L+", label: "Prize Pool" },
 ];
 
 export default function HomePage() {
@@ -116,273 +122,287 @@ export default function HomePage() {
   };
 
   return (
-    <div className="min-h-screen bg-[#f8fbfd] text-slate-900">
+    <div className="min-h-screen bg-[#050c10] text-white">
       <GoogleOneTap showButton={false} autoPrompt />
 
-      <header className="sticky top-0 z-40 border-b border-[#18AFCE]/10 bg-white/90 backdrop-blur">
-        <div className="mx-auto flex h-16 w-full max-w-7xl items-center justify-between px-4 sm:px-6">
-          <Link href="/" className="inline-flex items-center gap-3">
-            <Image src="/logo.png" alt="VALORHIVE" width={34} height={34} className="h-9 w-auto" priority />
-            <div className="leading-tight">
-              <p className="text-sm font-semibold text-[#060E11]">
-                <span>VALOR</span>
-                <span className="text-[#EE5D0E]">HIVE</span>
-              </p>
-            </div>
-          </Link>
+      <main className="relative overflow-hidden px-4 py-6 sm:px-6 lg:px-8">
+        <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top,rgba(24,175,206,0.18),transparent_30%),radial-gradient(circle_at_80%_0%,rgba(238,93,14,0.14),transparent_28%),linear-gradient(180deg,#041017_0%,#050c10_48%,#03080c_100%)]" />
+        <div className="pointer-events-none absolute inset-0 opacity-35 [background-image:linear-gradient(rgba(24,175,206,0.12)_1px,transparent_1px),linear-gradient(90deg,rgba(24,175,206,0.12)_1px,transparent_1px)] [background-size:48px_48px]" />
 
-          <nav className="hidden items-center gap-6 md:flex">
-            <Link href="/tournaments" className="text-sm font-medium text-slate-500 transition-colors hover:text-[#18AFCE]">
-              Tournaments
-            </Link>
-            <Link href="/cornhole/leaderboard" className="text-sm font-medium text-slate-500 transition-colors hover:text-[#18AFCE]">
-              Rankings
-            </Link>
-          </nav>
+        <div className="relative mx-auto max-w-[1220px]">
+          <div className="overflow-hidden rounded-[30px] border border-[#18AFCE]/55 bg-[linear-gradient(180deg,rgba(7,18,24,0.96),rgba(4,10,14,0.98))] shadow-[0_0_0_1px_rgba(24,175,206,0.18),0_0_28px_rgba(24,175,206,0.2),0_0_90px_rgba(24,175,206,0.08)]">
+            <header className="border-b border-[#18AFCE]/18 px-4 py-4 sm:px-6 lg:px-8">
+              <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+                <Link href="/" className="inline-flex items-center gap-3">
+                  <Image src="/logo.png" alt="VALORHIVE" width={34} height={34} className="h-9 w-auto" priority />
+                  <div className="leading-tight">
+                    <p className="text-sm font-semibold tracking-[0.18em] text-white/90">VALORHIVE</p>
+                  </div>
+                </Link>
 
-          <div className="flex items-center gap-2">
-            <button
-              type="button"
-              onClick={() => openAuth("login")}
-              className="rounded-full border border-[#18AFCE]/20 bg-white px-4 py-2 text-sm font-medium text-[#18AFCE] transition-all hover:bg-[#18AFCE]/8 hover:shadow-[0_10px_22px_rgba(24,175,206,0.10)]"
-            >
-              Login
-            </button>
-            <button
-              type="button"
-              onClick={() => openAuth("register")}
-              className="rounded-full border border-[#EE5D0E]/25 bg-[#EE5D0E] px-4 py-2 text-sm font-medium text-white transition-all hover:bg-[#d8530d] hover:shadow-[0_12px_24px_rgba(238,93,14,0.22)]"
-            >
-              Register
-            </button>
-          </div>
-        </div>
-      </header>
+                <nav className="flex flex-wrap items-center gap-2 text-sm">
+                  {NAV_ITEMS.map((item) => (
+                    <Link
+                      key={item.label}
+                      href={item.href}
+                      className="rounded-full border border-transparent px-3 py-2 text-white/66 transition-all hover:border-[#18AFCE]/30 hover:bg-[#18AFCE]/8 hover:text-[#9aefff]"
+                    >
+                      {item.label}
+                    </Link>
+                  ))}
+                </nav>
 
-      <main>
-        <section className="relative overflow-hidden px-4 pb-14 pt-14 sm:px-6 sm:pt-20">
-          <div className="absolute inset-x-0 top-0 h-[420px] bg-[radial-gradient(circle_at_top,rgba(24,175,206,0.12),transparent_58%),radial-gradient(circle_at_20%_20%,rgba(238,93,14,0.10),transparent_28%)]" />
-          <div className="mx-auto max-w-5xl text-center">
-            <div className="relative rounded-[32px] border border-white/70 bg-white/88 px-6 py-10 shadow-[0_24px_54px_rgba(15,23,42,0.07)] backdrop-blur sm:px-10 sm:py-12">
-              <div className="mx-auto inline-flex items-center gap-3 rounded-full border border-[#18AFCE]/15 bg-white px-4 py-2 shadow-sm">
-                <Image src="/logo.png" alt="ValorHive mark" width={28} height={28} className="h-7 w-auto" />
-                <p className="text-sm font-semibold text-[#060E11]">
-                  <span>VALOR</span>
-                  <span className="text-[#EE5D0E]">HIVE</span>
-                </p>
-              </div>
-
-              <div className="mt-8 space-y-4">
-                <h1 className="text-3xl font-semibold tracking-tight text-[#060E11] sm:text-4xl lg:text-[2.85rem]">
-                  India&apos;s Premier Inclusive Sports Ecosystem
-                </h1>
-                <p className="mx-auto max-w-2xl text-sm leading-7 text-slate-500 sm:text-base">
-                  Every sport. Every city. One ecosystem where competitions stay structured and rankings keep moving.
-                </p>
-              </div>
-
-              <div className="mt-7 flex justify-center">
-                <div className="inline-flex rounded-full border border-[#18AFCE]/12 bg-[#f9fbfd] p-1 shadow-sm">
+                <div className="flex items-center gap-2">
                   <button
                     type="button"
                     onClick={() => openAuth("login")}
-                    className="rounded-full px-5 py-2 text-sm font-medium text-[#18AFCE] transition-colors hover:bg-[#18AFCE]/8"
+                    className="rounded-xl border border-[#18AFCE]/35 bg-[#07141c] px-4 py-2 text-sm font-semibold text-[#c6f7ff] shadow-[0_0_14px_rgba(24,175,206,0.14)] transition-all hover:-translate-y-0.5 hover:border-[#18AFCE]/70 hover:bg-[#0a1b24]"
                   >
-                    Login
+                    Log in
                   </button>
                   <button
                     type="button"
                     onClick={() => openAuth("register")}
-                    className="rounded-full bg-[#EE5D0E] px-5 py-2 text-sm font-medium text-white transition-all hover:bg-[#d8530d]"
+                    className="rounded-xl bg-[#d6ff3f] px-4 py-2 text-sm font-semibold text-[#10210f] shadow-[0_0_18px_rgba(214,255,63,0.28)] transition-all hover:-translate-y-0.5 hover:bg-[#c8f12c]"
                   >
-                    Register
+                    Sign Up
                   </button>
                 </div>
               </div>
+            </header>
 
-              <div className="mt-8 flex flex-col items-center gap-4 sm:flex-row sm:justify-center">
-                <Button
-                  className="h-12 min-w-[230px] bg-[#EE5D0E] px-6 text-white hover:bg-[#d8530d] hover:shadow-[0_14px_28px_rgba(238,93,14,0.22)]"
-                  onClick={() => openAuth("register")}
-                >
-                  Join Upcoming Competitions
-                </Button>
-                <Button
-                  asChild
-                  variant="outline"
-                  className="h-12 min-w-[220px] border-[#18AFCE]/24 bg-white text-[#18AFCE] hover:bg-[#18AFCE]/8 hover:text-[#0f8ea8]"
-                >
-                  <Link href="/tournaments">
-                    View Tournaments
-                    <ArrowRight className="ml-2 h-4 w-4" />
-                  </Link>
-                </Button>
-              </div>
-
-              <div className="mt-8 grid gap-3 sm:grid-cols-3">
-                <HeroMiniPill text="Verified match results" />
-                <HeroMiniPill text="Recurring city tournaments" />
-                <HeroMiniPill text="Rankings that keep moving" />
-              </div>
-            </div>
-          </div>
-        </section>
-
-        <section className="px-4 py-14 sm:px-6">
-          <div className="mx-auto max-w-6xl">
-            <div className="mb-10 text-center">
-              <p className="text-xs font-semibold uppercase tracking-[0.28em] text-[#18AFCE]">Choose your sport</p>
-              <h2 className="text-2xl font-semibold text-[#060E11]">Choose Your Sport</h2>
-              <p className="mt-2 text-sm text-slate-500">
-                Structured formats, recurring tournaments, and verified rankings in every sport you play
-              </p>
-            </div>
-
-            <div className="grid gap-6 md:grid-cols-2">
-              {AUTH_SPORTS.map((sport) => {
-                const Icon = sport.icon;
-                const accent =
-                  sport.slug === "cornhole"
-                    ? "bg-[linear-gradient(135deg,#19cc62,#0e9e43)]"
-                    : "bg-[linear-gradient(135deg,#18AFCE,#0a9ab8)]";
-
-                return (
-                  <Card key={sport.slug} className="overflow-hidden border-0 shadow-[0_18px_38px_rgba(15,23,42,0.08)] transition-transform duration-200 hover:-translate-y-1">
-                    <CardContent className={`relative p-0 ${accent}`}>
-                      <div className="absolute inset-0 opacity-20">
-                        <Image
-                          src={sport.slug === "cornhole" ? "/images/hero/cornhole/action-shot.png" : "/images/hero/darts/action-shot.png"}
-                          alt={`${sport.label} background`}
-                          fill
-                          className="object-cover"
-                        />
-                      </div>
-                      <div className="relative p-6 text-white">
-                        <div className="flex items-start justify-between">
-                          <div>
-                            <h3 className="text-2xl font-semibold">{sport.label}</h3>
-                            <p className="mt-1 text-sm text-white/85">{sport.tagline}</p>
-                          </div>
-                          <div className="rounded-xl bg-white/16 p-3">
-                            <Icon className="h-5 w-5" />
-                          </div>
-                        </div>
-
-                        <div className="mt-6 grid gap-3 sm:grid-cols-3">
-                          <SportMetric value="5,000+" label="Players" />
-                          <SportMetric value="250+" label="Tournaments" />
-                          <SportMetric value="INR 25L+" label="Prize Pool" />
-                        </div>
-
-                        <div className="mt-7">
-                          <Button
-                            asChild
-                            className="h-10 rounded-full bg-white/18 px-5 text-white backdrop-blur transition-all hover:bg-white/24 hover:shadow-[0_12px_24px_rgba(255,255,255,0.14)]"
-                          >
-                            <Link href={sport.tournamentsHref}>View Details</Link>
-                          </Button>
-                        </div>
-                      </div>
-                    </CardContent>
-                  </Card>
-                );
-              })}
-            </div>
-          </div>
-        </section>
-
-        <section className="px-4 py-18 sm:px-6">
-          <div className="mx-auto max-w-6xl">
-            <div className="mb-10 text-center">
-              <p className="text-xs font-semibold uppercase tracking-[0.28em] text-[#18AFCE]">How it works</p>
-              <h2 className="text-2xl font-semibold text-[#060E11]">How It Works</h2>
-              <p className="mt-2 text-sm text-slate-500">
-                Join recurring sports formats in structured competition across seasons and cities
-              </p>
-            </div>
-
-            <div className="grid gap-4 md:grid-cols-5">
-              {HOW_IT_WORKS.map((item) => (
-                <SimpleFeatureCard key={item.title} title={item.title} description={item.description} icon={item.icon} />
-              ))}
-            </div>
-          </div>
-        </section>
-
-        <section className="bg-[linear-gradient(180deg,rgba(24,175,206,0.03),transparent_60%)] px-4 py-18 sm:px-6">
-          <div className="mx-auto max-w-6xl">
-            <div className="mb-10 text-center">
-              <p className="text-xs font-semibold uppercase tracking-[0.28em] text-[#18AFCE]">Built for champions</p>
-              <h2 className="text-2xl font-semibold text-[#060E11]">Built for Champions</h2>
-              <p className="mt-2 text-sm text-slate-500">
-                Structured tools that make competition repeatable, transparent, and scalable
-              </p>
-            </div>
-
-            <div className="grid gap-4 md:grid-cols-4">
-              {FEATURE_CARDS.map((item) => (
-                <SimpleFeatureCard
-                  key={item.title}
-                  title={item.title}
-                  description={item.description}
-                  icon={item.icon}
-                />
-              ))}
-            </div>
-          </div>
-        </section>
-
-        <section className="px-4 py-18 sm:px-6">
-          <div className="mx-auto max-w-5xl">
-            <div className="text-center">
-              <p className="text-xs font-semibold uppercase tracking-[0.28em] text-[#18AFCE]">Growing every day</p>
-              <h2 className="text-2xl font-semibold text-[#060E11]">Growing Every Day</h2>
-            </div>
-
-            <div className="mt-10 grid gap-4 sm:grid-cols-2 md:grid-cols-4">
-              {STATS.map((item) => (
-                <div
-                  key={item.label}
-                  className="rounded-[24px] border border-slate-200/80 bg-white px-5 py-6 text-center shadow-[0_12px_24px_rgba(15,23,42,0.04)]"
-                >
-                  <div className="mx-auto mb-3 flex h-11 w-11 items-center justify-center rounded-full bg-white shadow-sm ring-1 ring-slate-200">
-                    <item.icon className={`h-5 w-5 ${item.color}`} />
+            <section id="overview" className="px-4 py-6 sm:px-6 sm:py-8 lg:px-8">
+              <div className="grid gap-6 lg:grid-cols-[1.1fr_0.9fr]">
+                <div className="overflow-hidden rounded-[26px] border border-[#18AFCE]/28 bg-[#07131b] shadow-[0_0_30px_rgba(24,175,206,0.1)]">
+                  <div className="relative aspect-[16/11]">
+                    <Image
+                      src="/images/hero/cornhole/action-shot.png"
+                      alt="ValorHive competition"
+                      fill
+                      className="object-cover"
+                      priority
+                    />
+                    <div className="absolute inset-0 bg-[linear-gradient(180deg,rgba(5,12,16,0.08),rgba(5,12,16,0.24)_38%,rgba(5,12,16,0.68)_100%)]" />
+                    <div className="absolute left-4 top-4 inline-flex items-center gap-2 rounded-full border border-white/18 bg-[#09161f]/78 px-3 py-1.5 backdrop-blur">
+                      <CircleCheckBig className="h-4 w-4 text-[#18AFCE]" />
+                      <span className="text-xs font-medium text-white/88">VALORHIVE</span>
+                    </div>
                   </div>
-                  <p className={`text-3xl font-semibold ${item.color}`}>{item.value}</p>
-                  <p className="mt-1 text-sm text-slate-500">{item.label}</p>
                 </div>
-              ))}
-            </div>
-          </div>
-        </section>
 
-        <section className="px-4 pb-24 pt-12 sm:px-6">
-          <div className="mx-auto max-w-4xl rounded-[30px] border border-[#18AFCE]/12 bg-[linear-gradient(180deg,#ffffff,#f7fbfd)] px-6 py-12 text-center shadow-[0_18px_38px_rgba(15,23,42,0.06)] sm:px-10">
-            <h2 className="text-2xl font-semibold text-[#060E11]">Ready to Start Competing?</h2>
-            <p className="mx-auto mt-3 max-w-2xl text-sm leading-7 text-slate-500">
-              Join structured sports competitions and start building your ranking today.
-            </p>
+                <div className="flex flex-col justify-center rounded-[26px] border border-[#18AFCE]/22 bg-[linear-gradient(180deg,rgba(9,19,27,0.96),rgba(5,11,15,0.96))] p-6 shadow-[inset_0_0_0_1px_rgba(24,175,206,0.06),0_0_32px_rgba(24,175,206,0.08)] sm:p-8">
+                  <div className="inline-flex w-fit items-center rounded-full border border-[#18AFCE]/25 bg-[#0a1922] px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.24em] text-[#7de8ff]">
+                    Structured Competition
+                  </div>
+                  <h1 className="mt-5 max-w-[10ch] text-4xl font-semibold leading-[1.05] tracking-tight sm:text-[3.4rem]">
+                    India&apos;s Premier{" "}
+                    <span className="text-[#d6ff3f] [text-shadow:0_0_18px_rgba(214,255,63,0.32)]">
+                      Inclusive Sports
+                    </span>{" "}
+                    Ecosystem
+                  </h1>
+                  <p className="mt-5 max-w-xl text-sm leading-7 text-white/68 sm:text-base">
+                    Every sport. Every city. One competitive system where tournaments stay structured and rankings keep moving.
+                  </p>
 
-            <div className="mt-8 flex flex-col justify-center gap-3 sm:flex-row">
-              <Button
-                className="h-11 bg-[#19c766] px-6 text-white transition-all hover:bg-[#14b158] hover:shadow-[0_12px_24px_rgba(25,199,102,0.22)]"
-                onClick={() => openAuth("register")}
-              >
-                Get Started
-              </Button>
-              <Button
-                asChild
-                variant="outline"
-                className="h-11 border-[#18AFCE]/24 bg-white text-[#18AFCE] hover:bg-[#18AFCE]/8"
-              >
-                <Link href="/tournaments">View Tournaments</Link>
-              </Button>
-            </div>
+                  <div className="mt-7 flex flex-col gap-3 sm:flex-row">
+                    <Button
+                      className="h-11 rounded-xl bg-[#d6ff3f] px-5 text-sm font-semibold text-[#12230f] shadow-[0_0_22px_rgba(214,255,63,0.28)] transition-all hover:-translate-y-0.5 hover:bg-[#c8f12c]"
+                      onClick={() => openAuth("register")}
+                    >
+                      Join Upcoming Competitions
+                    </Button>
+                    <Button
+                      asChild
+                      variant="outline"
+                      className="h-11 rounded-xl border-[#18AFCE]/40 bg-[#08141c] px-5 text-sm font-semibold text-[#c3f8ff] shadow-[0_0_18px_rgba(24,175,206,0.14)] transition-all hover:-translate-y-0.5 hover:bg-[#0c1c26] hover:text-white"
+                    >
+                      <Link href="/tournaments">
+                        View Tournaments
+                        <ArrowRight className="ml-2 h-4 w-4" />
+                      </Link>
+                    </Button>
+                  </div>
+
+                  <p className="mt-4 text-xs font-medium uppercase tracking-[0.22em] text-white/45">
+                    Starting with Cornhole, Darts, Frisbee Golf, Pickleball
+                  </p>
+                </div>
+              </div>
+
+              <div className="mt-5 grid gap-3 md:grid-cols-3">
+                {HERO_OUTCOMES.map((item) => (
+                  <div
+                    key={item}
+                    className="rounded-2xl border border-[#18AFCE]/22 bg-[linear-gradient(180deg,rgba(12,25,34,0.9),rgba(7,14,19,0.96))] px-4 py-4 text-center text-sm font-medium text-white/86 shadow-[0_0_18px_rgba(24,175,206,0.12)]"
+                  >
+                    {item}
+                  </div>
+                ))}
+              </div>
+            </section>
+
+            <section id="sports" className="px-4 pb-6 sm:px-6 lg:px-8">
+              <SectionHeading
+                eyebrow="Choose your sport"
+                title="Choose your sport"
+                description="Choose a format built for structured match play, local tournament movement, and consistent rankings."
+              />
+
+              <div className="grid gap-5">
+                {AUTH_SPORTS.map((sport) => {
+                  const Icon = sport.icon;
+                  const isCornhole = sport.slug === "cornhole";
+                  const panelClass = isCornhole
+                    ? "from-[#cfff35] via-[#6fe5c0] to-[#1db8f4]"
+                    : "from-[#47d5ff] via-[#27bdf1] to-[#5ef0c9]";
+
+                  return (
+                    <div
+                      key={sport.slug}
+                      className={`relative overflow-hidden rounded-[24px] border border-[#18AFCE]/28 bg-gradient-to-r ${panelClass} p-[1px] shadow-[0_0_22px_rgba(24,175,206,0.18)]`}
+                    >
+                      <div className="relative flex flex-col gap-4 rounded-[23px] bg-[linear-gradient(90deg,rgba(18,38,43,0.14),rgba(8,16,23,0.08))] px-5 py-5 text-[#10202b] sm:flex-row sm:items-center sm:justify-between">
+                        <div className="flex items-center gap-4">
+                          <div className="flex h-20 w-20 items-center justify-center rounded-2xl bg-white/28 shadow-[inset_0_0_0_1px_rgba(255,255,255,0.26)] backdrop-blur">
+                            <Icon className="h-9 w-9" />
+                          </div>
+                          <div>
+                            <h3 className="text-3xl font-semibold">{sport.label}</h3>
+                            <div className="mt-3 grid grid-cols-3 gap-5 text-sm">
+                              <SportStat value="5,000+" label="Players" />
+                              <SportStat value="250+" label="Tournaments" />
+                              <SportStat value="INR 25L+" label="Prize Pool" />
+                            </div>
+                          </div>
+                        </div>
+
+                        <Button
+                          asChild
+                          className="h-11 rounded-xl bg-[#d6ff3f] px-5 text-sm font-semibold text-[#13220f] shadow-[0_0_20px_rgba(214,255,63,0.22)] transition-all hover:-translate-y-0.5 hover:bg-[#c8f12c]"
+                        >
+                          <Link href={sport.tournamentsHref}>View Details</Link>
+                        </Button>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </section>
+
+            <section className="px-4 pb-6 pt-2 sm:px-6 lg:px-8">
+              <SectionHeading
+                eyebrow="How it works"
+                title="How it works"
+                description="A clearer path from registration to repeat competition."
+              />
+
+              <div className="grid gap-4 md:grid-cols-4">
+                {HOW_IT_WORKS.map((item) => (
+                  <NeonInfoCard key={item.title} title={item.title} description={item.description} icon={item.icon} />
+                ))}
+              </div>
+            </section>
+
+            <section className="px-4 pb-6 pt-2 sm:px-6 lg:px-8">
+              <SectionHeading
+                eyebrow="Built for champions"
+                title="Built for champions"
+                description="Competition infrastructure designed for repeatable formats and long-term player progress."
+              />
+
+              <div className="grid gap-4 md:grid-cols-4">
+                {BUILT_FOR_CHAMPIONS.map((item) => (
+                  <NeonInfoCard key={item.title} title={item.title} description={item.description} icon={item.icon} />
+                ))}
+              </div>
+            </section>
+
+            <section className="px-4 pb-6 pt-2 sm:px-6 lg:px-8">
+              <SectionHeading eyebrow="Growing every day" title="Growing every day" />
+
+              <div className="grid gap-4 md:grid-cols-4">
+                {STATS.map((item, index) => (
+                  <div
+                    key={item.label}
+                    className="rounded-[22px] border border-[#18AFCE]/18 bg-[linear-gradient(180deg,rgba(11,20,28,0.96),rgba(6,11,15,0.96))] px-5 py-6 text-center shadow-[0_0_18px_rgba(24,175,206,0.08)]"
+                  >
+                    <p
+                      className={
+                        index === 0
+                          ? "text-4xl font-semibold text-[#d6ff3f]"
+                          : index === 1
+                            ? "text-4xl font-semibold text-[#39d7ff]"
+                            : index === 2
+                              ? "text-4xl font-semibold text-[#4fd8ff]"
+                              : "text-4xl font-semibold text-[#d6ff3f]"
+                      }
+                    >
+                      {item.value}
+                    </p>
+                    <p className="mt-2 text-sm text-white/56">{item.label}</p>
+                  </div>
+                ))}
+              </div>
+            </section>
+
+            <section className="px-4 pb-8 pt-2 sm:px-6 lg:px-8">
+              <div className="rounded-[26px] border border-[#18AFCE]/24 bg-[radial-gradient(circle_at_left,rgba(214,255,63,0.18),transparent_32%),radial-gradient(circle_at_right,rgba(24,175,206,0.18),transparent_30%),linear-gradient(180deg,rgba(13,24,32,0.98),rgba(8,13,18,0.98))] px-6 py-8 text-center shadow-[0_0_24px_rgba(24,175,206,0.12)]">
+                <h2 className="text-3xl font-semibold text-white">Ready to Start Competing?</h2>
+                <p className="mx-auto mt-3 max-w-2xl text-sm leading-7 text-white/62">
+                  Join structured competitions, build your ranking, and move through a more consistent competitive system.
+                </p>
+                <div className="mt-6 flex flex-col justify-center gap-3 sm:flex-row">
+                  <Button
+                    className="h-11 rounded-xl bg-[#d6ff3f] px-6 text-sm font-semibold text-[#12220f] shadow-[0_0_22px_rgba(214,255,63,0.28)] transition-all hover:-translate-y-0.5 hover:bg-[#c8f12c]"
+                    onClick={() => openAuth("register")}
+                  >
+                    Get Started
+                  </Button>
+                  <Button
+                    asChild
+                    variant="outline"
+                    className="h-11 rounded-xl border-[#18AFCE]/40 bg-[#08151d] px-6 text-sm font-semibold text-[#c8f7ff] shadow-[0_0_18px_rgba(24,175,206,0.12)] transition-all hover:-translate-y-0.5 hover:bg-[#0d1b24]"
+                  >
+                    <Link href="/tournaments">View Tournaments</Link>
+                  </Button>
+                </div>
+              </div>
+            </section>
+
+            <footer
+              id="support"
+              className="border-t border-[#18AFCE]/18 px-4 py-5 text-sm text-white/45 sm:px-6 lg:px-8"
+            >
+              <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+                <div className="flex items-center gap-3">
+                  <Image src="/logo.png" alt="VALORHIVE" width={28} height={28} className="h-7 w-auto" />
+                  <span className="font-semibold text-white/80">VALORHIVE</span>
+                </div>
+
+                <div className="flex flex-wrap items-center gap-4">
+                  <Link href="/tournaments" className="transition-colors hover:text-[#8fefff]">
+                    Quick links
+                  </Link>
+                  <Link href="/help" className="transition-colors hover:text-[#8fefff]">
+                    Support
+                  </Link>
+                  <Link href="/legal/privacy" className="transition-colors hover:text-[#8fefff]">
+                    Legal
+                  </Link>
+                  <Link href="/contact" className="transition-colors hover:text-[#8fefff]">
+                    Contact
+                  </Link>
+                </div>
+              </div>
+
+              <div className="mt-4 text-center text-xs text-white/32">
+                © {new Date().getFullYear()} VALORHIVE. All rights reserved.
+              </div>
+            </footer>
           </div>
-        </section>
+        </div>
       </main>
-
-      <LandingFooter />
 
       <UniversalLoginModal
         open={authView === "login"}
@@ -398,16 +418,25 @@ export default function HomePage() {
   );
 }
 
-function SportMetric({ value, label }: { value: string; label: string }) {
+function SectionHeading({
+  eyebrow,
+  title,
+  description,
+}: {
+  eyebrow: string;
+  title: string;
+  description?: string;
+}) {
   return (
-    <div className="rounded-2xl border border-white/18 bg-white/12 px-4 py-3 text-center backdrop-blur">
-      <p className="text-lg font-semibold">{value}</p>
-      <p className="mt-1 text-xs text-white/80">{label}</p>
+    <div className="mb-6 text-center">
+      <p className="text-xs font-semibold uppercase tracking-[0.28em] text-white/45">{eyebrow}</p>
+      <h2 className="mt-2 text-2xl font-semibold uppercase tracking-[0.04em] text-white">{title}</h2>
+      {description ? <p className="mx-auto mt-2 max-w-2xl text-sm leading-7 text-white/55">{description}</p> : null}
     </div>
   );
 }
 
-function SimpleFeatureCard({
+function NeonInfoCard({
   title,
   description,
   icon: Icon,
@@ -417,89 +446,21 @@ function SimpleFeatureCard({
   icon: typeof Trophy;
 }) {
   return (
-    <Card className="h-full border-slate-200/80 bg-white shadow-[0_12px_24px_rgba(15,23,42,0.04)] transition-transform duration-200 hover:-translate-y-1">
-      <CardHeader className="gap-4 p-5">
-        <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-[#EE5D0E]/10">
-          <Icon className="h-4 w-4 text-[#EE5D0E]" />
-        </div>
-        <div className="space-y-2">
-          <CardTitle className="text-base text-[#060E11]">{title}</CardTitle>
-          <CardDescription className="text-sm leading-6 text-slate-500">{description}</CardDescription>
-        </div>
-      </CardHeader>
-    </Card>
-  );
-}
-
-function HeroMiniPill({ text }: { text: string }) {
-  return (
-    <div className="rounded-2xl border border-[#18AFCE]/10 bg-[#f9fbfd] px-4 py-3 text-sm font-medium text-slate-600 shadow-sm">
-      {text}
+    <div className="group h-full rounded-[22px] border border-white/10 bg-[linear-gradient(180deg,rgba(17,24,32,0.98),rgba(9,13,18,0.98))] p-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.05),0_0_18px_rgba(24,175,206,0.06)] transition-all duration-200 hover:-translate-y-1 hover:border-[#18AFCE]/32 hover:shadow-[0_0_28px_rgba(24,175,206,0.14)]">
+      <div className="flex h-10 w-10 items-center justify-center rounded-2xl border border-[#d6ff3f]/18 bg-[#d6ff3f]/8 text-[#d6ff3f] shadow-[0_0_18px_rgba(214,255,63,0.12)]">
+        <Icon className="h-4 w-4" />
+      </div>
+      <h3 className="mt-4 text-lg font-semibold text-white">{title}</h3>
+      <p className="mt-2 text-sm leading-6 text-white/50">{description}</p>
     </div>
   );
 }
 
-function LandingFooter() {
+function SportStat({ value, label }: { value: string; label: string }) {
   return (
-    <footer className="border-t border-slate-200 bg-white">
-      <div className="mx-auto grid max-w-7xl gap-8 px-4 py-10 sm:grid-cols-2 sm:px-6 lg:grid-cols-4">
-        <div>
-          <div className="flex items-center gap-3">
-            <Image src="/logo.png" alt="ValorHive" width={28} height={28} className="h-7 w-auto" />
-            <p className="text-sm font-semibold text-[#060E11]">
-              <span>VALOR</span>
-              <span className="text-[#EE5D0E]">HIVE</span>
-            </p>
-          </div>
-          <p className="mt-3 text-sm leading-6 text-slate-500">
-            Structured sports competitions with verified results, city-level tournaments, and rankings that keep
-            progressing.
-          </p>
-        </div>
-
-        <div>
-          <p className="text-sm font-semibold text-[#060E11]">Quick Links</p>
-          <div className="mt-3 space-y-2 text-sm text-slate-500">
-            <Link href="/cornhole" className="block hover:text-[#18AFCE]">
-              Cornhole
-            </Link>
-            <Link href="/darts" className="block hover:text-[#18AFCE]">
-              Darts
-            </Link>
-            <Link href="/tournaments" className="block hover:text-[#18AFCE]">
-              Tournaments
-            </Link>
-          </div>
-        </div>
-
-        <div>
-          <p className="text-sm font-semibold text-[#060E11]">Support</p>
-          <div className="mt-3 space-y-2 text-sm text-slate-500">
-            <p>support@valorhive.com</p>
-            <p>+91 98765 43210</p>
-            <p>Mon-Sat, 9AM-6PM</p>
-          </div>
-        </div>
-
-        <div>
-          <p className="text-sm font-semibold text-[#060E11]">Legal</p>
-          <div className="mt-3 space-y-2 text-sm text-slate-500">
-            <Link href="/legal/privacy" className="block hover:text-[#18AFCE]">
-              Privacy Policy
-            </Link>
-            <Link href="/legal/terms" className="block hover:text-[#18AFCE]">
-              Terms of Service
-            </Link>
-            <Link href="/admin/login" className="block hover:text-[#18AFCE]">
-              Office Use Only
-            </Link>
-          </div>
-        </div>
-      </div>
-
-      <div className="border-t border-slate-200 px-4 py-4 text-center text-xs text-slate-400 sm:px-6">
-        © {new Date().getFullYear()} VALORHIVE. All rights reserved.
-      </div>
-    </footer>
+    <div>
+      <p className="text-xl font-semibold text-[#10222c]">{value}</p>
+      <p className="mt-0.5 text-xs uppercase tracking-[0.14em] text-[#10222c]/70">{label}</p>
+    </div>
   );
 }
