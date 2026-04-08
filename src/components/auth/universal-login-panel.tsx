@@ -404,7 +404,7 @@ export function UniversalLoginPanel({
               Create account
             </button>
           ) : (
-            <Link href="/register" className={`${sport.accentText} font-medium hover:underline`}>
+            <Link href="/?auth=register" className={`${sport.accentText} font-medium hover:underline`}>
               Create account
             </Link>
           )}

@@ -609,7 +609,7 @@ export function UniversalRegisterPanel({
               Sign in
             </button>
           ) : (
-            <Link href="/login" className={`${sport.accentText} font-medium hover:underline`}>
+            <Link href="/?auth=login" className={`${sport.accentText} font-medium hover:underline`}>
               Sign in
             </Link>
           )}

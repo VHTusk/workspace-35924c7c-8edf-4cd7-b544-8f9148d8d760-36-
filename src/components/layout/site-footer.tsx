@@ -42,12 +42,12 @@ export default function SiteFooter() {
                 </Link>
               </li>
               <li>
-                <Link href="/login" className="text-sm text-muted-foreground transition-colors hover:text-primary">
+                <Link href="/?auth=login" className="text-sm text-muted-foreground transition-colors hover:text-primary">
                   Log in
                 </Link>
               </li>
               <li>
-                <Link href="/register" className="text-sm text-muted-foreground transition-colors hover:text-primary">
+                <Link href="/?auth=register" className="text-sm text-muted-foreground transition-colors hover:text-primary">
                   Register
                 </Link>
               </li>

@@ -1,8 +1,9 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
+import { useRouter, useSearchParams } from "next/navigation";
 import { ArrowRight, Calendar, Check, ChevronRight, ClipboardList, Crown, ShieldCheck, Swords, Target, Trophy } from "lucide-react";
 import GoogleOneTap from "@/components/auth/google-one-tap";
 import { AUTH_SPORTS } from "@/components/auth/auth-sport-config";
@@ -48,7 +49,37 @@ const ORGANIZER_POINTS = [
 ];
 
 export default function HomePage() {
+  const router = useRouter();
+  const searchParams = useSearchParams();
   const [authView, setAuthView] = useState<"login" | "register" | null>(null);
+
+  useEffect(() => {
+    const authParam = searchParams.get("auth");
+    if (authParam === "login" || authParam === "register") {
+      setAuthView(authParam);
+      return;
+    }
+
+    setAuthView((current) => (current && !searchParams.get("auth") ? null : current));
+  }, [searchParams]);
+
+  const openAuth = (view: "login" | "register") => {
+    const params = new URLSearchParams(searchParams.toString());
+    params.set("auth", view);
+    router.replace(params.size ? `/?${params.toString()}` : "/");
+  };
+
+  const handleAuthChange = (view: "login" | "register" | null) => {
+    const params = new URLSearchParams(searchParams.toString());
+    if (view) {
+      params.set("auth", view);
+      setAuthView(view);
+    } else {
+      params.delete("auth");
+      setAuthView(null);
+    }
+    router.replace(params.size ? `/?${params.toString()}` : "/");
+  };
 
   return (
     <div className="flex min-h-screen flex-col bg-background">
@@ -65,10 +96,10 @@ export default function HomePage() {
           </Link>
 
           <div className="flex items-center gap-2 sm:gap-3">
-            <Button variant="ghost" className="hidden sm:inline-flex" onClick={() => setAuthView("login")}>
+            <Button variant="ghost" className="hidden sm:inline-flex" onClick={() => openAuth("login")}>
               Log In
             </Button>
-            <Button onClick={() => setAuthView("register")}>Register</Button>
+            <Button onClick={() => openAuth("register")}>Register</Button>
             <ThemeToggleCompact />
           </div>
         </div>
@@ -93,11 +124,11 @@ export default function HomePage() {
               </div>
 
               <div className="flex flex-col gap-3 sm:flex-row">
-                <Button size="lg" className="gap-2" onClick={() => setAuthView("register")}>
+                <Button size="lg" className="gap-2" onClick={() => openAuth("register")}>
                   Create your account
                   <ArrowRight className="h-4 w-4" />
                 </Button>
-                <Button size="lg" variant="outline" className="gap-2" onClick={() => setAuthView("login")}>
+                <Button size="lg" variant="outline" className="gap-2" onClick={() => openAuth("login")}>
                   Log in
                   <ChevronRight className="h-4 w-4" />
                 </Button>
@@ -285,13 +316,13 @@ export default function HomePage() {
 
       <UniversalLoginModal
         open={authView === "login"}
-        onOpenChange={(open) => setAuthView(open ? "login" : null)}
-        onSwitchToRegister={() => setAuthView("register")}
+        onOpenChange={(open) => handleAuthChange(open ? "login" : null)}
+        onSwitchToRegister={() => handleAuthChange("register")}
       />
       <UniversalRegisterModal
         open={authView === "register"}
-        onOpenChange={(open) => setAuthView(open ? "register" : null)}
-        onSwitchToLogin={() => setAuthView("login")}
+        onOpenChange={(open) => handleAuthChange(open ? "register" : null)}
+        onSwitchToLogin={() => handleAuthChange("login")}
       />
     </div>
   );
