@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from "next";
 import Script from "next/script";
 import "./globals.css";
 import { ThemeProvider } from "@/components/theme-provider";
+import { Toaster } from "@/components/ui/sonner";
 import { getAppUrl } from "@/lib/app-url";
 
 export const viewport: Viewport = {
@@ -45,6 +46,7 @@ export default function RootLayout({
           disableTransitionOnChange
         >
           {children}
+          <Toaster richColors closeButton duration={4000} />
         </ThemeProvider>
       </body>
     </html>

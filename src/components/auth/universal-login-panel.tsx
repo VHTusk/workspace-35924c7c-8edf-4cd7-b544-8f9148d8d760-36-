@@ -3,8 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
-import { AlertCircle, ArrowRight, CheckCircle2, Eye, EyeOff, KeyRound, Lock, Mail, MessageCircle, Phone, UserX } from "lucide-react";
-import { Alert, AlertDescription } from "@/components/ui/alert";
+import { ArrowRight, Eye, EyeOff, Lock, Mail, MessageCircle, Phone } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -15,6 +14,7 @@ import { WhatsAppLogin } from "@/components/auth/whatsapp-login";
 import { AUTH_SPORTS, getAuthSportOption, normalizeAuthSport, type AuthSportSlug } from "@/components/auth/auth-sport-config";
 import { AUTH_CODES, type AuthFieldErrors } from "@/lib/auth-contract";
 import { parseAuthResponse } from "@/lib/auth-client";
+import { toast } from "sonner";
 
 type UniversalLoginPanelProps = {
   initialSport?: string;
@@ -45,6 +45,18 @@ export function UniversalLoginPanel({
   useEffect(() => {
     setSelectedSport(normalizeAuthSport(initialSport));
   }, [initialSport]);
+
+  useEffect(() => {
+    if (error) {
+      toast.error(error, { id: "auth-login-error" });
+    }
+  }, [error]);
+
+  useEffect(() => {
+    if (successMessage) {
+      toast.success(successMessage, { id: "auth-login-success" });
+    }
+  }, [successMessage]);
 
   const sport = getAuthSportOption(selectedSport);
 
@@ -248,47 +260,26 @@ export function UniversalLoginPanel({
       </CardHeader>
 
       <CardContent className="space-y-4">
-        {successMessage && (
-          <Alert className="border-green-500/40 bg-green-500/10">
-            <CheckCircle2 className="h-4 w-4 text-green-600" />
-            <AlertDescription className="text-green-700 dark:text-green-300">{successMessage}</AlertDescription>
-          </Alert>
-        )}
-
-        {error && (
-          <Alert variant="destructive">
-            <div className="flex items-start gap-3">
-              {errorCode === AUTH_CODES.USER_NOT_FOUND ? (
-                <UserX className="mt-0.5 h-5 w-5 flex-shrink-0" />
-              ) : errorCode === AUTH_CODES.WRONG_PASSWORD ? (
-                <KeyRound className="mt-0.5 h-5 w-5 flex-shrink-0" />
-              ) : errorCode === AUTH_CODES.TOO_MANY_ATTEMPTS ? (
-                <Lock className="mt-0.5 h-5 w-5 flex-shrink-0" />
-              ) : (
-                <AlertCircle className="mt-0.5 h-5 w-5 flex-shrink-0" />
-              )}
-              <div className="flex-1">
-                <AlertDescription className="font-medium">{error}</AlertDescription>
-                {errorCode === AUTH_CODES.USER_NOT_FOUND && onSwitchToRegister && (
-                  <button
-                    type="button"
-                    onClick={onSwitchToRegister}
-                    className={`mt-2 text-sm font-medium ${sport.accentText} hover:underline`}
-                  >
-                    Create your account {"->"}
-                  </button>
-                )}
-                {errorCode === AUTH_CODES.EMAIL_NOT_VERIFIED && actionEmail && (
-                  <Link
-                    href={`/${selectedSport}/verify-email?pending=true&email=${encodeURIComponent(actionEmail)}`}
-                    className={`mt-2 inline-block text-sm font-medium ${sport.accentText} hover:underline`}
-                  >
-                    Verify your email {"->"}
-                  </Link>
-                )}
-              </div>
-            </div>
-          </Alert>
+        {(errorCode === AUTH_CODES.USER_NOT_FOUND || errorCode === AUTH_CODES.EMAIL_NOT_VERIFIED) && (
+          <div className="rounded-xl border border-border/60 bg-muted/30 p-3 text-sm">
+            {errorCode === AUTH_CODES.USER_NOT_FOUND && onSwitchToRegister && (
+              <button
+                type="button"
+                onClick={onSwitchToRegister}
+                className={`font-medium ${sport.accentText} hover:underline`}
+              >
+                Create your account {"->"}
+              </button>
+            )}
+            {errorCode === AUTH_CODES.EMAIL_NOT_VERIFIED && actionEmail && (
+              <Link
+                href={`/${selectedSport}/verify-email?pending=true&email=${encodeURIComponent(actionEmail)}`}
+                className={`font-medium ${sport.accentText} hover:underline`}
+              >
+                Verify your email {"->"}
+              </Link>
+            )}
+          </div>
         )}
 
         <GoogleOneTap sport={selectedSport} autoPrompt={false} anchorId="universal-login-google" />

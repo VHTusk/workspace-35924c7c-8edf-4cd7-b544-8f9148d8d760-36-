@@ -4,7 +4,6 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { ArrowRight, Building2, CheckCircle2, Eye, EyeOff, Lock, Mail, MessageCircle, Phone, User } from "lucide-react";
-import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -16,6 +15,7 @@ import { WhatsAppRegister } from "@/components/auth/whatsapp-register";
 import { getAuthSportOption, normalizeAuthSport, type AuthSportSlug } from "@/components/auth/auth-sport-config";
 import { type AuthFieldErrors } from "@/lib/auth-contract";
 import { parseAuthResponse } from "@/lib/auth-client";
+import { toast } from "sonner";
 
 type AccountType = "player" | "org";
 
@@ -53,6 +53,12 @@ export function UniversalRegisterPanel({
   useEffect(() => {
     setSelectedSport(normalizeAuthSport(initialSport));
   }, [initialSport]);
+
+  useEffect(() => {
+    if (error) {
+      toast.error(error, { id: "auth-register-error" });
+    }
+  }, [error]);
 
   const sport = getAuthSportOption(selectedSport);
 
@@ -283,12 +289,6 @@ export function UniversalRegisterPanel({
       </CardHeader>
 
       <CardContent className="space-y-4">
-        {error && (
-          <Alert variant="destructive">
-            <AlertDescription>{error}</AlertDescription>
-          </Alert>
-        )}
-
         {accountType === "player" && (
           <GoogleOneTap sport={selectedSport} autoPrompt={false} anchorId="universal-register-google" />
         )}

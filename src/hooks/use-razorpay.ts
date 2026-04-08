@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
+import { fetchWithCsrf } from '@/lib/client-csrf';
 
 // Extend Window interface for Razorpay
 declare global {
@@ -96,7 +97,7 @@ export function useRazorpay(options: UseRazorpayOptions = {}) {
 
     try {
       // Create order from backend
-      const orderResponse = await fetch('/api/payments/create-order', {
+      const orderResponse = await fetchWithCsrf('/api/payments/create-order', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -133,7 +134,7 @@ export function useRazorpay(options: UseRazorpayOptions = {}) {
         handler: async (response) => {
           try {
             // Verify payment
-            const verifyResponse = await fetch('/api/payments/verify', {
+            const verifyResponse = await fetchWithCsrf('/api/payments/verify', {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
               body: JSON.stringify({

@@ -43,6 +43,8 @@ import {
   Lock,
   CreditCard,
 } from "lucide-react";
+import { toast } from "sonner";
+import { fetchWithCsrf } from "@/lib/client-csrf";
 import { cn } from "@/lib/utils";
 import { useRazorpay, PAYMENT_TYPES, type RazorpayOptions } from "@/hooks/use-razorpay";
 
@@ -202,6 +204,12 @@ export default function TournamentDetailPage() {
     }
   }, [tournament?.status]);
 
+  useEffect(() => {
+    if (error && tournament) {
+      toast.error(error, { id: "tournament-detail-error" });
+    }
+  }, [error, tournament]);
+
   const fetchTournament = async () => {
     try {
       setLoading(true);
@@ -292,7 +300,7 @@ export default function TournamentDetailPage() {
     // For INDIVIDUAL and INTRA_ORG, individual player registration
     setIsRegistering(true);
     try {
-      const response = await fetch(`/api/tournaments/${tournamentId}/register`, {
+      const response = await fetchWithCsrf(`/api/tournaments/${tournamentId}/register`, {
         method: "POST",
       });
 
@@ -335,7 +343,7 @@ export default function TournamentDetailPage() {
     setError("");
 
     try {
-      const response = await fetch(`/api/tournaments/${tournamentId}/team-register`, {
+      const response = await fetchWithCsrf(`/api/tournaments/${tournamentId}/team-register`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ teamId: selectedTeam.id }),
@@ -365,6 +373,7 @@ export default function TournamentDetailPage() {
         // Free tournament, registration complete
         setShowTeamModal(false);
         setIsRegistered(true);
+        toast.success("Registration completed successfully.", { id: "tournament-detail-success" });
         fetchTournament();
       }
     } catch (err) {
@@ -407,7 +416,7 @@ export default function TournamentDetailPage() {
         handler: async (response) => {
           // Payment successful - verify on server
           try {
-            const verifyRes = await fetch('/api/payments/verify', {
+            const verifyRes = await fetchWithCsrf('/api/payments/verify', {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
               body: JSON.stringify({
@@ -423,6 +432,7 @@ export default function TournamentDetailPage() {
             if (verifyRes.ok) {
               setShowTeamModal(false);
               setIsRegistered(true);
+              toast.success("Payment successful. Registration confirmed.", { id: "tournament-detail-success" });
               // Refresh tournament data
               fetchTournament();
             } else {
@@ -1141,13 +1151,6 @@ export default function TournamentDetailPage() {
               Select your team to register for this doubles tournament. Only you (as captain) will pay the entry fee.
             </DialogDescription>
           </DialogHeader>
-
-          {error && (
-            <Alert variant="destructive">
-              <AlertCircle className="w-4 h-4" />
-              <AlertDescription>{error}</AlertDescription>
-            </Alert>
-          )}
 
           <div className="py-4">
             {loadingTeams ? (

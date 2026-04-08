@@ -11,16 +11,16 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
-import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { CouponInput } from '@/components/payment/coupon-input';
+import { fetchWithCsrf } from '@/lib/client-csrf';
 import { cn } from '@/lib/utils';
+import { toast } from 'sonner';
 import {
   CreditCard,
   Loader2,
   Check,
-  AlertCircle,
   Tag,
   ShieldCheck,
 } from 'lucide-react';
@@ -161,6 +161,12 @@ export function PaymentDialog({
     }
   }, [open, originalAmount]);
 
+  useEffect(() => {
+    if (error) {
+      toast.error(error, { id: 'payment-dialog-error' });
+    }
+  }, [error]);
+
   // Handle coupon applied
   const handleCouponApplied = useCallback((discount: AppliedCoupon) => {
     setAppliedCoupon(discount);
@@ -178,7 +184,7 @@ export function PaymentDialog({
   // Record coupon usage after successful payment
   const recordCouponUsage = useCallback(async (couponId: string, paymentId: string) => {
     try {
-      await fetch('/api/coupons/usage', {
+      await fetchWithCsrf('/api/coupons/usage', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -207,7 +213,7 @@ export function PaymentDialog({
 
     try {
       // Create order from backend
-      const orderResponse = await fetch('/api/payments/create-order', {
+      const orderResponse = await fetchWithCsrf('/api/payments/create-order', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -248,7 +254,7 @@ export function PaymentDialog({
         handler: async (response) => {
           try {
             // Verify payment
-            const verifyResponse = await fetch('/api/payments/verify', {
+            const verifyResponse = await fetchWithCsrf('/api/payments/verify', {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
               body: JSON.stringify({
@@ -272,6 +278,12 @@ export function PaymentDialog({
             }
 
             setStatus('success');
+            toast.success(
+              productType === 'tournament'
+                ? 'Payment successful. Your registration is confirmed.'
+                : 'Payment successful. Your subscription is active.',
+              { id: 'payment-dialog-success' },
+            );
             
             // Call onSuccess after a brief delay to show success state
             setTimeout(() => {
@@ -434,14 +446,6 @@ export function PaymentDialog({
               )}
             </div>
           </div>
-
-          {/* Error Alert */}
-          {error && (
-            <Alert variant="destructive">
-              <AlertCircle className="h-4 w-4" />
-              <AlertDescription>{error}</AlertDescription>
-            </Alert>
-          )}
 
           {/* Security Note */}
           <div className="flex items-center gap-2 text-xs text-muted-foreground">

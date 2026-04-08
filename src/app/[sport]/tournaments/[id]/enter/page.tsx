@@ -21,6 +21,8 @@ import {
   Info,
   Clock,
 } from "lucide-react";
+import { toast } from "sonner";
+import { fetchWithCsrf } from "@/lib/client-csrf";
 import { cn } from "@/lib/utils";
 
 interface RosterPlayer {
@@ -82,6 +84,18 @@ export default function TournamentEntryPage() {
     fetchEntryStatus();
   }, [tournamentId]);
 
+  useEffect(() => {
+    if (error && tournament) {
+      toast.error(error, { id: "org-entry-error" });
+    }
+  }, [error, tournament]);
+
+  useEffect(() => {
+    if (success) {
+      toast.success("Registration completed successfully.", { id: "org-entry-success" });
+    }
+  }, [success]);
+
   const fetchTournament = async () => {
     try {
       const response = await fetch(`/api/tournaments/${tournamentId}`);
@@ -127,7 +141,7 @@ export default function TournamentEntryPage() {
     setError("");
 
     try {
-      const response = await fetch(`/api/tournaments/${tournamentId}/org-enter`, {
+      const response = await fetchWithCsrf(`/api/tournaments/${tournamentId}/org-enter`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ playerIds: selectedPlayers }),
@@ -206,7 +220,7 @@ export default function TournamentEntryPage() {
         },
         handler: async (response) => {
           try {
-            const verifyResponse = await fetch("/api/payments/verify", {
+            const verifyResponse = await fetchWithCsrf("/api/payments/verify", {
               method: "POST",
               headers: { "Content-Type": "application/json" },
               body: JSON.stringify({
@@ -350,13 +364,6 @@ export default function TournamentEntryPage() {
 
         <h1 className="text-2xl font-bold text-gray-900">Register Your Organization</h1>
         <p className="text-gray-500 mb-6">Select players from your roster to participate</p>
-
-        {error && (
-          <Alert variant="destructive" className="mb-6">
-            <AlertCircle className="w-4 h-4" />
-            <AlertDescription>{error}</AlertDescription>
-          </Alert>
-        )}
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           {/* Tournament Info */}
