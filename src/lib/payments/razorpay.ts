@@ -45,11 +45,24 @@ interface CreateOrderParams {
   notes?: Record<string, string>;
 }
 
+function sanitizeReceipt(receipt: string): string {
+  const normalized = receipt.replace(/[^a-zA-Z0-9_-]/g, '_');
+
+  if (normalized.length <= 40) {
+    return normalized;
+  }
+
+  const hash = crypto.createHash('sha1').update(normalized).digest('hex').slice(0, 8);
+  const prefix = normalized.slice(0, 31);
+  return `${prefix}_${hash}`;
+}
+
 /**
  * Create a Razorpay order
  */
 export async function createRazorpayOrder(params: CreateOrderParams): Promise<RazorpayOrder> {
   const auth = Buffer.from(`${RAZORPAY_CONFIG.keyId}:${RAZORPAY_CONFIG.keySecret}`).toString('base64');
+  const receipt = sanitizeReceipt(params.receipt);
   
   const response = await fetch(`${RAZORPAY_CONFIG.baseUrl}/orders`, {
     method: 'POST',
@@ -60,7 +73,7 @@ export async function createRazorpayOrder(params: CreateOrderParams): Promise<Ra
     body: JSON.stringify({
       amount: params.amount,
       currency: params.currency || 'INR',
-      receipt: params.receipt,
+      receipt,
       notes: params.notes,
       payment_capture: 1, // Auto-capture payment
     }),
