@@ -20,6 +20,17 @@ interface CreateOrderBody {
   orgType?: 'CLUB' | 'SCHOOL' | 'CORPORATE'; // For org subscription
 }
 
+const SUPPORTED_SPORTS = new Set(['CORNHOLE', 'DARTS']);
+
+function normalizeSport(input: string | undefined): 'CORNHOLE' | 'DARTS' | null {
+  const normalized = input?.trim().toUpperCase();
+  if (!normalized || !SUPPORTED_SPORTS.has(normalized)) {
+    return null;
+  }
+
+  return normalized as 'CORNHOLE' | 'DARTS';
+}
+
 /**
  * Create a Razorpay order for payment
  * Works for both players and organizations
@@ -35,11 +46,31 @@ export async function POST(request: NextRequest) {
       'ORG_SUBSCRIPTION_SCHOOL_CLUB',
       'ORG_SUBSCRIPTION_CORPORATE',
       'TOURNAMENT_ENTRY',
+      'TEAM_TOURNAMENT_ENTRY',
       'INTER_ORG_TOURNAMENT_ENTRY',
     ];
 
     if (!validTypes.includes(paymentType)) {
       return NextResponse.json({ error: 'Invalid payment type' }, { status: 400 });
+    }
+
+    const normalizedSport = normalizeSport(sport);
+    if (!normalizedSport) {
+      return NextResponse.json({ error: 'Invalid sport' }, { status: 400 });
+    }
+
+    if (!process.env.RAZORPAY_KEY_ID || !process.env.RAZORPAY_KEY_SECRET) {
+      log.error('Razorpay configuration missing while creating order');
+      return NextResponse.json({ error: 'Payment gateway is not configured' }, { status: 500 });
+    }
+
+    if (
+      (paymentType === 'TOURNAMENT_ENTRY' ||
+        paymentType === 'TEAM_TOURNAMENT_ENTRY' ||
+        paymentType === 'INTER_ORG_TOURNAMENT_ENTRY') &&
+      !tournamentId
+    ) {
+      return NextResponse.json({ error: 'Tournament ID is required' }, { status: 400 });
     }
 
     // Get amount based on payment type
@@ -100,7 +131,12 @@ export async function POST(request: NextRequest) {
     }
 
     // For tournament entry, validate tournament exists and player isn't already registered
-    if (paymentType === 'TOURNAMENT_ENTRY' && tournamentId) {
+    if (
+      (paymentType === 'TOURNAMENT_ENTRY' ||
+        paymentType === 'TEAM_TOURNAMENT_ENTRY' ||
+        paymentType === 'INTER_ORG_TOURNAMENT_ENTRY') &&
+      tournamentId
+    ) {
       const tournament = await db.tournament.findUnique({
         where: { id: tournamentId },
       });
@@ -110,22 +146,26 @@ export async function POST(request: NextRequest) {
       }
 
       // Override amount with tournament's entry fee if set
-      if (tournament.entryFee > 0) {
+      if (paymentType === 'INTER_ORG_TOURNAMENT_ENTRY') {
+        amount = tournament.entryFee > 0 ? tournament.entryFee * 100 : amount;
+      } else if (tournament.entryFee > 0) {
         amount = tournament.entryFee * 100; // Convert to paise
       }
 
-      // Check if already registered
-      const existingReg = await db.tournamentRegistration.findUnique({
-        where: {
-          tournamentId_userId: {
-            tournamentId,
-            userId: payerId,
+      // Check if already registered for direct player registrations only.
+      if (paymentType === 'TOURNAMENT_ENTRY' && payerType === 'USER') {
+        const existingReg = await db.tournamentRegistration.findUnique({
+          where: {
+            tournamentId_userId: {
+              tournamentId,
+              userId: payerId,
+            },
           },
-        },
-      });
+        });
 
-      if (existingReg) {
-        return NextResponse.json({ error: 'Already registered for this tournament' }, { status: 400 });
+        if (existingReg) {
+          return NextResponse.json({ error: 'Already registered for this tournament' }, { status: 400 });
+        }
       }
     }
 
@@ -191,12 +231,12 @@ export async function POST(request: NextRequest) {
         userId: payerType === 'USER' ? payerId : null,
         orgId: payerType === 'ORG' ? payerId : null,
         tournamentId: tournamentId || null,
-        sport: sport as 'CORNHOLE' | 'DARTS',
+        sport: normalizedSport,
         amount,
         type: paymentType,
         status: 'INITIATED',
         razorpayId: order.id,
-        description: `${paymentType.replace(/_/g, ' ')} - ${sport}`,
+        description: `${paymentType.replace(/_/g, ' ')} - ${normalizedSport}`,
       },
     });
 
@@ -204,7 +244,7 @@ export async function POST(request: NextRequest) {
     const payerRole = authEntity.type === 'user' ? authEntity.user.role : undefined;
     logPaymentCreateEvent(
       payerId,
-      sport as 'CORNHOLE' | 'DARTS',
+      normalizedSport,
       order.id,
       request,
       {
@@ -233,9 +273,14 @@ export async function POST(request: NextRequest) {
     });
 
   } catch (error) {
-    console.error('Create order error:', error);
+    const message =
+      error instanceof Error && error.message
+        ? error.message
+        : 'Failed to create order';
+
+    log.error('Create order error', { error: message });
     return NextResponse.json(
-      { error: 'Failed to create order' },
+      { error: message },
       { status: 500 }
     );
   }
