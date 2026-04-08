@@ -372,9 +372,8 @@ describe('CSRF Token Generation/Validation', () => {
       expect(isCsrfExempt('/api/auth/org/register')).toBe(true);
     });
 
-    it('should exempt OAuth routes', () => {
-      expect(isCsrfExempt('/api/auth/google')).toBe(true);
-      expect(isCsrfExempt('/api/auth/google/callback')).toBe(false); // callback is not exempt
+    it('should exempt Google One Tap auth route', () => {
+      expect(isCsrfExempt('/api/auth/google-onetap')).toBe(true);
     });
 
     it('should exempt webhook endpoints', () => {

@@ -22,9 +22,6 @@ import { describe, it, expect, beforeEach, vi } from 'vitest';
  * - maxAge: 604800 (7 days in seconds)
  * - path: '/' (available across entire site)
  * 
- * OAUTH EXCEPTION:
- * OAuth callback routes must use sameSite: 'lax' override because OAuth redirects
- * are cross-site navigations. This is documented per-route with an inline comment.
  */
 const COOKIE_CONTRACT = {
   name: 'session_token',
@@ -146,7 +143,7 @@ describe('Cookie Consistency Across Auth Routes', () => {
       'POST /api/auth/register',
       'POST /api/auth/org/login',
       'POST /api/auth/org/register',
-      'GET /api/auth/google/callback', // Uses sameSite: 'lax' override
+      'POST /api/auth/google-onetap',
       'POST /api/org/login',
     ];
 
@@ -250,41 +247,28 @@ describe('Register Flow Cookie Test', () => {
   });
 });
 
-describe('OAuth Cookie Override', () => {
-  it('should allow sameSite: lax override for OAuth callbacks', async () => {
-    const { setSessionCookie, SESSION_COOKIE_OPTIONS } = await import('@/lib/session-helpers');
+describe('Google One Tap Cookie Contract', () => {
+  it('should keep sameSite: strict for One Tap session cookies', async () => {
+    const { setSessionCookie } = await import('@/lib/session-helpers');
 
-    // Simulate OAuth callback response
     const mockResponse = {
       cookies: {
         set: vi.fn(),
       },
     };
 
-    // Call with lax override (as OAuth callbacks must do)
-    setSessionCookie(mockResponse as any, 'oauth-session-token', { sameSite: 'lax' });
+    setSessionCookie(mockResponse as any, 'google-onetap-session-token');
 
-    // Verify the override was applied
     expect(mockResponse.cookies.set).toHaveBeenCalledWith(
       'session_token',
-      'oauth-session-token',
+      'google-onetap-session-token',
       expect.objectContaining({
         httpOnly: true,
-        sameSite: 'lax', // Overridden from strict
+        sameSite: 'strict',
         maxAge: 604800,
         path: '/',
       })
     );
-  });
-
-  it('should document which routes require sameSite: lax override', () => {
-    // Only OAuth callback routes should use the lax override
-    const routesWithLaxOverride = [
-      'GET /api/auth/google/callback - OAuth redirect from Google',
-    ];
-
-    // Each route must have an inline comment explaining the override
-    expect(routesWithLaxOverride.length).toBe(1);
   });
 });
 
@@ -296,7 +280,7 @@ describe('Migration Verification', () => {
       'src/app/api/auth/register/route.ts',
       'src/app/api/auth/org/login/route.ts',
       'src/app/api/auth/org/register/route.ts',
-      'src/app/api/auth/google/callback/route.ts',
+      'src/app/api/auth/google-onetap/route.ts',
       'src/app/api/org/login/route.ts',
       'src/lib/auth-utils.ts',
     ];

@@ -40,7 +40,7 @@ const requiredEnvSchema = z.object({
 const productionEnvSchema = z.object({
   // Authentication - Google OAuth
   GOOGLE_CLIENT_ID: z.string().min(1, 'GOOGLE_CLIENT_ID is required in production'),
-  GOOGLE_CLIENT_SECRET: z.string().min(1, 'GOOGLE_CLIENT_SECRET is required in production'),
+  NEXT_PUBLIC_GOOGLE_CLIENT_ID: z.string().min(1, 'NEXT_PUBLIC_GOOGLE_CLIENT_ID is required in production'),
   
   // Payment - Razorpay
   RAZORPAY_KEY_ID: z.string().min(1, 'RAZORPAY_KEY_ID is required in production'),
@@ -69,6 +69,7 @@ const optionalEnvSchema = z.object({
   NEXT_PUBLIC_API_URL: z.string().url().default('https://example.invalid'),
   NEXT_PUBLIC_WS_URL: z.string().default('wss://example.invalid'),
   NEXT_PUBLIC_APP_NAME: z.string().default('VALORHIVE'),
+  NEXT_PUBLIC_GOOGLE_CLIENT_ID: z.string().optional(),
   
   // Redis
   REDIS_URL: z.string().optional(),
@@ -222,8 +223,7 @@ export const env = {
   // Authentication
   sessionSecret: process.env.SESSION_SECRET!,
   googleClientId: process.env.GOOGLE_CLIENT_ID,
-  googleClientSecret: process.env.GOOGLE_CLIENT_SECRET,
-  googleRedirectUri: process.env.GOOGLE_REDIRECT_URI,
+  nextPublicGoogleClientId: process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID,
   
   // Payment
   razorpayKeyId: process.env.RAZORPAY_KEY_ID,

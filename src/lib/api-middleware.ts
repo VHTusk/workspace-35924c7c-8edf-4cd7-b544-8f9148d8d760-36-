@@ -625,7 +625,7 @@ export const MIDDLEWARE_DOCUMENTATION = {
     '/api/auth/logout',
     '/api/auth/org/login',
     '/api/auth/org/register',
-    '/api/auth/google',
+    '/api/auth/google-onetap',
     '/api/auth/send-otp',
     '/api/auth/verify-otp',
     '/api/payments/webhook',

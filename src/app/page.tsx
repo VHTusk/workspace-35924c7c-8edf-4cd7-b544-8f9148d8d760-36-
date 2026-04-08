@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { ThemeToggleCompact } from "@/components/theme-toggle";
 import SiteFooter from "@/components/layout/site-footer";
+import GoogleOneTap from "@/components/auth/google-one-tap";
 import {
   Trophy,
   Users,
@@ -145,6 +146,10 @@ export default function HomePage() {
             <Trophy className="mr-2 h-5 w-5" />
             Compete • Climb • Conquer
           </Badge>
+          <div className="mx-auto mt-8 max-w-sm rounded-2xl border border-border/60 bg-card/80 p-4 shadow-sm backdrop-blur">
+            <p className="mb-3 text-sm font-medium text-foreground">Continue with Google</p>
+            <GoogleOneTap />
+          </div>
         </div>
       </section>
 

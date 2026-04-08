@@ -1,4 +1,5 @@
 import type { Metadata, Viewport } from "next";
+import Script from "next/script";
 import "./globals.css";
 import { ThemeProvider } from "@/components/theme-provider";
 import { getAppUrl } from "@/lib/app-url";
@@ -26,6 +27,10 @@ export default function RootLayout({
       <body
         className="antialiased bg-background text-foreground min-h-screen"
       >
+        <Script
+          src="https://accounts.google.com/gsi/client"
+          strategy="afterInteractive"
+        />
         {/* Skip to main content link for accessibility */}
         <a
           href="#main-content"

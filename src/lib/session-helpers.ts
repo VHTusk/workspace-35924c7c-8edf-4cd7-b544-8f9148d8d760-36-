@@ -16,9 +16,9 @@
  * - path: '/' (available across entire site)
  * 
  * OVERRIDES:
- * OAuth callback routes MUST use sameSite: 'lax' because OAuth redirects
- * are cross-site navigations. Use setSessionCookie(response, token, { sameSite: 'lax' })
- * with an inline comment explaining the override.
+ * Only routes that truly need cross-site callback support should override
+ * sameSite to 'lax'. Google One Tap does not require that override because
+ * it completes on the same site via an XHR request.
  * 
  * NOTE: Both user and org authentication use 'session_token' cookie.
  * The validateSession vs validateOrgSession functions differentiate the session type.
@@ -62,10 +62,9 @@ type SessionCookieOptions = {
  * - This means if a user clicks a link from an external site (email, social media),
  *   they will need to re-authenticate. This is an acceptable security trade-off.
  * 
- * OAUTH EXCEPTION:
- * OAuth callback routes must use sameSite: 'lax' override because OAuth redirects
- * are cross-site navigations. Without 'lax', the session cookie wouldn't be sent
- * on subsequent cross-site navigations, breaking the OAuth flow.
+ * CROSS-SITE CALLBACK EXCEPTION:
+ * Reserve sameSite: 'lax' only for routes that must survive a true cross-site
+ * callback. Same-site auth flows such as Google One Tap should keep 'strict'.
  */
 export const SESSION_COOKIE_OPTIONS: SessionCookieOptions = {
   httpOnly: true,

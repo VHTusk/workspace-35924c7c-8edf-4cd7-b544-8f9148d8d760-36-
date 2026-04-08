@@ -25,7 +25,7 @@ const CSRF_EXEMPT_ROUTES = [
   '/api/auth/logout',
   '/api/auth/org/login',
   '/api/auth/org/register',
-  '/api/auth/google',
+  '/api/auth/google-onetap',
   '/api/auth/send-otp',
   '/api/auth/verify-otp',
   '/api/auth/whatsapp/send-otp',
