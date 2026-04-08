@@ -121,6 +121,18 @@ interface Tournament {
   } | null;
 }
 
+interface RazorpayCheckoutPayload {
+  orderId: string;
+  amount: number;
+  keyId: string;
+  paymentType: 'TOURNAMENT_ENTRY' | 'TEAM_TOURNAMENT_ENTRY';
+  payer?: {
+    name?: string | null;
+    email?: string | null;
+    phone?: string | null;
+  };
+}
+
 const scopeColors: Record<string, string> = {
   CITY: "bg-blue-500/10 text-blue-400 border-blue-500/30",
   DISTRICT: "bg-purple-500/10 text-purple-400 border-purple-500/30",
@@ -178,13 +190,6 @@ export default function TournamentDetailPage() {
   const [selectedTeam, setSelectedTeam] = useState<Team | null>(null);
   const [loadingTeams, setLoadingTeams] = useState(false);
   const [teamRegistering, setTeamRegistering] = useState(false);
-  const [paymentOrder, setPaymentOrder] = useState<{
-    orderId: string;
-    amount: number;
-    keyId: string;
-    teamId: string;
-  } | null>(null);
-
   useEffect(() => {
     fetchTournament();
     checkAuth();
@@ -303,7 +308,19 @@ export default function TournamentDetailPage() {
         return;
       }
 
+      if (data.requiresPayment) {
+        openRazorpayCheckout({
+          orderId: data.order.id,
+          amount: data.order.amount,
+          keyId: data.keyId,
+          paymentType: 'TOURNAMENT_ENTRY',
+          payer: data.payer,
+        });
+        return;
+      }
+
       setIsRegistered(true);
+      fetchTournament();
     } catch (err) {
       setError("Registration failed");
     } finally {
@@ -337,25 +354,18 @@ export default function TournamentDetailPage() {
       }
 
       if (data.requiresPayment) {
-        // Store payment order details and open Razorpay checkout
-        setPaymentOrder({
-          orderId: data.order.id,
-          amount: data.order.amount,
-          keyId: data.keyId,
-          teamId: selectedTeam.id,
-        });
-        
-        // Open Razorpay checkout
         openRazorpayCheckout({
           orderId: data.order.id,
           amount: data.order.amount,
           keyId: data.keyId,
-          teamId: selectedTeam.id,
+          paymentType: 'TEAM_TOURNAMENT_ENTRY',
+          payer: data.payer,
         });
       } else {
         // Free tournament, registration complete
         setShowTeamModal(false);
         setIsRegistered(true);
+        fetchTournament();
       }
     } catch (err) {
       setError("Team registration failed");
@@ -365,12 +375,7 @@ export default function TournamentDetailPage() {
   };
 
   // Razorpay checkout handler
-  const openRazorpayCheckout = useCallback((paymentData: {
-    orderId: string;
-    amount: number;
-    keyId: string;
-    teamId: string;
-  }) => {
+  const openRazorpayCheckout = useCallback((paymentData: RazorpayCheckoutPayload) => {
     // Load Razorpay script if not already loaded
     const loadRazorpay = () => {
       return new Promise((resolve) => {
@@ -409,7 +414,7 @@ export default function TournamentDetailPage() {
                 razorpayOrderId: response.razorpay_order_id,
                 razorpayPaymentId: response.razorpay_payment_id,
                 razorpaySignature: response.razorpay_signature,
-                paymentType: 'TOURNAMENT_ENTRY',
+                paymentType: paymentData.paymentType,
                 sport: sport.toUpperCase(),
                 tournamentId,
               }),
@@ -429,9 +434,9 @@ export default function TournamentDetailPage() {
           }
         },
         prefill: {
-          name: '',
-          email: '',
-          contact: '',
+          name: paymentData.payer?.name || '',
+          email: paymentData.payer?.email || '',
+          contact: paymentData.payer?.phone || '',
         },
         theme: {
           color: isCornhole ? '#16a34a' : '#14b8a6',
@@ -439,6 +444,7 @@ export default function TournamentDetailPage() {
         modal: {
           ondismiss: () => {
             setTeamRegistering(false);
+            setIsRegistering(false);
             // Payment cancelled - keep modal open
             setError('Payment cancelled. Please try again.');
           },

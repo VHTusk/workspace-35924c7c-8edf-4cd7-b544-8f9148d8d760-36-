@@ -10,7 +10,7 @@ interface VerifyPaymentBody {
   razorpayOrderId: string;
   razorpayPaymentId: string;
   razorpaySignature: string;
-  paymentType: string;
+  paymentType?: string;
   sport: string;
   tournamentId?: string;
 }
@@ -42,7 +42,6 @@ export async function POST(request: NextRequest) {
       razorpayOrderId, 
       razorpayPaymentId, 
       razorpaySignature,
-      paymentType,
       sport,
       tournamentId,
     } = body;
@@ -95,7 +94,7 @@ export async function POST(request: NextRequest) {
           amount: ledgerEntry.amount,
           status: 'captured',
         },
-        message: getSuccessMessage(paymentType),
+        message: getSuccessMessage(ledgerEntry.type),
         idempotent: true,
       });
     }
@@ -115,7 +114,10 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const sportType = sport as SportType;
+    const resolvedPaymentType = ledgerEntry.type;
+    const resolvedTournamentId = ledgerEntry.tournamentId ?? tournamentId;
+    const sportType = (ledgerEntry.sport || sport) as SportType;
+    const paymentNotes = paymentDetails.notes || {};
 
     // TRANSACTION: Wrap all database operations for atomicity
     // If any operation fails, all changes are rolled back
@@ -129,7 +131,7 @@ export async function POST(request: NextRequest) {
         },
       });
 
-      if (paymentType === 'PLAYER_SUBSCRIPTION') {
+      if (resolvedPaymentType === 'PLAYER_SUBSCRIPTION') {
         // Create or update player subscription
         const startDate = new Date();
         const endDate = new Date();
@@ -168,7 +170,7 @@ export async function POST(request: NextRequest) {
         }
       }
 
-      if (paymentType === 'ORG_SUBSCRIPTION_SCHOOL_CLUB' || paymentType === 'ORG_SUBSCRIPTION_CORPORATE') {
+      if (resolvedPaymentType === 'ORG_SUBSCRIPTION_SCHOOL_CLUB' || resolvedPaymentType === 'ORG_SUBSCRIPTION_CORPORATE') {
         // Create or update organization subscription
         const startDate = new Date();
         const endDate = new Date();
@@ -194,12 +196,12 @@ export async function POST(request: NextRequest) {
         });
       }
 
-      if (paymentType === 'TOURNAMENT_ENTRY' && tournamentId) {
+      if (resolvedPaymentType === 'TOURNAMENT_ENTRY' && resolvedTournamentId) {
         // Update existing pending registration to confirmed
         const existingReg = await tx.tournamentRegistration.findUnique({
           where: {
             tournamentId_userId: {
-              tournamentId,
+              tournamentId: resolvedTournamentId,
               userId: ledgerEntry.userId!,
             },
           },
@@ -218,7 +220,7 @@ export async function POST(request: NextRequest) {
           // Create new registration (shouldn't happen but fallback)
           await tx.tournamentRegistration.create({
             data: {
-              tournamentId,
+              tournamentId: resolvedTournamentId,
               userId: ledgerEntry.userId!,
               status: 'CONFIRMED',
               amount: paymentDetails.amount / 100, // Store in rupees
@@ -235,18 +237,50 @@ export async function POST(request: NextRequest) {
             type: 'TOURNAMENT_REGISTERED',
             title: 'Registration Confirmed',
             message: `Your tournament registration has been confirmed!`,
-            link: `/${sport.toLowerCase()}/tournaments/${tournamentId}`,
+            link: `/${sport.toLowerCase()}/tournaments/${resolvedTournamentId}`,
           },
         });
       }
 
-      if (paymentType === 'INTER_ORG_TOURNAMENT_ENTRY' && tournamentId) {
-        // Create org tournament registration
-        await tx.orgTournamentRegistration.create({
+      if (resolvedPaymentType === 'TEAM_TOURNAMENT_ENTRY' && resolvedTournamentId) {
+        const teamId = paymentNotes.teamId;
+
+        if (!teamId) {
+          throw new Error('Missing teamId in payment notes');
+        }
+
+        await tx.tournamentTeam.update({
+          where: {
+            tournamentId_teamId: {
+              tournamentId: resolvedTournamentId,
+              teamId,
+            },
+          },
           data: {
-            tournamentId,
+            status: 'CONFIRMED',
+            paymentId: razorpayPaymentId,
+          },
+        });
+      }
+
+      if (resolvedPaymentType === 'INTER_ORG_TOURNAMENT_ENTRY' && resolvedTournamentId) {
+        const pendingRegistrations = await tx.orgTournamentRegistration.findMany({
+          where: {
+            tournamentId: resolvedTournamentId,
             orgId: ledgerEntry.orgId!,
-            userId: ledgerEntry.userId!, // The user who made the payment
+          },
+        });
+
+        if (pendingRegistrations.length === 0) {
+          throw new Error('Pending organization registrations not found');
+        }
+
+        await tx.orgTournamentRegistration.updateMany({
+          where: {
+            tournamentId: resolvedTournamentId,
+            orgId: ledgerEntry.orgId!,
+          },
+          data: {
             status: 'CONFIRMED',
             amount: paymentDetails.amount / 100,
             paymentId: razorpayPaymentId,
@@ -264,8 +298,8 @@ export async function POST(request: NextRequest) {
       request,
       {
         amount: paymentDetails.amount,
-        paymentType,
-        tournamentId,
+        paymentType: resolvedPaymentType,
+        tournamentId: resolvedTournamentId,
         success: true,
       }
     ).catch(err => log.error('Failed to log payment verify event', { error: err }));
@@ -277,7 +311,7 @@ export async function POST(request: NextRequest) {
         amount: paymentDetails.amount,
         status: 'captured',
       },
-      message: getSuccessMessage(paymentType),
+      message: getSuccessMessage(resolvedPaymentType),
     });
   } catch (error) {
     console.error('Verify payment error:', error);
@@ -297,8 +331,10 @@ function getSuccessMessage(paymentType: string): string {
       return 'Organization subscription activated successfully!';
     case 'TOURNAMENT_ENTRY':
       return 'Tournament registration confirmed! You are now registered.';
-    case 'INTER_ORG_TOURNAMENT_ENTRY':
+    case 'TEAM_TOURNAMENT_ENTRY':
       return 'Team registration confirmed for the tournament!';
+    case 'INTER_ORG_TOURNAMENT_ENTRY':
+      return 'Organization registration confirmed for the tournament!';
     default:
       return 'Payment successful!';
   }

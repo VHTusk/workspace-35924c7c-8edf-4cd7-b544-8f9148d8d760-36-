@@ -56,16 +56,9 @@ export async function POST(
     }
 
     // Check if org already registered
-    const existingRegistration = await db.orgTournamentRegistration.findFirst({
+    const existingRegistrations = await db.orgTournamentRegistration.findMany({
       where: { tournamentId, orgId: org.id },
     });
-
-    if (existingRegistration) {
-      return NextResponse.json(
-        { error: 'Organization already registered for this tournament' },
-        { status: 400 }
-      );
-    }
 
     // Check max players per org
     if (tournament.maxPlayersPerOrg && playerIds.length > tournament.maxPlayersPerOrg) {
@@ -91,28 +84,59 @@ export async function POST(
       );
     }
 
-    // Create registrations for all players
-    const registrations = await db.$transaction(
-      playerIds.map((playerId: string) =>
-        db.orgTournamentRegistration.create({
-          data: {
-            tournamentId,
-            orgId: org.id,
-            userId: playerId,
-            status: RegistrationStatus.CONFIRMED,
-            amount: 0, // Individual amount is 0, org pays collectively
-          },
-        })
-      )
-    );
-
     // Calculate total amount for payment
     const totalAmount = tournament.entryFee * playerIds.length; // Or use org fee if set
+    const amountInPaise = totalAmount * 100;
+
+    const hasConfirmedRegistration = existingRegistrations.some(
+      (registration) => registration.status === RegistrationStatus.CONFIRMED,
+    );
+
+    if (hasConfirmedRegistration) {
+      return NextResponse.json(
+        { error: 'Organization already registered for this tournament' },
+        { status: 400 }
+      );
+    }
+
+    const existingPendingPlayerIds = existingRegistrations
+      .filter((registration) => registration.status === RegistrationStatus.PENDING)
+      .map((registration) => registration.userId)
+      .sort();
+
+    const requestedPlayerIds = [...playerIds].sort();
+
+    if (
+      existingPendingPlayerIds.length > 0 &&
+      JSON.stringify(existingPendingPlayerIds) !== JSON.stringify(requestedPlayerIds)
+    ) {
+      return NextResponse.json(
+        { error: 'A pending payment already exists for a different player selection. Please complete that payment first.' },
+        { status: 409 }
+      );
+    }
+
+    // Create registrations for all players
+    if (existingPendingPlayerIds.length === 0) {
+      await db.$transaction(
+        playerIds.map((playerId: string) =>
+          db.orgTournamentRegistration.create({
+            data: {
+              tournamentId,
+              orgId: org.id,
+              userId: playerId,
+              status: totalAmount > 0 ? RegistrationStatus.PENDING : RegistrationStatus.CONFIRMED,
+              amount: 0,
+            },
+          })
+        )
+      );
+    }
 
     // Create Razorpay order for payment if there's a fee
     if (totalAmount > 0) {
       const order = await createRazorpayOrder({
-        amount: totalAmount,
+        amount: amountInPaise,
         receipt: `org-entry-${tournamentId}-${org.id}`,
         notes: {
           type: 'INTER_ORG_TOURNAMENT_ENTRY',
@@ -129,7 +153,7 @@ export async function POST(
           orgId: org.id,
           tournamentId,
           sport: tournament.sport,
-          amount: totalAmount,
+          amount: amountInPaise,
           type: 'INTER_ORG_TOURNAMENT_ENTRY',
           status: 'INITIATED',
           description: `Inter-org entry for ${playerIds.length} player(s)`,
@@ -145,6 +169,11 @@ export async function POST(
           currency: order.currency,
         },
         keyId: process.env.RAZORPAY_KEY_ID,
+        payer: {
+          name: org.name,
+          email: org.email,
+          phone: org.phone,
+        },
         message: 'Please complete payment to register players',
       });
     }

@@ -158,6 +158,7 @@ export async function fetchPaymentDetails(paymentId: string): Promise<{
   currency: string;
   status: string;
   method: string;
+  notes?: Record<string, string>;
   created_at: number;
 }> {
   const auth = Buffer.from(`${RAZORPAY_CONFIG.keyId}:${RAZORPAY_CONFIG.keySecret}`).toString('base64');
@@ -283,6 +284,7 @@ export type PaymentType =
   | 'ORG_SUBSCRIPTION_SCHOOL_CLUB'
   | 'ORG_SUBSCRIPTION_CORPORATE'
   | 'TOURNAMENT_ENTRY'
+  | 'TEAM_TOURNAMENT_ENTRY'
   | 'INTER_ORG_TOURNAMENT_ENTRY';
 
 export function getPaymentTypeAmount(type: PaymentType): number {
@@ -294,6 +296,8 @@ export function getPaymentTypeAmount(type: PaymentType): number {
     case 'ORG_SUBSCRIPTION_CORPORATE':
       return PRICING.ORG_CORPORATE_YEARLY;
     case 'TOURNAMENT_ENTRY':
+      return PRICING.TOURNAMENT_ENTRY_FEE;
+    case 'TEAM_TOURNAMENT_ENTRY':
       return PRICING.TOURNAMENT_ENTRY_FEE;
     case 'INTER_ORG_TOURNAMENT_ENTRY':
       return PRICING.INTER_ORG_TOURNAMENT_FEE;

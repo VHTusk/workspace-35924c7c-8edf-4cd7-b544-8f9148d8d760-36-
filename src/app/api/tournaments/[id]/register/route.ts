@@ -170,10 +170,12 @@ export async function POST(
     });
 
     if (existingRegistration) {
-      return NextResponse.json(
-        { error: 'Already registered for this tournament' },
-        { status: 400 }
-      );
+      if (existingRegistration.status === RegistrationStatus.CONFIRMED) {
+        return NextResponse.json(
+          { error: 'Already registered for this tournament' },
+          { status: 400 }
+        );
+      }
     }
 
     // Check for scheduling conflicts
@@ -275,6 +277,59 @@ export async function POST(
     // Determine entry fee
     const entryFee = tournament.entryFee || 0;
     const amountInPaise = entryFee * 100; // Convert to paise
+
+    if (existingRegistration?.status === RegistrationStatus.PENDING && entryFee > 0) {
+      const receipt = `REG_${tournamentId.slice(0, 8)}_${Date.now()}_${uuidv4().slice(0, 8)}`;
+
+      const order = await createRazorpayOrder({
+        amount: amountInPaise,
+        receipt,
+        notes: {
+          paymentType: 'TOURNAMENT_ENTRY',
+          tournamentId,
+          userId: user.id,
+          sport: tournament.sport,
+          source: clientSource,
+        },
+      });
+
+      await db.paymentLedger.create({
+        data: {
+          userId: user.id,
+          tournamentId,
+          sport: tournament.sport,
+          amount: amountInPaise,
+          type: 'TOURNAMENT_ENTRY',
+          status: 'INITIATED',
+          razorpayId: order.id,
+          description: `Tournament registration retry: ${tournament.name}`,
+        },
+      });
+
+      return NextResponse.json({
+        success: true,
+        requiresPayment: true,
+        registration: {
+          id: existingRegistration.id,
+          status: existingRegistration.status,
+          tournamentName: tournament.name,
+          amount: entryFee,
+        },
+        order: {
+          id: order.id,
+          amount: order.amount,
+          currency: order.currency,
+        },
+        payer: {
+          name: `${user.firstName} ${user.lastName}`,
+          email: user.email,
+          phone: user.phone,
+        },
+        keyId: process.env.RAZORPAY_KEY_ID,
+        tournamentId,
+        amountDisplay: `₹${entryFee.toLocaleString('en-IN')}`,
+      });
+    }
 
     // ATOMIC TRANSACTION: Check capacity and create registration together
     // This prevents race conditions where multiple users could exceed capacity

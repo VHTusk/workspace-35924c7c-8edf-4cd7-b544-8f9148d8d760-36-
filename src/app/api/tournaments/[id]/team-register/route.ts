@@ -218,11 +218,6 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
       return NextResponse.json({ error: 'Only team captain can register the team' }, { status: 403 });
     }
 
-    // Check if already registered
-    if (team.tournamentTeams.length > 0) {
-      return NextResponse.json({ error: 'Team is already registered for this tournament' }, { status: 400 });
-    }
-
     // Check team size requirements
     const requiredSize = tournament.teamSize || (tournament.format === 'DOUBLES' ? 2 : 3);
     if (team.members.length < requiredSize) {
@@ -245,6 +240,61 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
     }
 
     const amountInPaise = entryFee * 100; // Convert to paise
+    const existingRegistration = team.tournamentTeams[0];
+
+    if (existingRegistration?.status === RegistrationStatus.CONFIRMED) {
+      return NextResponse.json({ error: 'Team is already registered for this tournament' }, { status: 400 });
+    }
+
+    if (existingRegistration?.status === RegistrationStatus.PENDING && entryFee > 0) {
+      const receipt = `TEAM_${tournamentId.slice(0, 8)}_${teamId.slice(0, 8)}_${Date.now()}`;
+
+      const order = await createRazorpayOrder({
+        amount: amountInPaise,
+        receipt,
+        notes: {
+          paymentType: 'TEAM_TOURNAMENT_ENTRY',
+          tournamentId,
+          teamId,
+          captainId: userId,
+          sport: tournament.sport,
+        },
+      });
+
+      await db.paymentLedger.create({
+        data: {
+          userId,
+          tournamentId,
+          sport: tournament.sport,
+          amount: amountInPaise,
+          type: 'TEAM_TOURNAMENT_ENTRY',
+          status: 'INITIATED',
+          razorpayId: order.id,
+          description: `Team registration retry: ${team.name} for ${tournament.name}`,
+        },
+      });
+
+      return NextResponse.json({
+        success: true,
+        requiresPayment: true,
+        registration: existingRegistration,
+        order: {
+          id: order.id,
+          amount: order.amount,
+          currency: order.currency,
+        },
+        payer: {
+          name: `${currentUser.firstName} ${currentUser.lastName}`,
+          email: currentUser.email,
+          phone: currentUser.phone,
+        },
+        keyId: process.env.RAZORPAY_KEY_ID,
+        tournamentId,
+        teamId,
+        amountDisplay: `₹${entryFee.toLocaleString('en-IN')}`,
+        message: 'Please complete payment to confirm your team registration.',
+      });
+    }
 
     // If no entry fee, create registration directly
     if (entryFee === 0) {

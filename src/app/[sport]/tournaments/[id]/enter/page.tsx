@@ -140,12 +140,109 @@ export default function TournamentEntryPage() {
         return;
       }
 
+      if (data.requiresPayment) {
+        openRazorpayCheckout({
+          orderId: data.order.id,
+          amount: data.order.amount,
+          keyId: data.keyId,
+          payer: data.payer,
+        });
+        return;
+      }
+
       setSuccess(true);
     } catch (err) {
       setError("Failed to register for tournament");
     } finally {
       setSubmitting(false);
     }
+  };
+
+  const openRazorpayCheckout = (paymentData: {
+    orderId: string;
+    amount: number;
+    keyId: string;
+    payer?: {
+      name?: string | null;
+      email?: string | null;
+      phone?: string | null;
+    };
+  }) => {
+    const loadRazorpay = () =>
+      new Promise<boolean>((resolve) => {
+        if (window.Razorpay) {
+          resolve(true);
+          return;
+        }
+
+        const script = document.createElement("script");
+        script.src = "https://checkout.razorpay.com/v1/checkout.js";
+        script.onload = () => resolve(true);
+        script.onerror = () => resolve(false);
+        document.body.appendChild(script);
+      });
+
+    loadRazorpay().then(async (loaded) => {
+      if (!loaded) {
+        setSubmitting(false);
+        setError("Failed to load payment gateway. Please try again.");
+        return;
+      }
+
+      const razorpay = new window.Razorpay({
+        key: paymentData.keyId,
+        amount: paymentData.amount,
+        currency: "INR",
+        name: "VALORHIVE",
+        description: `Organization Registration - ${tournament?.name || "Tournament"}`,
+        order_id: paymentData.orderId,
+        prefill: {
+          name: paymentData.payer?.name || "",
+          email: paymentData.payer?.email || "",
+          contact: paymentData.payer?.phone || "",
+        },
+        theme: {
+          color: isCornhole ? "#16a34a" : "#14b8a6",
+        },
+        handler: async (response) => {
+          try {
+            const verifyResponse = await fetch("/api/payments/verify", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                razorpayOrderId: response.razorpay_order_id,
+                razorpayPaymentId: response.razorpay_payment_id,
+                razorpaySignature: response.razorpay_signature,
+                paymentType: "INTER_ORG_TOURNAMENT_ENTRY",
+                sport: sport.toUpperCase(),
+                tournamentId,
+              }),
+            });
+
+            const verifyData = await verifyResponse.json();
+
+            if (!verifyResponse.ok) {
+              throw new Error(verifyData.error || "Payment verification failed");
+            }
+
+            await fetchEntryStatus();
+            setSuccess(true);
+          } catch (err) {
+            setError(err instanceof Error ? err.message : "Payment verification failed");
+          } finally {
+            setSubmitting(false);
+          }
+        },
+        modal: {
+          ondismiss: () => {
+            setSubmitting(false);
+            setError("Payment cancelled. Please try again.");
+          },
+        },
+      });
+
+      razorpay.open();
+    });
   };
 
   const primaryBtnClass = isCornhole
