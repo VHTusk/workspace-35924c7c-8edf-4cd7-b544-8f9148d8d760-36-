@@ -60,19 +60,7 @@ import { VerificationBanners, useVerificationStatus } from "@/components/profile
 import { indianStates, getDistrictsForState } from "@/lib/indian-locations";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { toast } from "sonner";
-
-// Helper function to get CSRF token from cookie
-function getCsrfToken(): string | null {
-  if (typeof document === 'undefined') return null;
-  const cookies = document.cookie.split(';');
-  for (const cookie of cookies) {
-    const [name, value] = cookie.trim().split('=');
-    if (name === 'csrf_token') {
-      return decodeURIComponent(value);
-    }
-  }
-  return null;
-}
+import { ensureCsrfToken as ensureClientCsrfToken, fetchWithCsrf } from "@/lib/client-csrf";
 
 interface Organization {
   id: string;
@@ -257,13 +245,10 @@ export default function ProfilePage() {
   }, []);
 
   const ensureCsrfToken = async () => {
-    const existingToken = getCsrfToken();
-    if (!existingToken) {
-      try {
-        await fetch('/api/auth/csrf-token');
-      } catch (err) {
-        console.error("Failed to fetch CSRF token:", err);
-      }
+    try {
+      await ensureClientCsrfToken();
+    } catch (err) {
+      console.error("Failed to fetch CSRF token:", err);
     }
   };
 
@@ -523,13 +508,10 @@ export default function ProfilePage() {
 
   // Generic profile field update
   const updateProfileField = async (field: string, value: any) => {
-    const csrfToken = getCsrfToken();
-    
-    const response = await fetch("/api/player/profile", {
+    const response = await fetchWithCsrf("/api/player/profile", {
       method: "PUT",
       headers: {
         "Content-Type": "application/json",
-        ...(csrfToken ? { "X-CSRF-Token": csrfToken } : {}),
       },
       body: JSON.stringify({ [field]: value }),
     });
@@ -566,14 +548,11 @@ export default function ProfilePage() {
       return;
     }
     
-    const csrfToken = getCsrfToken();
-    
     try {
-      const response = await fetch("/api/player/profile", {
+      const response = await fetchWithCsrf("/api/player/profile", {
         method: "PUT",
         headers: {
           "Content-Type": "application/json",
-          ...(csrfToken ? { "X-CSRF-Token": csrfToken } : {}),
         },
         body: JSON.stringify({
           firstName: personalForm.firstName,
@@ -633,14 +612,11 @@ export default function ProfilePage() {
       return;
     }
     
-    const csrfToken = getCsrfToken();
-    
     try {
-      const response = await fetch("/api/player/profile", {
+      const response = await fetchWithCsrf("/api/player/profile", {
         method: "PUT",
         headers: {
           "Content-Type": "application/json",
-          ...(csrfToken ? { "X-CSRF-Token": csrfToken } : {}),
         },
         body: JSON.stringify({
           address: addressForm.address,
@@ -698,14 +674,11 @@ export default function ProfilePage() {
       return;
     }
     
-    const csrfToken = getCsrfToken();
-    
     try {
-      const response = await fetch("/api/player/profile", {
+      const response = await fetchWithCsrf("/api/player/profile", {
         method: "PUT",
         headers: {
           "Content-Type": "application/json",
-          ...(csrfToken ? { "X-CSRF-Token": csrfToken } : {}),
         },
         body: JSON.stringify({
           emergencyContactName: emergencyForm.emergencyContactName,
@@ -741,16 +714,13 @@ export default function ProfilePage() {
 
   const saveOrganizationSection = async () => {
     setSectionSaving(prev => ({ ...prev, organization: true }));
-    
-    const csrfToken = getCsrfToken();
-    
+
     try {
       // First update basic profile
-      const response = await fetch("/api/player/profile", {
+      const response = await fetchWithCsrf("/api/player/profile", {
         method: "PUT",
         headers: {
           "Content-Type": "application/json",
-          ...(csrfToken ? { "X-CSRF-Token": csrfToken } : {}),
         },
         body: JSON.stringify({
           playerOrgType: orgForm.playerOrgType,
@@ -765,11 +735,10 @@ export default function ProfilePage() {
 
       // If organization changed, submit verification request
       if (orgForm.organizationId && orgForm.organizationId !== profile.organizationId && orgForm.idDocumentUrl) {
-        const orgResponse = await fetch("/api/player/organization", {
+        const orgResponse = await fetchWithCsrf("/api/player/organization", {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
-            ...(csrfToken ? { "X-CSRF-Token": csrfToken } : {}),
           },
           body: JSON.stringify({
             organizationId: orgForm.organizationId,
@@ -835,12 +804,10 @@ export default function ProfilePage() {
     setSectionSaving(prev => ({ ...prev, password: true }));
 
     try {
-      const csrfToken = getCsrfToken();
-      const response = await fetch("/api/player/change-password", {
+      const response = await fetchWithCsrf("/api/player/change-password", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          ...(csrfToken ? { "X-CSRF-Token": csrfToken } : {}),
         },
         body: JSON.stringify(passwordData),
       });
