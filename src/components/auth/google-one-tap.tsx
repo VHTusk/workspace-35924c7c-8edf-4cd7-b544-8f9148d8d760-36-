@@ -9,6 +9,7 @@ type GoogleOneTapProps = {
   className?: string;
   prompt?: boolean;
   autoPrompt?: boolean;
+  promptDelayMs?: number;
   anchorId?: string;
   showButton?: boolean;
   onLoginSuccess?: (data: GoogleOneTapResponse) => void;
@@ -66,6 +67,7 @@ export default function GoogleOneTap({
   className,
   prompt = true,
   autoPrompt,
+  promptDelayMs = 5500,
   anchorId,
   showButton = true,
   onLoginSuccess,
@@ -132,6 +134,7 @@ export default function GoogleOneTap({
 
     let isCancelled = false;
     let attempts = 0;
+    let promptTimeout: number | null = null;
 
     const initialize = () => {
       if (isCancelled) {
@@ -203,13 +206,25 @@ export default function GoogleOneTap({
       });
 
       if (shouldPrompt && typeof window !== "undefined" && !window.sessionStorage.getItem(dismissalKey)) {
-        googleIdentity.disableAutoSelect();
-        googleIdentity.prompt((notification) => {
-          if (notification.isNotDisplayed() || notification.isSkippedMoment()) {
-            window.sessionStorage.setItem(dismissalKey, "1");
-            console.log("Google One Tap prompt not shown on this visit.");
+        const promptOneTap = () => {
+          if (isCancelled) {
+            return;
           }
-        });
+
+          googleIdentity.disableAutoSelect();
+          googleIdentity.prompt((notification) => {
+            if (notification.isNotDisplayed() || notification.isSkippedMoment()) {
+              window.sessionStorage.setItem(dismissalKey, "1");
+              console.log("Google One Tap prompt not shown on this visit.");
+            }
+          });
+        };
+
+        if (promptDelayMs > 0) {
+          promptTimeout = window.setTimeout(promptOneTap, promptDelayMs);
+        } else {
+          promptOneTap();
+        }
       }
     };
 
@@ -217,9 +232,12 @@ export default function GoogleOneTap({
 
     return () => {
       isCancelled = true;
+      if (promptTimeout) {
+        window.clearTimeout(promptTimeout);
+      }
       window.google?.accounts?.id.cancel();
     };
-  }, [buttonId, clientId, configLoaded, dismissalKey, onLoginError, onLoginSuccess, shouldPrompt, sport]);
+  }, [buttonId, clientId, configLoaded, dismissalKey, onLoginError, onLoginSuccess, promptDelayMs, shouldPrompt, sport]);
 
   return (
     <div id={anchorId} className={className}>

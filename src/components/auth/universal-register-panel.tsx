@@ -11,7 +11,6 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import GoogleOneTap from "@/components/auth/google-one-tap";
 import { WhatsAppRegister } from "@/components/auth/whatsapp-register";
 import { getAuthSportOption, normalizeAuthSport, type AuthSportSlug } from "@/components/auth/auth-sport-config";
@@ -25,17 +24,6 @@ type UniversalRegisterPanelProps = {
   onSwitchToLogin?: () => void;
   onSuccess?: () => void;
 };
-
-const ORG_TYPES = [
-  { value: "SCHOOL", label: "School" },
-  { value: "COLLEGE", label: "College" },
-  { value: "CLUB", label: "Club" },
-  { value: "ASSOCIATION", label: "Association" },
-  { value: "CORPORATE", label: "Corporate" },
-  { value: "GOVT_ORGANISATION", label: "Govt Organisation" },
-  { value: "ACADEMY", label: "Academy" },
-  { value: "OTHER", label: "Other" },
-];
 
 export function UniversalRegisterPanel({
   initialSport,
@@ -55,7 +43,6 @@ export function UniversalRegisterPanel({
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
   const [orgName, setOrgName] = useState("");
-  const [orgType, setOrgType] = useState("CLUB");
   const [emailOrPhone, setEmailOrPhone] = useState(searchParams.get("phone") || "");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
@@ -196,12 +183,11 @@ export function UniversalRegisterPanel({
               tournamentAccepted: acceptedLegal,
               marketingAccepted: acceptedMarketing,
             }
-          : {
-              name: orgName.trim(),
-              type: orgType,
-              email,
-              phone,
-              password,
+            : {
+                name: orgName.trim(),
+                email,
+                phone,
+                password,
               confirmPassword,
               sport: selectedSport.toUpperCase(),
               phoneVerified: phoneVerified && verifiedPhone === phone,
@@ -297,12 +283,6 @@ export function UniversalRegisterPanel({
           </button>
         </div>
 
-        <div className="rounded-2xl border border-border/60 bg-muted/25 p-4 text-center">
-          <p className="text-sm font-medium text-foreground">Sport selection is handled after signup.</p>
-          <p className="mt-1 text-xs text-muted-foreground">
-            Your account works across supported sports, so you do not need to choose one in this registration popup.
-          </p>
-        </div>
       </CardHeader>
 
       <CardContent className="space-y-4">
@@ -411,21 +391,6 @@ export function UniversalRegisterPanel({
                   {fieldErrors.name && <p className="text-xs text-red-500">{fieldErrors.name}</p>}
                 </div>
 
-                <div className="space-y-2">
-                  <Label htmlFor="universal-register-org-type">Organization type</Label>
-                  <Select value={orgType} onValueChange={setOrgType}>
-                    <SelectTrigger id="universal-register-org-type">
-                      <SelectValue placeholder="Select organization type" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {ORG_TYPES.map((type) => (
-                        <SelectItem key={type.value} value={type.value}>
-                          {type.label}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
               </>
             )}
 
