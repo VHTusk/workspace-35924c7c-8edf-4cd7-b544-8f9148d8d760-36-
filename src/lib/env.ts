@@ -40,7 +40,7 @@ const requiredEnvSchema = z.object({
 const productionEnvSchema = z.object({
   // Authentication - Google OAuth
   GOOGLE_CLIENT_ID: z.string().min(1, 'GOOGLE_CLIENT_ID is required in production'),
-  NEXT_PUBLIC_GOOGLE_CLIENT_ID: z.string().min(1, 'NEXT_PUBLIC_GOOGLE_CLIENT_ID is required in production'),
+  GOOGLE_CLIENT_SECRET: z.string().min(1, 'GOOGLE_CLIENT_SECRET is required in production'),
   
   // Payment - Razorpay
   RAZORPAY_KEY_ID: z.string().min(1, 'RAZORPAY_KEY_ID is required in production'),
@@ -223,6 +223,7 @@ export const env = {
   // Authentication
   sessionSecret: process.env.SESSION_SECRET!,
   googleClientId: process.env.GOOGLE_CLIENT_ID,
+  googleClientSecret: process.env.GOOGLE_CLIENT_SECRET,
   nextPublicGoogleClientId: process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID,
   
   // Payment

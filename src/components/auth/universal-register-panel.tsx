@@ -14,7 +14,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import GoogleOneTap from "@/components/auth/google-one-tap";
 import { WhatsAppRegister } from "@/components/auth/whatsapp-register";
-import { AUTH_SPORTS, getAuthSportOption, normalizeAuthSport, type AuthSportSlug } from "@/components/auth/auth-sport-config";
+import { getAuthSportOption, normalizeAuthSport, type AuthSportSlug } from "@/components/auth/auth-sport-config";
 import { type AuthFieldErrors } from "@/lib/auth-contract";
 import { parseAuthResponse } from "@/lib/auth-client";
 
@@ -258,7 +258,7 @@ export function UniversalRegisterPanel({
           </Badge>
           <CardTitle className="text-2xl">Create your VALORHIVE account</CardTitle>
           <CardDescription>
-            Register once, choose your sport, and keep growing across every verified competition.
+            Register once and keep growing across every verified competition.
           </CardDescription>
         </div>
 
@@ -297,34 +297,11 @@ export function UniversalRegisterPanel({
           </button>
         </div>
 
-        <div className="grid gap-3 sm:grid-cols-2">
-          {AUTH_SPORTS.map((option) => {
-            const Icon = option.icon;
-            const selected = option.slug === selectedSport;
-
-            return (
-              <button
-                key={option.slug}
-                type="button"
-                onClick={() => setSelectedSport(option.slug)}
-                className={`rounded-2xl border p-4 text-left transition-all ${
-                  selected
-                    ? `${option.accentBorder} ${option.accentBackground} shadow-sm`
-                    : `border-border/60 bg-background ${option.hoverBorder}`
-                }`}
-              >
-                <div className="flex items-start justify-between gap-3">
-                  <div>
-                    <p className="text-sm font-semibold text-foreground">{option.label}</p>
-                    <p className="mt-1 text-xs text-muted-foreground">{option.tagline}</p>
-                  </div>
-                  <div className={`rounded-full p-2 ${selected ? option.accentBackground : "bg-muted"}`}>
-                    <Icon className={`h-4 w-4 ${selected ? option.accentText : "text-muted-foreground"}`} />
-                  </div>
-                </div>
-              </button>
-            );
-          })}
+        <div className="rounded-2xl border border-border/60 bg-muted/25 p-4 text-center">
+          <p className="text-sm font-medium text-foreground">Sport selection is handled after signup.</p>
+          <p className="mt-1 text-xs text-muted-foreground">
+            Your account works across supported sports, so you do not need to choose one in this registration popup.
+          </p>
         </div>
       </CardHeader>
 

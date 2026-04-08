@@ -21,6 +21,13 @@ type GoogleOneTapResponse = {
   redirectTo?: string;
 };
 
+type GoogleOneTapConfigResponse = {
+  success: boolean;
+  enabled?: boolean;
+  clientId?: string;
+  message?: string;
+};
+
 declare global {
   interface Window {
     google?: {
@@ -68,15 +75,58 @@ export default function GoogleOneTap({
   const buttonId = `google-login-btn-${generatedId}`;
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
-  const clientId = process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID;
+  const [clientId, setClientId] = useState<string>("");
+  const [configLoaded, setConfigLoaded] = useState(false);
   const shouldPrompt = autoPrompt ?? prompt;
   const dismissalKey = `google-onetap-dismissed:${sport ?? "global"}`;
 
   useEffect(() => {
-    if (!clientId) {
-      const message = "Google sign-in is not configured right now.";
-      setError(message);
-      onLoginError?.(message);
+    let isCancelled = false;
+
+    const loadGoogleConfig = async () => {
+      try {
+        const response = await fetch("/api/auth/google/config", {
+          method: "GET",
+          cache: "no-store",
+        });
+
+        const data = (await response.json()) as GoogleOneTapConfigResponse;
+        if (isCancelled) {
+          return;
+        }
+
+        if (!response.ok || !data.success || !data.enabled || !data.clientId) {
+          const message = data.message || "Google sign-in is not configured right now.";
+          setError(message);
+          onLoginError?.(message);
+          setConfigLoaded(true);
+          return;
+        }
+
+        setError("");
+        setClientId(data.clientId);
+        setConfigLoaded(true);
+      } catch (requestError) {
+        console.error("Failed to load Google auth configuration", requestError);
+        if (isCancelled) {
+          return;
+        }
+        const message = "Google sign-in is not configured right now.";
+        setError(message);
+        onLoginError?.(message);
+        setConfigLoaded(true);
+      }
+    };
+
+    void loadGoogleConfig();
+
+    return () => {
+      isCancelled = true;
+    };
+  }, [onLoginError]);
+
+  useEffect(() => {
+    if (!configLoaded || !clientId) {
       return;
     }
 
@@ -169,7 +219,7 @@ export default function GoogleOneTap({
       isCancelled = true;
       window.google?.accounts?.id.cancel();
     };
-  }, [buttonId, clientId, dismissalKey, onLoginError, onLoginSuccess, shouldPrompt, sport]);
+  }, [buttonId, clientId, configLoaded, dismissalKey, onLoginError, onLoginSuccess, shouldPrompt, sport]);
 
   return (
     <div id={anchorId} className={className}>

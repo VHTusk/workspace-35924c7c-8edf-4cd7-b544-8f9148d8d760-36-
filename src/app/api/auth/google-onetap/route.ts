@@ -8,6 +8,7 @@ import { setSessionCookie } from "@/lib/session-helpers";
 import { AUTH_CODES, type AuthCode } from "@/lib/auth-contract";
 import { authError, authSuccess } from "@/lib/auth-response";
 import { normalizeEmail } from "@/lib/auth-validation";
+import { getGoogleAuthServerConfig } from "@/lib/google-auth-config";
 import { normalizeSport } from "@/lib/sports";
 import {
   GOOGLE_ONE_TAP_PENDING_COOKIE,
@@ -29,13 +30,13 @@ type GoogleTokenPayload = {
   sub?: string;
 };
 
-const googleClientId =
-  process.env.GOOGLE_CLIENT_ID ?? process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID;
+const googleAuthConfig = getGoogleAuthServerConfig();
+const googleClientId = googleAuthConfig.clientId;
 
 const googleClient = googleClientId ? new OAuth2Client(googleClientId) : null;
 
 export async function POST(request: NextRequest): Promise<NextResponse> {
-  if (!googleClientId || !googleClient) {
+  if (!googleAuthConfig.enabled || !googleClientId || !googleClient) {
     return authError(
       AUTH_CODES.PROVIDER_ERROR,
       "Google sign-in is not configured right now.",
