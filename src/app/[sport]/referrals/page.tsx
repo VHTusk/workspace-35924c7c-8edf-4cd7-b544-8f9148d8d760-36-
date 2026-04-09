@@ -9,6 +9,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { toast } from 'sonner';
 
 interface ReferralData {
@@ -37,7 +38,11 @@ export default function ReferralsPage() {
 
   const [data, setData] = useState<ReferralData | null>(null);
   const [loading, setLoading] = useState(true);
-  const [copied, setCopied] = useState(false);
+  const [copiedField, setCopiedField] = useState<'code' | 'link' | null>(null);
+
+  const referralLink = data?.referralCode
+    ? `${typeof window !== 'undefined' ? window.location.origin : ''}/${sport}/register?ref=${encodeURIComponent(data.referralCode)}`
+    : '';
 
   useEffect(() => {
     fetchReferrals();
@@ -60,25 +65,34 @@ export default function ReferralsPage() {
   const copyReferralCode = async () => {
     if (data?.referralCode) {
       await navigator.clipboard.writeText(data.referralCode);
-      setCopied(true);
+      setCopiedField('code');
       toast.success('Referral code copied!');
-      setTimeout(() => setCopied(false), 2000);
+      setTimeout(() => setCopiedField(null), 2000);
+    }
+  };
+
+  const copyReferralLink = async () => {
+    if (referralLink) {
+      await navigator.clipboard.writeText(referralLink);
+      setCopiedField('link');
+      toast.success('Referral link copied!');
+      setTimeout(() => setCopiedField(null), 2000);
     }
   };
 
   const shareReferral = async () => {
-    if (navigator.share && data?.referralCode) {
+    if (navigator.share && data?.referralCode && referralLink) {
       try {
         await navigator.share({
           title: 'Join VALORHIVE',
           text: `Join me on VALORHIVE and start competing! Use my referral code: ${data.referralCode}`,
-          url: window.location.origin,
+          url: referralLink,
         });
       } catch (error) {
         // User cancelled or error
       }
     } else {
-      copyReferralCode();
+      copyReferralLink();
     }
   };
 
@@ -117,57 +131,116 @@ export default function ReferralsPage() {
           </div>
         ) : (
           <>
-            {/* Referral Code Card */}
+            {/* Referral Share Card */}
             <Card className="mb-6">
               <CardHeader>
-                <CardTitle className="text-lg">Your Referral Code</CardTitle>
+                <CardTitle className="text-lg">Share Your Referral</CardTitle>
               </CardHeader>
-              <CardContent>
-                <div className="flex items-center gap-4">
-                  <div className="flex-1">
-                    <Input
-                      value={data?.referralCode || 'Generate a code'}
-                      readOnly
-                      className="text-lg font-mono text-center tracking-wider"
-                    />
+              <CardContent className="space-y-4">
+                <div className="space-y-2">
+                  <p className="text-sm font-medium text-gray-700">Referral Code</p>
+                  <div className="flex items-center gap-4">
+                    <div className="flex-1">
+                      <Input
+                        value={data?.referralCode || 'Generate a code'}
+                        readOnly
+                        className="text-lg font-mono text-center tracking-wider"
+                      />
+                    </div>
+                    <Button
+                      variant="outline"
+                      onClick={copyReferralCode}
+                      className="shrink-0"
+                    >
+                      {copiedField === 'code' ? (
+                        <CheckCircle className="h-4 w-4 text-green-500" />
+                      ) : (
+                        <Copy className="h-4 w-4" />
+                      )}
+                    </Button>
                   </div>
-                  <Button
-                    variant="outline"
-                    onClick={copyReferralCode}
-                    className="shrink-0"
-                  >
-                    {copied ? (
-                      <CheckCircle className="h-4 w-4 text-green-500" />
-                    ) : (
-                      <Copy className="h-4 w-4" />
-                    )}
-                  </Button>
+                </div>
+
+                <div className="space-y-2">
+                  <p className="text-sm font-medium text-gray-700">Referral Link</p>
+                  <div className="flex items-center gap-4">
+                    <div className="flex-1">
+                      <Input
+                        value={referralLink || 'Referral link will appear here'}
+                        readOnly
+                        className="text-sm"
+                      />
+                    </div>
+                    <Button
+                      variant="outline"
+                      onClick={copyReferralLink}
+                      className="shrink-0"
+                      disabled={!referralLink}
+                    >
+                      {copiedField === 'link' ? (
+                        <CheckCircle className="h-4 w-4 text-green-500" />
+                      ) : (
+                        <Copy className="h-4 w-4" />
+                      )}
+                    </Button>
+                  </div>
+                </div>
+
+                <div className="flex justify-end">
                   <Button
                     onClick={shareReferral}
                     className={`shrink-0 bg-${theme}-500 hover:bg-${theme}-600`}
+                    disabled={!referralLink}
                   >
                     <Share2 className="h-4 w-4 mr-2" />
-                    Share
+                    Share Referral
                   </Button>
                 </div>
 
-                <div className="mt-4 p-4 bg-gray-50 rounded-lg">
-                  <h4 className="font-medium text-gray-900 mb-2">How it works:</h4>
-                  <ol className="text-sm text-gray-600 space-y-2">
-                    <li className="flex items-start gap-2">
-                      <span className={`font-medium ${theme === 'green' ? 'text-green-600' : 'text-teal-600'}`}>1.</span>
-                      Share your referral code with friends
-                    </li>
-                    <li className="flex items-start gap-2">
-                      <span className={`font-medium ${theme === 'green' ? 'text-green-600' : 'text-teal-600'}`}>2.</span>
-                      They enter your code when registering
-                    </li>
-                    <li className="flex items-start gap-2">
-                      <span className={`font-medium ${theme === 'green' ? 'text-green-600' : 'text-teal-600'}`}>3.</span>
-                      Once they play their first tournament, you both earn bonus points!
-                    </li>
-                  </ol>
-                </div>
+                <Tabs defaultValue="how-it-works" className="mt-4">
+                  <TabsList className="grid w-full grid-cols-2">
+                    <TabsTrigger value="how-it-works">How It Works</TabsTrigger>
+                    <TabsTrigger value="benefits">Benefits</TabsTrigger>
+                  </TabsList>
+                  <TabsContent value="how-it-works" className="mt-4">
+                    <div className="p-4 bg-gray-50 rounded-lg">
+                      <ol className="text-sm text-gray-600 space-y-2">
+                        <li className="flex items-start gap-2">
+                          <span className={`font-medium ${theme === 'green' ? 'text-green-600' : 'text-teal-600'}`}>1.</span>
+                          Share your referral code or direct referral link with friends
+                        </li>
+                        <li className="flex items-start gap-2">
+                          <span className={`font-medium ${theme === 'green' ? 'text-green-600' : 'text-teal-600'}`}>2.</span>
+                          They register using your code or by opening your referral link
+                        </li>
+                        <li className="flex items-start gap-2">
+                          <span className={`font-medium ${theme === 'green' ? 'text-green-600' : 'text-teal-600'}`}>3.</span>
+                          Once they complete their first eligible tournament, both of you receive bonus points
+                        </li>
+                      </ol>
+                    </div>
+                  </TabsContent>
+                  <TabsContent value="benefits" className="mt-4">
+                    <div className="grid gap-4 md:grid-cols-2">
+                      <div className="rounded-lg border bg-gray-50 p-4">
+                        <h4 className="font-medium text-gray-900">Benefits for you</h4>
+                        <ul className="mt-3 space-y-2 text-sm text-gray-600">
+                          <li>Earn bonus reward points when a referral completes their first eligible tournament.</li>
+                          <li>Track every referral from pending to completed in one place.</li>
+                          <li>Keep sharing the same code and link across future invites.</li>
+                        </ul>
+                      </div>
+                      <div className="rounded-lg border bg-gray-50 p-4">
+                        <h4 className="font-medium text-gray-900">Benefits for your friend</h4>
+                        <ul className="mt-3 space-y-2 text-sm text-gray-600">
+                          <li>Join quickly using a ready-to-use referral link or code.</li>
+                          <li>Receive a welcome reward after their first eligible tournament.</li>
+                          <li>Start with a smoother onboarding path into upcoming competitions.</li>
+                        </ul>
+                      </div>
+                    </div>
+                  </TabsContent>
+                </Tabs>
               </CardContent>
             </Card>
 

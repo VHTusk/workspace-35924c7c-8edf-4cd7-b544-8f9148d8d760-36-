@@ -170,7 +170,6 @@ async function searchPlayersHandler(request: NextRequest): Promise<NextResponse>
       const conditions: Record<string, unknown>[] = [
         { sport: sportUpper },
         { isActive: true },
-        { showOnLeaderboard: true },
       ];
 
       // Full-text search on name, city, state
@@ -220,6 +219,7 @@ async function searchPlayersHandler(request: NextRequest): Promise<NextResponse>
           state: true,
           visiblePoints: true,
           hiddenElo: true,
+          photoUrl: true,
           rating: {
             select: {
               matchesPlayed: true,
@@ -252,7 +252,7 @@ async function searchPlayersHandler(request: NextRequest): Promise<NextResponse>
           tier: calculateTier(player.hiddenElo),
           matchesPlayed: player.rating?.matchesPlayed || 0,
           wins: player.rating?.wins || 0,
-          avatar: null,
+          avatar: player.photoUrl,
           relevanceScore,
         };
       }).sort((a, b) => {
@@ -272,7 +272,6 @@ async function searchPlayersHandler(request: NextRequest): Promise<NextResponse>
   const countConditions: Record<string, unknown>[] = [
     { sport: sportUpper },
     { isActive: true },
-    { showOnLeaderboard: true },
   ];
 
   if (query) {

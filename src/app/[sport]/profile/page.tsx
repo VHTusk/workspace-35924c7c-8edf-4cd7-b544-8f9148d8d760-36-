@@ -71,6 +71,7 @@ interface Organization {
 }
 
 interface ProfileData {
+  playerId: string;
   firstName: string;
   lastName: string;
   email: string;
@@ -179,6 +180,7 @@ export default function ProfilePage() {
   const verificationStatus = useVerificationStatus();
 
   const [profile, setProfile] = useState<ProfileData>({
+    playerId: "",
     firstName: "",
     lastName: "",
     email: "",
@@ -259,6 +261,7 @@ export default function ProfilePage() {
       if (response.ok) {
         const data = await response.json();
         const profileData: ProfileData = {
+          playerId: data.playerId || data.id || "",
           firstName: data.firstName || "",
           lastName: data.lastName || "",
           email: data.email || "",
@@ -1036,6 +1039,11 @@ export default function ProfilePage() {
                   {profile.firstName} {profile.lastName}
                 </h1>
                 <p className="text-muted-foreground">Manage your profile settings</p>
+                {profile.playerId && (
+                  <p className="mt-1 text-xs font-medium uppercase tracking-[0.14em] text-muted-foreground">
+                    Player ID: <span className="font-mono tracking-normal">{profile.playerId}</span>
+                  </p>
+                )}
                 {profile.profileUpdatedAt && (
                   <p className="text-xs text-muted-foreground flex items-center gap-1 mt-1">
                     <RefreshCw className="h-3 w-3" />
@@ -1085,6 +1093,12 @@ export default function ProfilePage() {
                 </Badge>
               </div>
               <Progress value={completionPercentage} className="h-2 mb-2" />
+              {profile.playerId && (
+                <div className="mb-2 rounded-md bg-muted px-3 py-2">
+                  <p className="text-xs uppercase tracking-[0.14em] text-muted-foreground">Player ID</p>
+                  <p className="font-mono text-sm text-foreground break-all">{profile.playerId}</p>
+                </div>
+              )}
               {completionPercentage < 100 && (
                 <div className="flex flex-wrap gap-2">
                   <span className="text-sm text-muted-foreground">Missing:</span>

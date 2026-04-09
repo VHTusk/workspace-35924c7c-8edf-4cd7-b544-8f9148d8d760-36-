@@ -313,9 +313,9 @@ export default function HomePage() {
 
             <section id="sports" className="px-4 pb-6 sm:px-6 lg:px-8">
               <SectionHeading
-                eyebrow="Choose your sport"
-                title="Choose your sport"
-                description="Choose a format built for structured match play, local tournament movement, and consistent rankings."
+                eyebrow="Sports"
+                title="Pick your starting sport"
+                description="Select the competition format you want to enter first and move into scheduled local play."
               />
 
               <div className="grid gap-5">
@@ -361,9 +361,9 @@ export default function HomePage() {
 
             <section className="px-4 pb-6 pt-2 sm:px-6 lg:px-8">
               <SectionHeading
-                eyebrow="How it works"
+                eyebrow="Competition flow"
                 title="How it works"
-                description="A clearer path from registration to repeat competition."
+                description="A simple path from registration to repeat competitive play."
               />
 
               <div className="grid gap-4 md:grid-cols-4">
@@ -375,9 +375,9 @@ export default function HomePage() {
 
             <section className="px-4 pb-6 pt-2 sm:px-6 lg:px-8">
               <SectionHeading
-                eyebrow="Built for champions"
+                eyebrow="Platform features"
                 title="Built for champions"
-                description="Competition infrastructure designed for repeatable formats and long-term player progress."
+                description="Core systems designed for repeatable tournaments, verified outcomes, and steady player progress."
               />
 
               <div className="grid gap-4 md:grid-cols-4">
@@ -388,7 +388,7 @@ export default function HomePage() {
             </section>
 
             <section className="px-4 pb-6 pt-2 sm:px-6 lg:px-8">
-              <SectionHeading eyebrow="Growing every day" title="Growing every day" />
+              <SectionHeading eyebrow="Momentum" title="Growing every day" />
 
               <div className="grid gap-4 md:grid-cols-4">
                 {STATS.map((item, index) => (
@@ -437,7 +437,9 @@ export default function HomePage() {
                   </Button>
                 </div>
               </div>
-            </section>`r`n            <SiteFooter variant="landing" />
+            </section>
+
+            <SiteFooter variant="landing" />
           </div>
         </div>
       </main>

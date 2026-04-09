@@ -55,6 +55,7 @@ interface UserData {
   wins: number;
   followersCount: number;
   followingCount: number;
+  profileCompletion?: number;
   isSubscribed?: boolean;
   subscriptionPlan?: string | null;
 }
@@ -92,6 +93,15 @@ function SidebarContent({
     : userType === "player" ? "P" : userType === "admin" ? "A" : "O";
   const isSubscribed = user?.isSubscribed || false;
   const subscriptionPlan = user?.subscriptionPlan || null;
+  const profileCompletion =
+    userType === "player" && typeof user?.profileCompletion === "number"
+      ? Math.max(0, Math.min(100, user.profileCompletion))
+      : null;
+  const rookieBadgeClass = "bg-amber-300 text-amber-950 border-0 shadow-sm";
+  const subscriptionBadgeClass = "bg-cyan-200 text-cyan-950 border-0 shadow-sm";
+  const socialPillClass = "rounded-md bg-black/20 px-2 py-1 text-white/95 backdrop-blur-sm";
+  const upgradeLinkClass = "rounded-md bg-white text-slate-900 hover:bg-slate-100 px-3 py-1 font-semibold shadow-sm transition-colors";
+  const manageLinkClass = "rounded-md bg-cyan-200 text-cyan-950 hover:bg-cyan-100 px-3 py-1 font-semibold shadow-sm transition-colors";
 
   return (
     <div className="flex flex-col h-full">
@@ -113,12 +123,12 @@ function SidebarContent({
                 <p className="font-semibold truncate">{displayName}</p>
                 <div className="flex items-center gap-1 mt-0.5">
                   {isSubscribed ? (
-                    <Badge className="bg-amber-400 text-amber-900 text-[10px] px-2 py-0.5 border-0">
+                    <Badge className={cn("text-[10px] px-2 py-0.5", subscriptionBadgeClass)}>
                       <Crown className="w-3 h-3 mr-1" />
                       {subscriptionPlan}
                     </Badge>
                   ) : (
-                    <Badge className="bg-white/20 text-white text-[10px] px-2 py-0.5 border-0">
+                    <Badge className={cn("text-[10px] px-2 py-0.5", rookieBadgeClass)}>
                       Rookie
                     </Badge>
                   )}
@@ -129,19 +139,22 @@ function SidebarContent({
             {userType === "player" && (
               <div className="flex items-center justify-between text-sm mt-2">
                 <div className="flex items-center gap-3">
-                  <div className="flex items-center gap-1">
-                    <Heart className="w-4 h-4" />
+                  <div className={cn("flex items-center gap-1.5", socialPillClass)}>
+                    <Heart className="w-4 h-4 text-rose-200" />
                     <span className="font-medium">{user?.followersCount || 0}</span>
                   </div>
-                  <div className="flex items-center gap-1">
-                    <UserCheck className="w-4 h-4" />
+                  <div className={cn("flex items-center gap-1.5", socialPillClass)}>
+                    <UserCheck className="w-4 h-4 text-cyan-200" />
                     <span className="font-medium">{user?.followingCount || 0}</span>
                   </div>
                 </div>
                 <Link
                   href={`/${sport}/subscription`}
                   onClick={onLinkClick}
-                  className="text-xs bg-white/20 hover:bg-white/30 px-2 py-1 rounded-md transition-colors"
+                  className={cn(
+                    "text-xs",
+                    isSubscribed ? manageLinkClass : upgradeLinkClass,
+                  )}
                 >
                   {isSubscribed ? 'Manage' : 'Upgrade'}
                 </Link>
@@ -190,10 +203,18 @@ function SidebarContent({
                 >
                   <item.icon className={cn("w-5 h-5", isActive ? primaryTextClass : "text-muted-foreground")} />
                   {item.label}
+                  {item.label === "My Profile" && profileCompletion !== null && profileCompletion < 100 && (
+                    <span className="ml-auto rounded-full bg-amber-100 px-2 py-0.5 text-[11px] font-semibold text-amber-800">
+                      {profileCompletion}%
+                    </span>
+                  )}
                   {item.hasIndicator && (
                     <span
                       className={cn(
-                        "ml-auto w-2.5 h-2.5 rounded-full",
+                        item.label === "My Profile" && profileCompletion !== null && profileCompletion < 100
+                          ? "ml-2"
+                          : "ml-auto",
+                        "w-2.5 h-2.5 rounded-full",
                         isSubscribed ? "bg-green-500 animate-pulse" : "bg-amber-400"
                       )}
                     />

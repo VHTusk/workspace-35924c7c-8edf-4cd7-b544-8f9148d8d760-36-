@@ -124,6 +124,7 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json({
       id: user.id,
+      playerId: user.id,
       firstName: user.firstName,
       lastName: user.lastName,
       name: `${user.firstName} ${user.lastName}`,

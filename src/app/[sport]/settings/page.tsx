@@ -123,7 +123,11 @@ export default function SettingsPage() {
   const isCornhole = sport === "cornhole";
 
   // Get initial tab from URL
-  const initialTab = searchParams.get('tab') || 'account';
+  const requestedTab = searchParams.get('tab');
+  const initialTab =
+    requestedTab && ['account', 'security', 'notifications', 'privacy', 'rules'].includes(requestedTab)
+      ? requestedTab
+      : 'account';
 
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -508,10 +512,6 @@ export default function SettingsPage() {
               <TabsTrigger value="privacy" className="gap-2">
                 <Eye className="w-4 h-4" />
                 Privacy
-              </TabsTrigger>
-              <TabsTrigger value="blocked" className="gap-2">
-                <UserX className="w-4 h-4" />
-                Blocked
               </TabsTrigger>
               <TabsTrigger value="rules" className="gap-2">
                 <ScrollText className="w-4 h-4" />
@@ -1163,73 +1163,6 @@ export default function SettingsPage() {
                       </Select>
                     </div>
                   </div>
-                </CardContent>
-              </Card>
-            </TabsContent>
-
-            {/* Blocked Players Tab */}
-            <TabsContent value="blocked">
-              <Card className="bg-card border-border shadow-sm">
-                <CardHeader>
-                  <CardTitle className="text-foreground flex items-center gap-2">
-                    <UserX className="w-5 h-5" />
-                    Blocked Players
-                  </CardTitle>
-                  <CardDescription>Manage players you&apos;ve blocked or muted</CardDescription>
-                </CardHeader>
-                <CardContent>
-                  {blockedPlayers.length === 0 ? (
-                    <div className="text-center py-12">
-                      <div className={cn("w-16 h-16 rounded-full mx-auto mb-4 flex items-center justify-center", primaryBgClass)}>
-                        <Users className={cn("w-8 h-8", primaryTextClass)} />
-                      </div>
-                      <h3 className="text-lg font-medium text-foreground mb-2">No blocked players</h3>
-                      <p className="text-muted-foreground max-w-md mx-auto">
-                        You haven&apos;t blocked any players. Blocking prevents a player from messaging you or matching with you in tournaments.
-                      </p>
-                    </div>
-                  ) : (
-                    <div className="space-y-3">
-                      {blockedPlayers.map((bp) => (
-                        <div
-                          key={bp.id}
-                          className="flex items-center justify-between p-4 rounded-lg bg-muted/30 border border-border"
-                        >
-                          <div className="flex items-center gap-3">
-                            <div className={cn("h-10 w-10 rounded-full flex items-center justify-center", primaryBgClass)}>
-                              <span className={cn("text-sm font-medium", primaryTextClass)}>
-                                {bp.blocked.firstName.charAt(0)}{bp.blocked.lastName.charAt(0)}
-                              </span>
-                            </div>
-                            <div>
-                              <p className="font-medium text-foreground">
-                                {bp.blocked.firstName} {bp.blocked.lastName}
-                              </p>
-                              <div className="flex items-center gap-2 mt-0.5">
-                                <span className={cn("text-xs px-2 py-0.5 rounded-full", bp.isMute ? "bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400" : "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400")}>
-                                  {bp.isMute ? "Muted" : "Blocked"}
-                                </span>
-                                {bp.reason && (
-                                  <span className="text-xs text-muted-foreground">
-                                    Reason: {bp.reason}
-                                  </span>
-                                )}
-                              </div>
-                            </div>
-                          </div>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => handleUnblock(bp.blockedId)}
-                            className="text-red-500 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-950"
-                          >
-                            <Trash2 className="h-4 w-4 mr-1" />
-                            Unblock
-                          </Button>
-                        </div>
-                      ))}
-                    </div>
-                  )}
                 </CardContent>
               </Card>
             </TabsContent>

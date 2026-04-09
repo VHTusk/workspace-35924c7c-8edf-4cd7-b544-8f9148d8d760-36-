@@ -59,9 +59,12 @@ const iconMap: Record<string, LucideIcon> = {
 
 interface UserData {
   id: string;
+  playerId?: string;
   firstName: string;
   lastName: string;
   name: string;
+  email?: string;
+  phone?: string;
   photoUrl: string | null;
   score: number;
   wins: number;
@@ -319,6 +322,16 @@ export default function SportHeader({
     return "Free";
   };
 
+  const getLoginIdentifier = () => {
+    if (userType === "org" && org) {
+      return org.email || "";
+    }
+    if (userType === "player" && user) {
+      return user.email || user.phone || "";
+    }
+    return "";
+  };
+
   // Check if on login or register page
   const isAuthPage = pathname?.includes('/login') || pathname?.includes('/register');
 
@@ -374,6 +387,11 @@ export default function SportHeader({
               <DropdownMenuLabel>
                 <div className="flex flex-col">
                   <span>{getDisplayName()}</span>
+                  {getLoginIdentifier() && (
+                    <span className="text-xs font-normal text-muted-foreground">
+                      {getLoginIdentifier()}
+                    </span>
+                  )}
                   <span className="text-xs font-normal text-muted-foreground">
                     {getSubscriptionStatus()}
                     {userType === "org" && org?.type && (
@@ -605,6 +623,11 @@ export default function SportHeader({
                           </Avatar>
                           <div>
                             <p className="font-medium">{getDisplayName()}</p>
+                            {getLoginIdentifier() && (
+                              <p className="text-xs text-muted-foreground">
+                                {getLoginIdentifier()}
+                              </p>
+                            )}
                             <p className="text-xs text-muted-foreground">
                               {getSubscriptionStatus()}
                             </p>

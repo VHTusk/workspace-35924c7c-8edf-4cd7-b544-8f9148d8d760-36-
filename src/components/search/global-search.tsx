@@ -99,24 +99,35 @@ export function GlobalSearch({ sport, isOpen, onClose }: GlobalSearchProps) {
 
     setLoading(true);
     try {
+      const sportParam = sport.toUpperCase();
       const [playersRes, tournamentsRes, orgsRes] = await Promise.all([
-        fetch(`/api/search/players?q=${encodeURIComponent(searchQuery)}&limit=5`),
-        fetch(`/api/search/tournaments?q=${encodeURIComponent(searchQuery)}&limit=5`),
-        fetch(`/api/search/orgs?q=${encodeURIComponent(searchQuery)}&limit=3`),
+        fetch(`/api/search/players?q=${encodeURIComponent(searchQuery)}&sport=${sportParam}&limit=5`, {
+          cache: "no-store",
+        }),
+        fetch(`/api/search/tournaments?q=${encodeURIComponent(searchQuery)}&sport=${sportParam}&limit=5`, {
+          cache: "no-store",
+        }),
+        fetch(`/api/search/orgs?q=${encodeURIComponent(searchQuery)}&sport=${sportParam}&limit=3`, {
+          cache: "no-store",
+        }),
       ]);
 
       const allResults: SearchResult[] = [];
 
       if (playersRes.ok) {
         const data = await playersRes.json();
-        (data.players || []).forEach((p: Record<string, unknown>) => {
+        const playerResults = data?.data?.results || data?.players || [];
+        playerResults.forEach((p: Record<string, unknown>) => {
           allResults.push({
             id: p.id as string,
             type: "player",
-            name: (p.name as string) || `${p.firstName || ''} ${p.lastName || ''}`.trim(),
+            name:
+              (p.fullName as string) ||
+              (p.name as string) ||
+              `${p.firstName || ""} ${p.lastName || ""}`.trim(),
             subtitle: p.city ? `${p.city}${p.state ? `, ${p.state}` : ''}` : undefined,
-            image: p.photoUrl as string,
-            points: p.score as number,
+            image: (p.avatar as string) || (p.photoUrl as string),
+            points: (p.visiblePoints as number) ?? (p.score as number),
             rank: p.rank as number,
           });
         });
@@ -124,7 +135,8 @@ export function GlobalSearch({ sport, isOpen, onClose }: GlobalSearchProps) {
 
       if (tournamentsRes.ok) {
         const data = await tournamentsRes.json();
-        (data.results || data.tournaments || []).forEach((t: Record<string, unknown>) => {
+        const tournamentResults = data?.data?.results || data?.results || data?.tournaments || [];
+        tournamentResults.forEach((t: Record<string, unknown>) => {
           allResults.push({
             id: t.id as string,
             type: "tournament",
@@ -139,13 +151,14 @@ export function GlobalSearch({ sport, isOpen, onClose }: GlobalSearchProps) {
 
       if (orgsRes.ok) {
         const data = await orgsRes.json();
-        (data.orgs || []).forEach((o: Record<string, unknown>) => {
+        const orgResults = data?.data?.results || data?.orgs || [];
+        orgResults.forEach((o: Record<string, unknown>) => {
           allResults.push({
             id: o.id as string,
             type: "organization",
             name: o.name as string,
             subtitle: o.type as string,
-            image: o.logo as string,
+            image: (o.logoUrl as string) || (o.logo as string),
           });
         });
       }
@@ -156,7 +169,7 @@ export function GlobalSearch({ sport, isOpen, onClose }: GlobalSearchProps) {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [sport]);
 
   useEffect(() => {
     if (searchRef.current) {
@@ -358,9 +371,6 @@ export function SearchButton({ onClick }: { onClick: () => void }) {
         <Search className="h-4 w-4" />
         <span className="text-sm">Search players, tournaments...</span>
       </span>
-      <kbd className="hidden lg:inline-flex h-6 items-center rounded-md border border-border bg-muted px-2 text-[10px] font-medium text-muted-foreground">
-        Ctrl K
-      </kbd>
     </Button>
   );
 }

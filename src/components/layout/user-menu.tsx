@@ -27,10 +27,12 @@ import { cn } from "@/lib/utils";
 
 interface UserInfo {
   id: string;
+  playerId?: string;
   firstName: string;
   lastName: string;
   name: string;
-  email: string;
+  email?: string;
+  phone?: string;
   photoUrl: string | null;
 }
 
@@ -55,7 +57,7 @@ export function UserMenu({ sport, primaryTextClass, isLoggedIn }: UserMenuProps)
   const fetchUserInfo = async () => {
     setLoading(true);
     try {
-      const response = await fetch("/api/player/me");
+      const response = await fetch(`/api/player/me?sport=${sport.toUpperCase()}`);
       if (response.ok) {
         const data = await response.json();
         setUser(data);
@@ -99,6 +101,8 @@ export function UserMenu({ sport, primaryTextClass, isLoggedIn }: UserMenuProps)
     }
     return "U";
   };
+
+  const loginIdentifier = user?.email || user?.phone || "";
 
   if (!isLoggedIn) {
     return null;
@@ -144,9 +148,11 @@ export function UserMenu({ sport, primaryTextClass, isLoggedIn }: UserMenuProps)
               <p className="text-sm font-medium leading-none">
                 {user?.name || "Player"}
               </p>
-              <p className="text-xs leading-none text-muted-foreground">
-                {user?.email || ""}
-              </p>
+              {loginIdentifier && (
+                <p className="text-xs leading-none text-muted-foreground">
+                  {loginIdentifier}
+                </p>
+              )}
             </div>
           </DropdownMenuLabel>
           <DropdownMenuSeparator />
