@@ -68,6 +68,8 @@ export async function POST(request: NextRequest) {
         startDate: new Date(startDate),
         endDate: new Date(endDate),
         regDeadline: new Date(regDeadline),
+        managerName: org.name,
+        managerPhone: org.phone || 'N/A',
         prizePool: prizePool || 0,
         entryFee: entryFee || 0,
         maxPlayers: maxPlayers || 32,

@@ -314,7 +314,6 @@ export default function OrgSubscriptionPage() {
           },
         };
 
-        // @ts-expect-error Razorpay is loaded via script
         const rzp = new window.Razorpay(options);
         rzp.open();
       } else if (data.paymentUrl) {

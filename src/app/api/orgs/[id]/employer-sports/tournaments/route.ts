@@ -116,7 +116,18 @@ export async function POST(
       },
     });
 
-    return apiResponse({ tournament }, 'Internal tournament created successfully', 201);
+    return NextResponse.json(
+      {
+        success: true,
+        data: { tournament },
+        meta: {
+          timestamp: new Date().toISOString(),
+          version: 'v1',
+          message: 'Internal tournament created successfully',
+        },
+      },
+      { status: 201 }
+    );
   } catch (error) {
     console.error('Error creating employer sports tournament:', error);
     return NextResponse.json({ error: 'Failed to create tournament' }, { status: 500 });

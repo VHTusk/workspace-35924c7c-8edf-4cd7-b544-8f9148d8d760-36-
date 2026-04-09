@@ -7,6 +7,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 import { validateOrgSession } from '@/lib/auth';
+import { AcademicTeamStatus, SportType } from '@prisma/client';
 
 // GET - List all college teams for the organization
 export async function GET(
@@ -16,7 +17,7 @@ export async function GET(
   try {
     const { id: orgId } = await params;
     const { searchParams } = new URL(req.url);
-    const sport = searchParams.get('sport') as 'CORNHOLE' | 'DARTS' || 'CORNHOLE';
+    const sport = (searchParams.get('sport') as SportType) || SportType.CORNHOLE;
     const status = searchParams.get('status');
 
     // Verify this is a college
@@ -42,18 +43,29 @@ export async function GET(
       whereClause.status = status;
     }
 
-    const teams = await db.academicTeam.findMany({
+    const teams = await db.collegeTeam.findMany({
       where: whereClause,
-      include: {
-        _count: {
-          select: { 
-            players: true,
-            tournamentRegistrations: true,
-          },
-        },
-      },
-      orderBy: { createdAt: 'desc' },
+      orderBy: { formedAt: 'desc' },
     });
+
+    const teamIds = teams.map((team) => team.id);
+    const [members, registrations] = await Promise.all([
+      db.academicTeamMember.findMany({
+        where: {
+          teamType: 'COLLEGE',
+          teamId: { in: teamIds },
+          isActive: true,
+        },
+        select: { id: true, teamId: true },
+      }),
+      db.academicTeamRegistration.findMany({
+        where: {
+          teamType: 'COLLEGE',
+          teamId: { in: teamIds },
+        },
+        select: { id: true, teamId: true, finalRank: true },
+      }),
+    ]);
 
     const formattedTeams = teams.map((team) => ({
       id: team.id,
@@ -61,23 +73,23 @@ export async function GET(
       description: team.description,
       logoUrl: team.logoUrl,
       status: team.status,
-      formedAt: team.createdAt.toISOString(),
-      // NOTE: These are placeholder values - MUST be calculated from actual match data before production
-      // Requires: Match model queries for teamId, aggregate wins/losses by outcome
-      wins: 0, // IMPLEMENT: Count matches where team won
-      losses: 0, // IMPLEMENT: Count matches where team lost
-      matchesPlayed: 0, // IMPLEMENT: Count total matches
-      tournamentsParticipated: team._count.tournamentRegistrations,
-      tournamentsWon: 0, // IMPLEMENT: Count tournament results where team placed first
-      playerCount: team._count.players,
+      formedAt: team.formedAt.toISOString(),
+      wins: team.wins,
+      losses: team.losses,
+      matchesPlayed: team.matchesPlayed,
+      tournamentsParticipated: registrations.filter((registration) => registration.teamId === team.id).length,
+      tournamentsWon: registrations.filter(
+        (registration) => registration.teamId === team.id && registration.finalRank === 1
+      ).length,
+      playerCount: members.filter((member) => member.teamId === team.id).length,
     }));
 
     // Get stats
     const stats = {
       totalTeams: teams.length,
       activeTeams: teams.filter(t => t.status === 'ACTIVE').length,
-      totalPlayers: teams.reduce((sum, t) => sum + (t._count.players || 0), 0),
-      activeRegistrations: teams.reduce((sum, t) => sum + (t._count.tournamentRegistrations || 0), 0),
+      totalPlayers: members.length,
+      activeRegistrations: registrations.length,
     };
 
     return NextResponse.json({
@@ -113,7 +125,7 @@ export async function POST(
     }
 
     const session = await validateOrgSession(sessionToken);
-    if (!session || session.orgId !== orgId) {
+    if (!session || ((!session.orgId || session.orgId !== orgId) && session.org?.id !== orgId)) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
@@ -139,10 +151,10 @@ export async function POST(
     }
 
     // Check if team with same name already exists
-    const existing = await db.academicTeam.findFirst({
+    const existing = await db.collegeTeam.findFirst({
       where: {
         orgId,
-        sport: sport as 'CORNHOLE' | 'DARTS',
+        sport: sport as SportType,
         name: { equals: name, mode: 'insensitive' },
       },
     });
@@ -155,13 +167,13 @@ export async function POST(
     }
 
     // Create team
-    const team = await db.academicTeam.create({
+    const team = await db.collegeTeam.create({
       data: {
         orgId,
-        sport: sport as 'CORNHOLE' | 'DARTS',
+        sport: sport as SportType,
         name,
         description,
-        status: 'ACTIVE',
+        status: AcademicTeamStatus.ACTIVE,
       },
     });
 
@@ -172,7 +184,7 @@ export async function POST(
         name: team.name,
         description: team.description,
         status: team.status,
-        formedAt: team.createdAt.toISOString(),
+        formedAt: team.formedAt.toISOString(),
         playerCount: 0,
       },
     });

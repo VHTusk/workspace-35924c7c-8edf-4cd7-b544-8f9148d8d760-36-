@@ -11,7 +11,7 @@ export async function GET(request: NextRequest) {
       request.cookies.get('session_token')?.value || ''
     );
 
-    if (!session) {
+    if (!session || !session.org) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
@@ -29,7 +29,7 @@ export async function GET(request: NextRequest) {
     if (typeFilter === 'INTRA_ORG') {
       // Only INTRA_ORG tournaments hosted by this org
       whereClause.type = 'INTRA_ORG';
-      whereClause.hostOrgId = orgId;
+      whereClause.orgId = orgId;
     } else if (typeFilter === 'INTER_ORG') {
       // Only INTER_ORG tournaments
       whereClause.type = 'INTER_ORG';
@@ -39,7 +39,7 @@ export async function GET(request: NextRequest) {
       // 2. Type is INTRA_ORG and hosted by this org
       whereClause.OR = [
         { type: 'INTER_ORG' },
-        { type: 'INTRA_ORG', hostOrgId: orgId },
+        { type: 'INTRA_ORG', orgId },
       ];
     }
 
@@ -56,9 +56,10 @@ export async function GET(request: NextRequest) {
     // Check if org is already registered for each tournament
     const tournamentWithRegistration = await Promise.all(
       tournaments.map(async (t) => {
-        const registration = await db.orgTournamentRegistration.findUnique({
+        const registration = await db.orgTournamentRegistration.findFirst({
           where: {
-            orgId_tournamentId: { orgId, tournamentId: t.id },
+            orgId,
+            tournamentId: t.id,
           },
         });
 
@@ -69,11 +70,11 @@ export async function GET(request: NextRequest) {
           status: t.status,
           startDate: t.startDate,
           endDate: t.endDate,
-          registrationDeadline: t.registrationDeadline,
+          registrationDeadline: t.regDeadline,
           city: t.city,
           state: t.state,
           scope: t.scope,
-          maxParticipants: t.maxParticipants,
+          maxParticipants: t.maxPlayers,
           currentParticipants: t._count.registrations,
           prizePool: t.prizePool,
           isRegistered: !!registration,

@@ -24,7 +24,7 @@ export async function GET(
     }
 
     const session = await validateOrgSession(sessionToken);
-    if (!session || session.orgId !== orgId) {
+    if (!session || (session.orgId !== orgId && session.org?.id !== orgId)) {
       return NextResponse.json({ error: 'Invalid session' }, { status: 401 });
     }
 
@@ -88,17 +88,17 @@ export async function GET(
           completedAt: reg.tournament.startDate.toISOString(),
           teamId: reg.teamId,
           teamName: team?.name || 'Unknown Team',
-          position: reg.finalPosition || 0,
-          matchesPlayed: reg.matchesPlayed || 0,
-          matchesWon: reg.matchesWon || 0,
-          matchesLost: (reg.matchesPlayed || 0) - (reg.matchesWon || 0),
-          points: reg.pointsEarned || 0,
+          position: reg.finalRank || 0,
+          matchesPlayed: 0,
+          matchesWon: 0,
+          matchesLost: 0,
+          points: reg.prizeWon || 0,
           medal:
-            reg.finalPosition === 1
+            reg.finalRank === 1
               ? 'GOLD'
-              : reg.finalPosition === 2
+              : reg.finalRank === 2
                 ? 'SILVER'
-                : reg.finalPosition === 3
+                : reg.finalRank === 3
                   ? 'BRONZE'
                   : undefined,
         };
@@ -116,7 +116,7 @@ export async function GET(
       teams = repSquads;
 
       // Get tournament registrations
-      const tournamentRegistrations = await db.tournamentRegistration.findMany({
+      const tournamentRegistrations = await db.orgTournamentRegistration.findMany({
         where: {
           orgId,
           tournament: {
@@ -141,28 +141,20 @@ export async function GET(
 
       // Build results
       results = tournamentRegistrations.map((reg) => {
-        const squad = teams.find((t) => t.id === reg.teamId);
         return {
           id: reg.id,
           tournamentId: reg.tournament.id,
           tournamentName: reg.tournament.name,
           tournamentScope: reg.tournament.scope,
           completedAt: reg.tournament.startDate.toISOString(),
-          teamId: reg.teamId || 'main',
-          teamName: squad?.name || 'Main Squad',
-          position: reg.finalPosition || 0,
-          matchesPlayed: reg.matchesPlayed || 0,
-          matchesWon: reg.matchesWon || 0,
-          matchesLost: (reg.matchesPlayed || 0) - (reg.matchesWon || 0),
-          points: reg.pointsEarned || 0,
-          medal:
-            reg.finalPosition === 1
-              ? 'GOLD'
-              : reg.finalPosition === 2
-                ? 'SILVER'
-                : reg.finalPosition === 3
-                  ? 'BRONZE'
-                  : undefined,
+          teamId: reg.orgId,
+          teamName: org.name,
+          position: 0,
+          matchesPlayed: 0,
+          matchesWon: 0,
+          matchesLost: 0,
+          points: 0,
+          medal: undefined,
         };
       });
     }

@@ -5,12 +5,6 @@ import { createRazorpayOrder, formatAmount } from '@/lib/payments/razorpay';
 import { v4 as uuidv4 } from 'uuid';
 import { SportType, SubscriptionStatus } from '@prisma/client';
 
-interface CheckoutItem {
-  sportId: string;
-  sportName: string;
-  price: number;
-}
-
 interface CheckoutRequest {
   sports: string[];  // Array of sport IDs (CORNHOLE, DARTS, etc.)
   promoCode?: string;
@@ -60,19 +54,17 @@ export async function POST(request: NextRequest) {
     }
 
     // Check for already subscribed sports
-    const existingSubscriptions = await db.orgSubscription.findMany({
+    const existingSubscription = await db.orgSubscription.findFirst({
       where: {
         orgId: org.id,
         status: SubscriptionStatus.ACTIVE,
-        sport: { in: sports as SportType[] },
       },
     });
 
-    if (existingSubscriptions.length > 0) {
-      const subscribedSports = existingSubscriptions.map(s => s.sport);
+    if (existingSubscription) {
       return NextResponse.json({ 
-        error: `Already subscribed to: ${subscribedSports.join(', ')}`,
-        subscribedSports,
+        error: 'This organization already has an active subscription.',
+        subscribedSports: sports,
       }, { status: 400 });
     }
 

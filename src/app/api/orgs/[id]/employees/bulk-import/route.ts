@@ -208,24 +208,6 @@ export async function POST(
       }
     });
 
-    // Get department name to ID mapping
-    const departments = await db.corporateDepartment.findMany({
-      where: {
-        orgId,
-        sport,
-        isActive: true,
-      },
-      select: {
-        id: true,
-        name: true,
-      },
-    });
-
-    const departmentMap = new Map<string, string>();
-    departments.forEach(dept => {
-      departmentMap.set(dept.name.toLowerCase(), dept.id);
-    });
-
     // Validate all rows
     const validationResults = employees.map((row, index) => ({
       row,
@@ -291,15 +273,6 @@ export async function POST(
 
       for (const { row, rowIndex } of chunk) {
         try {
-          // Map department name to ID
-          let departmentId: string | null = null;
-          if (row.department && row.department.trim() !== '') {
-            const deptId = departmentMap.get(row.department.toLowerCase().trim());
-            if (deptId) {
-              departmentId = deptId;
-            }
-          }
-
           const employee = await db.employee.create({
             data: {
               orgId,
@@ -310,7 +283,6 @@ export async function POST(
               phone: row.phone?.trim() || null,
               employeeId: row.employee_id?.trim() || null,
               department: row.department?.trim() || null,
-              departmentId,
               designation: row.designation?.trim() || null,
               isActive: true,
               isVerified: false,

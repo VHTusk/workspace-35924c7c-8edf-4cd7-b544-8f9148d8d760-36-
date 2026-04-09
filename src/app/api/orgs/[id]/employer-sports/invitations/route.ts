@@ -153,13 +153,20 @@ export async function POST(
       )
     );
 
-    return apiResponse(
+    return NextResponse.json(
       {
-        invitations,
-        invitedCount: invitations.length,
+        success: true,
+        data: {
+          invitations,
+          invitedCount: invitations.length,
+        },
+        meta: {
+          timestamp: new Date().toISOString(),
+          version: 'v1',
+          message: 'Invitations sent successfully',
+        },
       },
-      'Invitations sent successfully',
-      201
+      { status: 201 }
     );
   } catch (error) {
     console.error('Error sending employee invitations:', error);

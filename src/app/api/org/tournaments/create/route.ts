@@ -7,7 +7,7 @@ import { TournamentStatus, TournamentType, TournamentScope, BracketFormat, Sport
 export async function POST(request: NextRequest) {
   try {
     const auth = await getAuthenticatedOrg(request);
-    if (!auth) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    if (!auth || !auth.org) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     const { org } = auth;
 
     const body = await request.json();
@@ -54,6 +54,8 @@ export async function POST(request: NextRequest) {
         startDate: new Date(startDate),
         endDate: new Date(endDate),
         regDeadline: new Date(regDeadline),
+        managerName: org.name,
+        managerPhone: org.phone || 'N/A',
         prizePool: prizePool || 0,
         entryFee: entryFee || 0,
         maxPlayers: maxPlayers || 32,

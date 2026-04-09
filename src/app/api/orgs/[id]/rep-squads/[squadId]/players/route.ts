@@ -62,7 +62,7 @@ export async function POST(
     const session = await validateOrgSession(
       req.cookies.get('session_token')?.value || ''
     );
-    if (!session || session.org.id !== orgId) {
+    if (!session || !session.org || session.org.id !== orgId) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
@@ -142,7 +142,7 @@ export async function POST(
             startDate: now,
             endDate: yearEnd,
             status: 'PENDING', // Requires admin verification
-            createdById: session.user?.id,
+            createdById: session.org.id,
           },
         });
 

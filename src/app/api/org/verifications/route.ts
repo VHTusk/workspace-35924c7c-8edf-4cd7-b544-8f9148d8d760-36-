@@ -9,7 +9,7 @@ export async function GET(request: NextRequest) {
       request.cookies.get("session_token")?.value || ""
     );
 
-    if (!session) {
+    if (!session || !session.org) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 

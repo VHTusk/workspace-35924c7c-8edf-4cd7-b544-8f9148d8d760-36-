@@ -12,7 +12,7 @@ export async function POST(
       request.cookies.get("session_token")?.value || ""
     );
 
-    if (!session) {
+    if (!session || !session.org) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
@@ -46,7 +46,7 @@ export async function POST(
         data: {
           status: "VERIFIED",
           verifiedAt: new Date(),
-          verifiedBy: session.operatorId || session.org.id,
+          verifiedBy: session.org.id,
         },
       });
 
@@ -56,7 +56,7 @@ export async function POST(
         data: {
           verificationStatus: "VERIFIED",
           orgVerifiedAt: new Date(),
-          orgVerifiedBy: session.operatorId || session.org.id,
+          orgVerifiedBy: session.org.id,
           verificationNotes: notes || null,
         },
       });
@@ -93,7 +93,7 @@ export async function POST(
         data: {
           status: "REJECTED",
           verifiedAt: new Date(),
-          verifiedBy: session.operatorId || session.org.id,
+          verifiedBy: session.org.id,
           rejectionReason: rejectionReason || "Not specified",
         },
       });
@@ -133,7 +133,7 @@ export async function GET(
       request.cookies.get("session_token")?.value || ""
     );
 
-    if (!session) {
+    if (!session || !session.org) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 

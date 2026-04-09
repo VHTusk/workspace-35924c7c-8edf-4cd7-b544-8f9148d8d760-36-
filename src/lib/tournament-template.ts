@@ -201,6 +201,15 @@ export async function createFromTemplate(
     throw new Error('Template not found');
   }
 
+  const templateOrg = await db.organization.findUnique({
+    where: { id: template.orgId },
+    select: { name: true, phone: true },
+  });
+
+  if (!templateOrg) {
+    throw new Error('Template organization not found');
+  }
+
   // Calculate dates
   const startDate = new Date(options.startDate);
   const endDate = options.endDate 
@@ -226,6 +235,8 @@ export async function createFromTemplate(
       format: template.format,
       scope: template.scope,
       location: options.customLocation || template.defaultLocation || 'TBD',
+      managerName: templateOrg.name,
+      managerPhone: templateOrg.phone || 'N/A',
       startDate,
       endDate,
       regDeadline,

@@ -145,57 +145,52 @@ export async function GET(
     ]);
 
     // School Teams Stats (Layer 2)
-    const [
-      totalTeams,
-      teamPlayers,
-      activeInterOrgRegistrations,
-      teams,
-    ] = await Promise.all([
-      // Count teams
-      db.schoolTeam.count({
-        where: { orgId, sport, status: 'ACTIVE' },
-      }),
-      // Count team players via AcademicTeamMember
-      db.academicTeamMember.count({
+    const teams = await db.schoolTeam.findMany({
+      where: { orgId, sport, status: 'ACTIVE' },
+      take: 5,
+      orderBy: { formedAt: 'desc' },
+      select: {
+        id: true,
+        name: true,
+        description: true,
+        formedAt: true,
+        wins: true,
+        losses: true,
+        status: true,
+        logoUrl: true,
+        matchesPlayed: true,
+        tournamentsParticipated: true,
+        tournamentsWon: true,
+      },
+    });
+
+    const totalTeams = await db.schoolTeam.count({
+      where: { orgId, sport, status: 'ACTIVE' },
+    });
+
+    const teamIds = teams.map((team) => team.id);
+    const [teamMembers, activeRegistrations] = await Promise.all([
+      db.academicTeamMember.findMany({
         where: {
-          student: { orgId, sport },
           teamType: 'SCHOOL',
+          teamId: { in: teamIds },
           isActive: true,
+          student: { orgId, sport },
         },
+        select: { id: true, teamId: true },
       }),
-      // Count active inter-org registrations
-      db.academicTeamRegistration.count({
+      db.academicTeamRegistration.findMany({
         where: {
           teamType: 'SCHOOL',
+          teamId: { in: teamIds },
           status: { in: ['PENDING', 'CONFIRMED'] },
-          team: { orgId, sport, status: 'ACTIVE' },
         },
-      }),
-      // Get teams
-      db.schoolTeam.findMany({
-        where: { orgId, sport, status: 'ACTIVE' },
-        take: 5,
-        orderBy: { formedAt: 'desc' },
-        select: {
-          id: true,
-          name: true,
-          description: true,
-          formedAt: true,
-          wins: true,
-          losses: true,
-          status: true,
-          logoUrl: true,
-          matchesPlayed: true,
-          tournamentsParticipated: true,
-          tournamentsWon: true,
-          _count: {
-            select: {
-              members: { where: { isActive: true } },
-            },
-          },
-        },
+        select: { id: true, teamId: true },
       }),
     ]);
+
+    const teamPlayers = teamMembers.length;
+    const activeInterOrgRegistrations = activeRegistrations.length;
 
     // Format classes with student count
     const formattedClasses = classes.map((c) => ({
@@ -230,7 +225,7 @@ export async function GET(
       losses: t.losses,
       tournamentsParticipated: t.tournamentsParticipated,
       tournamentsWon: t.tournamentsWon,
-      playerCount: t._count.members,
+      playerCount: teamMembers.filter((member) => member.teamId === t.id).length,
     }));
 
     return NextResponse.json({

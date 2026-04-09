@@ -57,11 +57,11 @@ export async function GET(request: NextRequest) {
     const daysRemaining = Math.max(0, Math.ceil((endDate.getTime() - now.getTime()) / (24 * 60 * 60 * 1000)));
 
     return NextResponse.json({
-      plan: activeSubscription.plan || 'BASIC',
+      plan: org.planTier || 'BASIC',
       status: activeSubscription.status,
       startDate: activeSubscription.startDate.toISOString(),
       endDate: activeSubscription.endDate.toISOString(),
-      autoRenew: activeSubscription.autoRenew ?? false,
+      autoRenew: false,
       amount: activeSubscription.amount,
       daysRemaining,
       payments: payments.map(p => ({
