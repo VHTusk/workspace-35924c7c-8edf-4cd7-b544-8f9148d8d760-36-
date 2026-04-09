@@ -18,7 +18,6 @@ import {
   Search,
   Clock,
   Plus,
-  Eye,
   Filter,
   X,
 } from "lucide-react";
@@ -247,25 +246,6 @@ export default function TournamentsPage() {
   return (
     <div className="py-8 px-4">
       <div className="container mx-auto">
-        {/* Spectator Mode Indicator */}
-        {!userType && (
-          <Card className="bg-gradient-to-r from-primary/5 to-primary/10 border-primary/20 mb-6">
-            <CardContent className="p-4">
-              <div className="flex items-center gap-3">
-                <Eye className="w-5 h-5 text-primary" />
-                <div className="flex-1">
-                  <p className="text-sm font-medium text-foreground">
-                    You&apos;re in Spectator Mode
-                  </p>
-                  <p className="text-xs text-muted-foreground">
-                    Browse tournaments and view results. <Link href={`/${sport}/login`} className="text-primary hover:underline">Login</Link> or <Link href={`/${sport}/register`} className="text-primary hover:underline">Register</Link> to participate.
-                  </p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        )}
-
         {/* Header */}
         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-6">
           <div>
