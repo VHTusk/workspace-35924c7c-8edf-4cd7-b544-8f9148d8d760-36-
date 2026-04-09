@@ -18,7 +18,7 @@ export function UniversalRegisterModal({
 }: UniversalRegisterModalProps) {
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-h-[90vh] overflow-y-auto border-border/60 p-0 sm:max-w-2xl">
+      <DialogContent className="max-h-[calc(100dvh-1rem)] overflow-y-auto border-border/60 p-0 sm:max-w-2xl">
         <DialogHeader className="sr-only">
           <DialogTitle>Create a VALORHIVE account</DialogTitle>
           <DialogDescription>Register once and join structured competitions across supported sports.</DialogDescription>

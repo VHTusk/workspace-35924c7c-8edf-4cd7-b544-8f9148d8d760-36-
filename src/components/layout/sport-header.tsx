@@ -326,9 +326,9 @@ export default function SportHeader({
         <div className="flex items-center gap-2">
           {userType === "player" && (
             <Link href={`/${sport}/dashboard`}>
-              <Button variant="outline" size="sm" className="gap-2">
+              <Button variant="outline" size="sm" className="gap-2 px-2.5 sm:px-3">
                 <LayoutDashboard className="h-4 w-4" />
-                <span className="hidden sm:inline">Dashboard</span>
+                <span className="hidden md:inline">Dashboard</span>
               </Button>
             </Link>
           )}
@@ -339,14 +339,14 @@ export default function SportHeader({
           {/* User Dropdown */}
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button variant="ghost" className="gap-2 pl-2 pr-3">
+              <Button variant="ghost" className="gap-1.5 pl-1.5 pr-2 sm:gap-2 sm:pl-2 sm:pr-3">
                 <Avatar className="h-7 w-7">
                   <AvatarImage src={user?.photoUrl || org?.photoUrl || undefined} />
                   <AvatarFallback className={cn("text-white text-xs", primaryBtnClass)}>
                     {userType === "org" ? <Building2 className="w-4 h-4" /> : getInitials()}
                   </AvatarFallback>
                 </Avatar>
-                <span className="hidden sm:inline text-sm font-medium">{getDisplayName()}</span>
+                <span className="hidden lg:inline text-sm font-medium">{getDisplayName()}</span>
                 <ChevronDown className="h-4 w-4 text-muted-foreground" />
               </Button>
             </DropdownMenuTrigger>
@@ -414,15 +414,16 @@ export default function SportHeader({
       return (
         <>
           <Link href={`/${sport}/org/login`}>
-            <Button variant="ghost" size="sm" className="text-muted-foreground">
-              <LogIn className="w-4 h-4 mr-2" />
-              Login
+            <Button variant="ghost" size="sm" className="px-2 text-muted-foreground sm:px-3">
+              <LogIn className="w-4 h-4 sm:mr-2" />
+              <span className="hidden sm:inline">Login</span>
             </Button>
           </Link>
           <Link href={`/${sport}/org/register`}>
-            <Button size="sm" className={cn("shadow-sm", primaryBtnClass)}>
-              <Building2 className="w-4 h-4 mr-2" />
-              Register Org
+            <Button size="sm" className={cn("px-2.5 shadow-sm sm:px-3", primaryBtnClass)}>
+              <Building2 className="w-4 h-4 sm:mr-2" />
+              <span className="hidden sm:inline">Register Org</span>
+              <span className="sm:hidden">Org</span>
             </Button>
           </Link>
         </>
@@ -432,15 +433,16 @@ export default function SportHeader({
     return (
       <>
         <Link href={`/${sport}/login`}>
-          <Button variant="ghost" size="sm" className="text-muted-foreground">
-            <LogIn className="w-4 h-4 mr-2" />
-            Login
+          <Button variant="ghost" size="sm" className="px-2 text-muted-foreground sm:px-3">
+            <LogIn className="w-4 h-4 sm:mr-2" />
+            <span className="hidden sm:inline">Login</span>
           </Button>
         </Link>
         <Link href={`/${sport}/register`}>
-          <Button size="sm" className={cn("shadow-sm", primaryBtnClass)}>
-            <UserPlus className="w-4 h-4 mr-2" />
-            Register
+          <Button size="sm" className={cn("px-2.5 shadow-sm sm:px-3", primaryBtnClass)}>
+            <UserPlus className="w-4 h-4 sm:mr-2" />
+            <span className="hidden sm:inline">Register</span>
+            <span className="sm:hidden">Join</span>
           </Button>
         </Link>
       </>
@@ -451,16 +453,16 @@ export default function SportHeader({
     <>
       <header className="fixed top-0 left-0 right-0 z-50 border-b border-border bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
         <div className="container mx-auto px-4">
-          <div className="flex h-16 items-center justify-between gap-3">
-            <Link href={`/${sport}`} className="flex items-center gap-2 min-w-0">
+          <div className="flex h-14 items-center justify-between gap-2 sm:h-16 sm:gap-3">
+            <Link href={`/${sport}`} className="flex items-center gap-2 min-w-0 max-w-[55%] sm:max-w-none">
               <Image src="/logo.png" alt="VALORHIVE" width={32} height={32} className="h-8 w-auto" priority />
-              <span className="truncate text-lg font-bold text-foreground">VALORHIVE</span>
-              <Badge variant="outline" className={cn("border-current/30", sportBadgeClass)}>
+              <span className="hidden truncate text-lg font-bold text-foreground min-[380px]:inline">VALORHIVE</span>
+              <Badge variant="outline" className={cn("hidden border-current/30 sm:inline-flex", sportBadgeClass)}>
                 {sportName}
               </Badge>
             </Link>
 
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-1.5 sm:gap-2">
               <SearchButton onClick={() => setSearchOpen(true)} />
               {renderAuthButtons()}
             </div>

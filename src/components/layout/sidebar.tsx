@@ -388,13 +388,13 @@ export default function Sidebar({ userType = "player" }: SidebarProps) {
           <Button
             variant="ghost"
             size="icon"
-            className="fixed top-[68px] left-3 z-50 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 border shadow-sm md:hidden"
+            className="fixed top-[4.4rem] left-3 z-50 h-10 w-10 rounded-xl bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 border shadow-sm md:hidden"
             aria-label="Toggle menu"
           >
             <Menu className="h-5 w-5" />
           </Button>
         </SheetTrigger>
-        <SheetContent side="left" className="w-72 p-0 flex flex-col bg-sidebar">
+        <SheetContent side="left" className="mobile-safe-bottom w-[min(88vw,20rem)] p-0 flex flex-col bg-sidebar">
           <SidebarContent {...sidebarContentProps} onLinkClick={() => setSheetOpen(false)} />
         </SheetContent>
       </Sheet>

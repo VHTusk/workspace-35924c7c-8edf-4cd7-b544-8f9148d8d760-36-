@@ -211,8 +211,8 @@ export default function SubscriptionPage() {
   return (
     <div className="bg-background min-h-screen">
       <Sidebar userType="player" />
-      <main className="ml-0 md:ml-72">
-        <div className="p-6 max-w-5xl">
+      <main className="ml-0 overflow-x-hidden md:ml-72">
+        <div className="max-w-5xl px-4 py-4 sm:px-6 sm:py-6">
           {/* Header */}
           <div className="mb-6">
             <h1 className="text-2xl font-bold text-foreground">Subscription</h1>

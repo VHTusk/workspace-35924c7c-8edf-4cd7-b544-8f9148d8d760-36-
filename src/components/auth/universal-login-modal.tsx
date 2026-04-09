@@ -20,7 +20,7 @@ export function UniversalLoginModal({
 }: UniversalLoginModalProps) {
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-h-[90vh] overflow-y-auto border-border/60 p-0 sm:max-w-2xl">
+      <DialogContent className="max-h-[calc(100dvh-1rem)] overflow-y-auto border-border/60 p-0 sm:max-w-2xl">
         <DialogHeader className="sr-only">
           <DialogTitle>Log in to VALORHIVE</DialogTitle>
           <DialogDescription>Access your account across all supported sports.</DialogDescription>

@@ -1043,7 +1043,7 @@ export default function ProfilePage() {
     <div className="bg-background min-h-screen">
       <Sidebar userType="player" />
       <main className="ml-0 md:ml-72 min-h-screen">
-        <div className="p-6 max-w-4xl">
+        <div className="max-w-4xl px-4 py-4 sm:px-6 sm:py-6">
           {/* Header */}
           <div className="mb-6 flex items-center justify-between">
             <div className="flex items-center gap-4">

@@ -374,8 +374,8 @@ export default function LeaderboardPage() {
     <div className="bg-muted/30 min-h-screen">
       {/* Only show sidebar when authenticated */}
       {isAuthenticated && <Sidebar userType="player" />}
-      <main className={isAuthenticated ? "ml-0 md:ml-72" : ""}>
-        <div className="p-4 md:p-6">
+      <main className={cn(isAuthenticated ? "ml-0 md:ml-72" : "", "overflow-x-hidden")}>
+        <div className="px-4 py-4 sm:px-6 sm:py-6">
           {/* Header */}
           <div className="mb-6">
             <h1 className="text-2xl font-bold text-foreground flex items-center gap-3">
@@ -389,8 +389,8 @@ export default function LeaderboardPage() {
           {currentUser && !loading && (
             <Card className={cn("mb-6 border-l-4", isCornhole ? "border-l-green-500" : "border-l-teal-500")}>
               <CardContent className="p-4">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-4">
+                <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+                  <div className="flex items-center gap-3 sm:gap-4">
                     <div className={cn("p-3 rounded-xl", primaryBgClass)}>
                       <Sparkles className={cn("w-6 h-6", primaryTextClass)} />
                     </div>
@@ -411,7 +411,7 @@ export default function LeaderboardPage() {
                       </p>
                     </div>
                   </div>
-                  <Link href={`/${sport}/stats`}>
+                  <Link href={`/${sport}/stats`} className="self-start sm:self-auto">
                     <Badge className="cursor-pointer hover:bg-primary/20" variant="secondary">
                       View My Stats
                     </Badge>
@@ -696,7 +696,7 @@ export default function LeaderboardPage() {
                   <PodiumSkeleton />
                 ) : (
                   !loading && leaderboard.length >= 3 && (
-                    <div className="grid grid-cols-3 gap-4 mb-6">
+                    <div className="grid grid-cols-1 gap-4 mb-6 sm:grid-cols-3">
                       {[1, 0, 2].map((index) => {
                         const player = leaderboard[index];
                         if (!player) return null;
@@ -778,7 +778,7 @@ export default function LeaderboardPage() {
                     </CardHeader>
                     <CardContent className="p-0">
                       <div className="overflow-x-auto max-h-[600px] overflow-y-auto">
-                        <table className="w-full">
+                        <table className="min-w-[640px] w-full">
                           <thead className="sticky top-0 bg-card z-10">
                             <tr className="border-b border-border/40">
                               <th className="px-4 py-3 text-left text-sm font-medium text-muted-foreground">Rank</th>

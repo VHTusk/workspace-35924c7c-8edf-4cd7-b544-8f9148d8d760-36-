@@ -25,6 +25,7 @@ import {
 } from "lucide-react";
 import { useState, useEffect, useRef } from "react";
 import Sidebar from "@/components/layout/sidebar";
+import { cn } from "@/lib/utils";
 
 interface Tournament {
   id: string;
@@ -346,11 +347,11 @@ export default function TournamentsPage() {
   return (
     <div className="bg-muted/30 min-h-screen">
       {userType && <Sidebar userType={userType} />}
-      <main className={userType ? "ml-0 md:ml-72" : ""}>
-      <div className="py-8 px-4">
+      <main className={cn(userType ? "ml-0 md:ml-72" : "", "overflow-x-hidden")}>
+      <div className="px-4 py-6 sm:px-6 sm:py-8">
       <div className="container mx-auto">
         {/* Header */}
-        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-6">
+        <div className="mb-6 flex flex-col items-start justify-between gap-4 sm:flex-row sm:items-center">
           <div>
             <h1 className="text-3xl font-bold text-foreground">Tournaments</h1>
             <p className="text-muted-foreground mt-1">
@@ -361,9 +362,9 @@ export default function TournamentsPage() {
           </div>
           {/* Only show Create Tournament for org accounts (not School/College) */}
           {userType === "org" && !isSchoolOrCollege && (
-            <div className="flex gap-2">
+            <div className="flex w-full gap-2 sm:w-auto">
               <Link href={`/${sport}/org/tournaments/create`}>
-                <Button variant="outline" size="sm" className="gap-2">
+                <Button variant="outline" size="sm" className="w-full gap-2 sm:w-auto">
                   <Plus className="w-4 h-4" />
                   Create Tournament
                 </Button>
@@ -372,9 +373,9 @@ export default function TournamentsPage() {
           )}
           {/* For School/College: Show Manage Teams button */}
           {isSchoolOrCollege && (
-            <div className="flex gap-2">
+            <div className="flex w-full gap-2 sm:w-auto">
               <Link href={`/${sport}/org/${orgType === "SCHOOL" ? "school-teams" : "college-teams"}`}>
-                <Button variant="outline" size="sm" className="gap-2">
+                <Button variant="outline" size="sm" className="w-full gap-2 sm:w-auto">
                   <Users className="w-4 h-4" />
                   Manage Teams
                 </Button>
@@ -386,7 +387,7 @@ export default function TournamentsPage() {
         {/* Search and Filter Toggle */}
         <Card className="bg-gradient-card border-border/50 mb-4">
           <CardContent className="p-4">
-            <div className="flex flex-col sm:flex-row gap-4">
+            <div className="flex flex-col gap-4 sm:flex-row">
               <div className="relative flex-1">
                 <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
                 <Input
@@ -396,11 +397,11 @@ export default function TournamentsPage() {
                   onChange={(e) => setSearch(e.target.value)}
                 />
               </div>
-              <div className="flex gap-2">
+              <div className="flex flex-wrap gap-2">
                 <Button
                   variant={showFilters ? "default" : "outline"}
                   size="sm"
-                  className="gap-2"
+                  className="min-h-10 gap-2"
                   onClick={() => setShowFilters(!showFilters)}
                 >
                   <Filter className="w-4 h-4" />
@@ -415,7 +416,7 @@ export default function TournamentsPage() {
                   <Button
                     variant="ghost"
                     size="sm"
-                    className="gap-2 text-muted-foreground"
+                    className="min-h-10 gap-2 text-muted-foreground"
                     onClick={clearAllFilters}
                   >
                     <X className="w-4 h-4" />
@@ -546,7 +547,7 @@ export default function TournamentsPage() {
 
         {/* Active Filters Display */}
         {hasActiveFilters && !showFilters && (
-          <div className="flex flex-wrap gap-2 mb-4">
+          <div className="mb-4 flex flex-wrap gap-2">
             {scopeFilter !== "all" && (
               <Badge variant="secondary" className="gap-1">
                 Scope: {scopeFilter}
@@ -593,8 +594,9 @@ export default function TournamentsPage() {
         )}
 
         {/* Tournament Tabs */}
-        <Tabs value={currentTab} onValueChange={handleTabChange} className="space-y-6">
-          <TabsList>
+          <Tabs value={currentTab} onValueChange={handleTabChange} className="space-y-6">
+          <div className="overflow-x-auto pb-2 -mb-2">
+          <TabsList className="inline-flex h-auto min-w-max gap-1">
             <TabsTrigger value="all" className="gap-2">
               <Trophy className="w-4 h-4" />
               All Tournaments ({filteredTournaments.length})
@@ -612,6 +614,7 @@ export default function TournamentsPage() {
               Completed ({pastTournaments.length})
             </TabsTrigger>
           </TabsList>
+          </div>
 
           {loading ? (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">

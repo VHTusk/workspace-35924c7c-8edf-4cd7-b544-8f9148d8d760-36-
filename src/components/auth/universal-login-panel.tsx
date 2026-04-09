@@ -218,7 +218,7 @@ export function UniversalLoginPanel({
 
   return (
     <Card className="border-border/60 shadow-xl">
-      <CardHeader className="space-y-4">
+      <CardHeader className="space-y-4 px-4 pt-5 sm:px-6 sm:pt-6">
         <div className="space-y-2 text-center">
           <CardTitle className="text-2xl">Log in to VALORHIVE</CardTitle>
           <CardDescription>
@@ -259,7 +259,7 @@ export function UniversalLoginPanel({
         )}
       </CardHeader>
 
-      <CardContent className="space-y-4">
+      <CardContent className="space-y-4 px-4 pb-5 sm:px-6 sm:pb-6">
         {(errorCode === AUTH_CODES.USER_NOT_FOUND || errorCode === AUTH_CODES.EMAIL_NOT_VERIFIED) && (
           <div className="rounded-xl border border-border/60 bg-muted/30 p-3 text-sm">
             {errorCode === AUTH_CODES.USER_NOT_FOUND && onSwitchToRegister && (

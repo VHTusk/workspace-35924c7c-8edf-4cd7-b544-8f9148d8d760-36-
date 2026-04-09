@@ -243,7 +243,7 @@ export function UniversalRegisterPanel({
 
   return (
     <Card className="border-border/60 shadow-xl">
-      <CardHeader className="space-y-4">
+      <CardHeader className="space-y-4 px-4 pt-5 sm:px-6 sm:pt-6">
         <div className="space-y-2 text-center">
           <CardTitle className="text-2xl">Create your VALORHIVE account</CardTitle>
           <CardDescription>
@@ -288,7 +288,7 @@ export function UniversalRegisterPanel({
 
       </CardHeader>
 
-      <CardContent className="space-y-4">
+      <CardContent className="space-y-4 px-4 pb-5 sm:px-6 sm:pb-6">
         {accountType === "player" && (
           <GoogleOneTap sport={selectedSport} autoPrompt={false} anchorId="universal-register-google" />
         )}
@@ -334,7 +334,7 @@ export function UniversalRegisterPanel({
         ) : (
           <form onSubmit={handleSubmit} className="space-y-4">
             {accountType === "player" ? (
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                 <div className="space-y-2">
                   <Label htmlFor="universal-register-first-name">First name</Label>
                   <Input

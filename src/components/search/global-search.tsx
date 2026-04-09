@@ -233,13 +233,13 @@ export function GlobalSearch({ sport, isOpen, onClose }: GlobalSearchProps) {
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-xl p-0 gap-0">
+      <DialogContent className="w-[calc(100vw-1rem)] max-w-xl p-0 gap-0 overflow-hidden">
         <DialogHeader className="sr-only">
           <DialogTitle>Search</DialogTitle>
         </DialogHeader>
 
         {/* Search Input */}
-        <div className="flex items-center border-b px-4">
+        <div className="flex items-center border-b px-3 sm:px-4">
           <Search className="w-5 h-5 text-muted-foreground" />
           <Input
             ref={inputRef}
@@ -262,7 +262,7 @@ export function GlobalSearch({ sport, isOpen, onClose }: GlobalSearchProps) {
         </div>
 
         {/* Results */}
-        <ScrollArea className="max-h-[400px]">
+        <ScrollArea className="max-h-[min(65dvh,400px)]">
           {results.length > 0 ? (
             <div className="p-2">
               {results.map((result) => (
@@ -343,7 +343,7 @@ export function GlobalSearch({ sport, isOpen, onClose }: GlobalSearchProps) {
 
         {/* Footer */}
         {results.length > 0 && (
-          <div className="border-t px-4 py-3 bg-muted/30">
+          <div className="border-t px-3 py-3 bg-muted/30 sm:px-4">
             <p className="text-xs text-muted-foreground text-center">
               Press <kbd className="px-1.5 py-0.5 bg-muted rounded text-[10px]">Enter</kbd> to search,{" "}
               <kbd className="px-1.5 py-0.5 bg-muted rounded text-[10px]">Esc</kbd> to close
@@ -363,13 +363,13 @@ export function SearchButton({ onClick }: { onClick: () => void }) {
       size="sm"
       onClick={onClick}
       className={cn(
-        "h-10 min-w-[220px] justify-between rounded-xl border-border/70 bg-background/80 px-3 text-muted-foreground shadow-sm transition-colors hover:bg-muted/50 hover:text-foreground",
-        "max-lg:min-w-[180px]"
+        "h-10 w-10 shrink-0 justify-center rounded-xl border-border/70 bg-background/80 px-0 text-muted-foreground shadow-sm transition-colors hover:bg-muted/50 hover:text-foreground sm:min-w-[210px] sm:justify-between sm:px-3 lg:min-w-[220px]",
       )}
+      aria-label="Search players and tournaments"
     >
       <span className="flex items-center gap-2">
         <Search className="h-4 w-4" />
-        <span className="text-sm">Search players, tournaments...</span>
+        <span className="hidden text-sm sm:inline">Search players, tournaments...</span>
       </span>
     </Button>
   );
