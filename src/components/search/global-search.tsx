@@ -346,18 +346,20 @@ export function GlobalSearch({ sport, isOpen, onClose }: GlobalSearchProps) {
 export function SearchButton({ onClick }: { onClick: () => void }) {
   return (
     <Button
-      variant="ghost"
+      variant="outline"
       size="sm"
       onClick={onClick}
       className={cn(
-        "gap-2 text-muted-foreground hover:text-foreground",
-        "bg-muted/50 hover:bg-muted"
+        "h-10 min-w-[220px] justify-between rounded-xl border-border/70 bg-background/80 px-3 text-muted-foreground shadow-sm transition-colors hover:bg-muted/50 hover:text-foreground",
+        "max-lg:min-w-[180px]"
       )}
     >
-      <Search className="w-4 h-4" />
-      <span className="hidden sm:inline">Search</span>
-      <kbd className="hidden md:inline-flex h-5 items-center gap-1 rounded border bg-muted px-1.5 text-[10px] font-medium">
-        ⌘K
+      <span className="flex items-center gap-2">
+        <Search className="h-4 w-4" />
+        <span className="text-sm">Search players, tournaments...</span>
+      </span>
+      <kbd className="hidden lg:inline-flex h-6 items-center rounded-md border border-border bg-muted px-2 text-[10px] font-medium text-muted-foreground">
+        Ctrl K
       </kbd>
     </Button>
   );
