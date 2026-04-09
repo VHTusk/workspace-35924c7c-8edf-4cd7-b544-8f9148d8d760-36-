@@ -1,19 +1,15 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname, useParams, useRouter } from "next/navigation";
+import { usePathname, useParams } from "next/navigation";
 import { cn } from "@/lib/utils";
 import {
   Trophy,
   BarChart3,
   Award,
-  User,
-  Settings,
   PlusCircle,
   Users,
   Building2,
-  LogOut,
-  CreditCard,
   Gift,
   Menu,
   Heart,
@@ -75,14 +71,10 @@ interface SidebarContentProps {
   primaryClass: string;
   primaryTextClass: string;
   primaryBgClass: string;
-  onLogout: () => void;
   onLinkClick?: () => void;
   sport: string;
   isCornhole: boolean;
   pathname: string;
-  logoutLabel: string;
-  manageLabel: string;
-  upgradeLabel: string;
 }
 
 function SidebarContent({
@@ -92,13 +84,9 @@ function SidebarContent({
   primaryClass,
   primaryTextClass,
   primaryBgClass,
-  onLogout,
   onLinkClick,
   sport,
   pathname,
-  logoutLabel,
-  manageLabel,
-  upgradeLabel,
 }: SidebarContentProps) {
   const displayName = user?.name || user?.firstName || (userType === "player" ? "Player" : userType === "admin" ? "Admin" : "Organization");
   const initials = user 
@@ -136,9 +124,6 @@ function SidebarContent({
   const rookieBadgeClass = "bg-amber-300 text-amber-950 border-0 shadow-sm";
   const subscriptionBadgeClass = "bg-cyan-200 text-cyan-950 border-0 shadow-sm";
   const socialPillClass = "rounded-md bg-black/20 px-2 py-1 text-white/95 backdrop-blur-sm";
-  const upgradeLinkClass = "rounded-md bg-white text-slate-900 hover:bg-slate-100 px-3 py-1 font-semibold shadow-sm transition-colors";
-  const manageLinkClass = "rounded-md bg-cyan-200 text-cyan-950 hover:bg-cyan-100 px-3 py-1 font-semibold shadow-sm transition-colors";
-
   return (
     <div className="flex flex-col h-full">
       {/* User Card */}
@@ -194,16 +179,6 @@ function SidebarContent({
                     <span className="font-medium">{user?.followingCount || 0}</span>
                   </div>
                 </div>
-                <Link
-                  href={`/${sport}/subscription`}
-                  onClick={onLinkClick}
-                  className={cn(
-                    "text-xs",
-                    isSubscribed ? manageLinkClass : upgradeLinkClass,
-                  )}
-                >
-                  {isSubscribed ? manageLabel : upgradeLabel}
-                </Link>
               </div>
             )}
           </div>
@@ -272,20 +247,6 @@ function SidebarContent({
         </ul>
       </nav>
 
-      {/* Logout */}
-      <div className="p-3 border-t border-sidebar-border">
-        <Button
-          variant="ghost"
-          className="w-full justify-start gap-3 text-sidebar-foreground hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-950"
-          onClick={() => {
-            onLogout();
-            onLinkClick?.();
-          }}
-        >
-          <LogOut className="w-5 h-5" />
-          {logoutLabel}
-        </Button>
-      </div>
     </div>
   );
 }
@@ -294,7 +255,6 @@ export default function Sidebar({ userType = "player" }: SidebarProps) {
   const { language } = useTranslation();
   const pathname = usePathname();
   const params = useParams();
-  const router = useRouter();
   const sport = params.sport as string;
   const isCornhole = sport === "cornhole";
   const isMobile = useIsMobile();
@@ -342,9 +302,6 @@ export default function Sidebar({ userType = "player" }: SidebarProps) {
     { icon: BarChart3, label: language === "hi" ? "मेरे आँकड़े" : "My Stats", href: `/${sport}/stats`, category: categories.performance },
     { icon: Award, label: common.leaderboard, href: `/${sport}/leaderboard`, category: categories.performance },
     { icon: Gift, label: language === "hi" ? "रेफरल्स" : "Referrals", href: `/${sport}/referrals`, category: categories.growth },
-    { icon: User, label: common.profile, href: `/${sport}/profile`, category: categories.account },
-    { icon: CreditCard, label: common.subscription, href: `/${sport}/subscription`, category: categories.account, hasIndicator: true },
-    { icon: Settings, label: common.settings, href: `/${sport}/settings`, category: categories.account },
   ];
 
   // Org menu items - cleaned and reordered by importance
@@ -356,8 +313,6 @@ export default function Sidebar({ userType = "player" }: SidebarProps) {
     { icon: Award, label: common.leaderboard, href: `/${sport}/org/leaderboard` },
     { icon: BarChart3, label: language === "hi" ? "एनालिटिक्स" : "Analytics", href: `/${sport}/org/analytics` },
     { icon: Building2, label: language === "hi" ? "संगठन प्रोफाइल" : "Org Profile", href: `/${sport}/org/profile` },
-    { icon: CreditCard, label: common.subscription, href: `/${sport}/org/subscription`, hasIndicator: true },
-    { icon: Settings, label: common.settings, href: `/${sport}/org/settings` },
   ];
 
   // Admin menu items
@@ -368,7 +323,6 @@ export default function Sidebar({ userType = "player" }: SidebarProps) {
     { icon: Users, label: language === "hi" ? "मैच" : "Matches", href: `/${sport}/admin/matches` },
     { icon: Award, label: language === "hi" ? "विवाद" : "Disputes", href: `/${sport}/admin/disputes` },
     { icon: BarChart3, label: language === "hi" ? "गतिविधि" : "Activity", href: `/${sport}/admin/activity` },
-    { icon: Settings, label: common.settings, href: `/${sport}/admin/settings` },
   ];
 
   const menuItems = userType === "player" ? playerMenuItems : userType === "admin" ? adminMenuItems : orgMenuItems;
@@ -412,15 +366,6 @@ export default function Sidebar({ userType = "player" }: SidebarProps) {
     fetchUserData();
   }, [userType, followRefreshKey, sport]); // Re-fetch when follow status changes
 
-  const handleLogout = async () => {
-    try {
-      await fetch("/api/auth/logout", { method: "POST" });
-    } catch (e) {
-      // ignore
-    }
-    router.push(`/${sport}`);
-  };
-
   const sidebarContentProps = {
     userType,
     menuItems,
@@ -428,13 +373,9 @@ export default function Sidebar({ userType = "player" }: SidebarProps) {
     primaryClass,
     primaryTextClass,
     primaryBgClass,
-    onLogout: handleLogout,
     sport,
     isCornhole,
     pathname,
-    logoutLabel: common.logout,
-    manageLabel: language === "hi" ? "मैनेज" : "Manage",
-    upgradeLabel: language === "hi" ? "अपग्रेड" : "Upgrade",
   };
 
   // Mobile: Sheet with trigger button

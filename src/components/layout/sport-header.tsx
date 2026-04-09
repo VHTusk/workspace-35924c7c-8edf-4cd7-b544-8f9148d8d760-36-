@@ -11,6 +11,7 @@ import {
   UserPlus,
   Loader2,
   LayoutDashboard,
+  BookOpen,
   User,
   Settings,
   Crown,
@@ -84,8 +85,9 @@ export default function SportHeader({
   const [org, setOrg] = useState<OrgData | null>(null);
   const [searchOpen, setSearchOpen] = useState(false);
   const copy = language === "hi"
-    ? {
+      ? {
         dashboard: "डैशबोर्ड",
+        howItIsPlayed: "कैसे खेला जाता है?",
         profile: "मेरी प्रोफाइल",
         orgProfile: "संगठन प्रोफाइल",
         settings: "सेटिंग्स",
@@ -96,6 +98,7 @@ export default function SportHeader({
       }
     : {
         dashboard: "Dashboard",
+        howItIsPlayed: "How it is played?",
         profile: "My Profile",
         orgProfile: "Org Profile",
         settings: "Settings",
@@ -332,6 +335,10 @@ export default function SportHeader({
     }
     return `/${sport}/profile`;
   };
+  const showDashboardButton =
+    authenticated === true &&
+    userType === "player" &&
+    pathname === `/${sport}`;
 
   // Render auth buttons
   const renderAuthButtons = () => {
@@ -347,7 +354,7 @@ export default function SportHeader({
       // Show notification bell + user dropdown when logged in
       return (
         <div className="flex items-center gap-2">
-          {userType === "player" && (
+          {showDashboardButton && (
             <Link href={`/${sport}/dashboard`}>
               <Button variant="outline" size="sm" className="gap-2 px-2.5 sm:px-3">
                 <LayoutDashboard className="h-4 w-4" />
@@ -474,17 +481,38 @@ export default function SportHeader({
     <>
       <header className="fixed top-0 left-0 right-0 z-50 border-b border-border bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
         <div className="container mx-auto px-4">
-          <div className="flex h-14 items-center justify-between gap-2 sm:h-16 sm:gap-3">
-            <Link href={`/${sport}`} className="flex items-center gap-2 min-w-0 max-w-[55%] sm:max-w-none">
-              <Image src="/logo.png" alt="VALORHIVE" width={32} height={32} className="h-8 w-auto" priority />
-              <span className="hidden truncate text-lg font-bold text-foreground min-[380px]:inline">VALORHIVE</span>
-              <Badge variant="outline" className={cn("hidden border-current/30 sm:inline-flex", sportBadgeClass)}>
-                {sportName}
-              </Badge>
-            </Link>
+          <div className="flex h-14 items-center gap-2 sm:h-16 sm:gap-3">
+            <div className="flex min-w-0 shrink-0 items-center gap-2 max-w-[72%] sm:max-w-none">
+              <Link href={`/${sport}`} className="flex min-w-0 items-center gap-2">
+                <Image src="/logo.png" alt="VALORHIVE" width={32} height={32} className="h-8 w-auto" priority />
+                <span className="hidden truncate text-lg font-bold text-foreground min-[380px]:inline">VALORHIVE</span>
+                <Badge variant="outline" className={cn("hidden border-current/30 sm:inline-flex", sportBadgeClass)}>
+                  {sportName}
+                </Badge>
+              </Link>
+              <Link
+                href={`/${sport}/how-it-is-played`}
+                className="hidden items-center gap-1.5 rounded-full border border-border px-3 py-1.5 text-sm font-medium text-muted-foreground transition-colors hover:bg-accent hover:text-foreground lg:inline-flex"
+              >
+                <BookOpen className="h-4 w-4" />
+                {copy.howItIsPlayed}
+              </Link>
+            </div>
 
-            <div className="flex items-center gap-1.5 sm:gap-2">
-              <SearchButton onClick={() => setSearchOpen(true)} />
+            <div className="flex min-w-0 flex-1 items-center justify-start sm:justify-center">
+              <div className="w-full max-w-sm md:max-w-md">
+                <SearchButton onClick={() => setSearchOpen(true)} />
+              </div>
+            </div>
+
+            <div className="flex shrink-0 items-center gap-1.5 sm:gap-2">
+              <Link
+                href={`/${sport}/how-it-is-played`}
+                className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-border text-muted-foreground transition-colors hover:bg-accent hover:text-foreground lg:hidden"
+                aria-label={copy.howItIsPlayed}
+              >
+                <BookOpen className="h-4 w-4" />
+              </Link>
               {renderAuthButtons()}
               <LanguageSelector variant="icon" className="sm:hidden" />
               <LanguageSelector variant="compact" className="hidden sm:inline-flex" />
