@@ -190,24 +190,31 @@ export default async function SportHomePage({ params, searchParams }: SportPageP
     {
       icon: ShieldCheck,
       title: "Verified results",
-      description: "Every recorded result contributes to rankings and event credibility.",
+      description: "Match outcomes recorded reliably.",
     },
     {
       icon: Calendar,
-      title: "Clear tournament visibility",
-      description: "Know the format, fee, location, and participation level before you register.",
+      title: "Tournament visibility",
+      description: "Format, fee, and location upfront.",
     },
     {
       icon: TrendingUp,
-      title: "Progress that stays visible",
-      description: "Track points, Elo, and your competitive growth across repeat events.",
+      title: "Rank progression",
+      description: "Points and Elo stay visible.",
     },
   ];
 
   const competitionFlow = [
-    "Discover public tournaments near your city",
-    "Register with clear entry rules and event details",
-    "Play verified matches that update your standing",
+    "Find tournaments",
+    "Register for the right event",
+    "Play and move up the rankings",
+  ];
+
+  const featureShowcase = [
+    { icon: Trophy, title: "Structured tournaments", description: "Recurring events across levels." },
+    { icon: Users, title: "Player rankings", description: "See where you stand." },
+    { icon: MapPin, title: "City discovery", description: "Browse active locations." },
+    { icon: Award, title: "Competitive progress", description: "Build momentum over time." },
   ];
 
   return (
@@ -229,7 +236,7 @@ export default async function SportHomePage({ params, searchParams }: SportPageP
                     Play {sportName.toLowerCase()} in a system that feels organized, competitive, and worth coming back to.
                   </h1>
                   <p className="max-w-2xl text-base leading-7 text-muted-foreground sm:text-lg">
-                    Find upcoming tournaments, understand the level of competition, follow rankings, and see how each event contributes to your progress.
+                    Join tournaments, follow rankings, and track your progress.
                   </p>
                 </div>
               </div>
@@ -293,11 +300,8 @@ export default async function SportHomePage({ params, searchParams }: SportPageP
               <Badge variant="outline" className={cn("mb-3 px-3 py-1", softAccentClass)}>
                 Competition Flow
               </Badge>
-              <h2 className="text-3xl font-bold tracking-tight text-foreground">What the experience looks like from signup to standings</h2>
+              <h2 className="text-3xl font-bold tracking-tight text-foreground">How the system works</h2>
             </div>
-            <p className="max-w-xl text-sm leading-6 text-muted-foreground">
-              The goal is not just to list tournaments. It is to make the path from joining to progressing easier to understand.
-            </p>
           </div>
 
           <div className="grid gap-4 lg:grid-cols-[1.1fr_0.9fr]">
@@ -316,21 +320,18 @@ export default async function SportHomePage({ params, searchParams }: SportPageP
 
             <Card className="border-border/70 bg-card">
               <CardHeader className="pb-3">
-                <CardTitle className="text-lg">Why this page should feel useful</CardTitle>
+                <CardTitle className="text-lg">What you can do here</CardTitle>
               </CardHeader>
-              <CardContent className="space-y-4 text-sm leading-6 text-muted-foreground">
-                <p>
-                  Players should quickly understand whether the sport is active, what level of events are running, and where to go next.
-                </p>
-                <p>
-                  That is why the page now keeps one clear hero, a stronger competition summary, visible tournament cards, and a proper leaderboard preview instead of loosely stacked blocks.
-                </p>
-                <div className={cn("rounded-xl border p-4", softAccentClass)}>
-                  <p className="font-medium">Visual slots stay present even when content is sparse.</p>
-                  <p className="mt-1 text-xs leading-5 opacity-90">
-                    If an image is unavailable later, the page still shows a deliberate skeleton panel instead of collapsing awkwardly.
-                  </p>
-                </div>
+              <CardContent className="grid gap-3 sm:grid-cols-2">
+                {featureShowcase.map((item) => (
+                  <div key={item.title} className="rounded-xl border border-border/60 bg-muted/25 p-4">
+                    <div className={cn("mb-3 inline-flex rounded-lg border p-2", softAccentClass)}>
+                      <item.icon className="h-4 w-4" />
+                    </div>
+                    <p className="font-medium text-foreground">{item.title}</p>
+                    <p className="mt-1 text-sm text-muted-foreground">{item.description}</p>
+                  </div>
+                ))}
               </CardContent>
             </Card>
           </div>
@@ -507,20 +508,20 @@ export default async function SportHomePage({ params, searchParams }: SportPageP
                 <CardContent className="grid gap-4 p-6 sm:grid-cols-3">
                   <CompetitionPillar
                     icon={Flag}
-                    title="City to bigger-stage path"
-                    description="Competition is easier to understand when players can see how local events feed long-term progress."
+                    title="Competition levels"
+                    description="Local to higher-stage play."
                     accentClass={softAccentClass}
                   />
                   <CompetitionPillar
                     icon={Sparkles}
-                    title="Cleaner event context"
-                    description="Event cards should tell you where, when, and what kind of field you are entering."
+                    title="Clear event context"
+                    description="Date, place, and format visible."
                     accentClass={softAccentClass}
                   />
                   <CompetitionPillar
                     icon={Trophy}
                     title="Visible momentum"
-                    description="Rankings, points, and repeat play make the homepage feel alive instead of static."
+                    description="Rankings keep moving."
                     accentClass={softAccentClass}
                   />
                 </CardContent>
@@ -532,22 +533,19 @@ export default async function SportHomePage({ params, searchParams }: SportPageP
                     <Badge variant="outline" className={cn("mb-3 px-3 py-1", softAccentClass)}>
                       Why Compete Here
                     </Badge>
-                    <h3 className="text-2xl font-bold text-foreground">More signal, less clutter.</h3>
-                    <p className="mt-3 text-sm leading-6 text-muted-foreground">
-                      The homepage now presents the sport as an active competitive environment, not just a list of disconnected widgets.
-                    </p>
+                    <h3 className="text-2xl font-bold text-foreground">Built for repeat competition.</h3>
                     <ul className="mt-5 space-y-3 text-sm text-muted-foreground">
                       <li className="flex gap-3">
                         <ShieldCheck className={cn("mt-0.5 h-4 w-4 shrink-0", accentTextClass)} />
-                        Results, participation, and standings feel tied together.
+                        Verified match results.
                       </li>
                       <li className="flex gap-3">
                         <Users className={cn("mt-0.5 h-4 w-4 shrink-0", accentTextClass)} />
-                        Visual sections help new users understand the competition level faster.
+                        Rankings and player visibility.
                       </li>
                       <li className="flex gap-3">
                         <Award className={cn("mt-0.5 h-4 w-4 shrink-0", accentTextClass)} />
-                        If media is sparse, the page still keeps its structure with purposeful placeholders.
+                        Stable visual slots for media.
                       </li>
                     </ul>
                   </CardContent>
