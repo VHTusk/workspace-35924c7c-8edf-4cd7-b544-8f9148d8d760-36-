@@ -296,7 +296,7 @@ export default function LeaderboardPage() {
   useEffect(() => {
     const fetchCurrentUser = async () => {
       try {
-        const response = await fetch("/api/auth/check", {
+        const response = await fetch(`/api/auth/check?sport=${sport.toUpperCase()}`, {
           credentials: "include",
         });
         if (response.ok) {
@@ -304,7 +304,9 @@ export default function LeaderboardPage() {
           setIsAuthenticated(data.authenticated === true);
           
           if (data.authenticated) {
-            const userRes = await fetch("/api/player/me");
+            const userRes = await fetch(`/api/player/me?sport=${sport.toUpperCase()}`, {
+              credentials: "include",
+            });
             if (userRes.ok) {
               const userData = await userRes.json();
               setCurrentUser({

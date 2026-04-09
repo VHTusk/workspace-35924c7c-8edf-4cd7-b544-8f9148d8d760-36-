@@ -245,14 +245,21 @@ export default function TournamentDetailPage() {
   const checkAuth = async () => {
     try {
       // Check player session
-      const playerRes = await fetch("/api/auth/check");
+      const playerRes = await fetch(`/api/auth/check?sport=${sport.toUpperCase()}`, {
+        credentials: "include",
+      });
       if (playerRes.ok) {
-        setUserType("player");
-        return;
+        const playerData = await playerRes.json();
+        if (playerData.authenticated && playerData.userType === "player") {
+          setUserType("player");
+          return;
+        }
       }
 
       // Check org session
-      const orgRes = await fetch("/api/org/me");
+      const orgRes = await fetch("/api/org/me", {
+        credentials: "include",
+      });
       if (orgRes.ok) {
         setUserType("org");
         return;

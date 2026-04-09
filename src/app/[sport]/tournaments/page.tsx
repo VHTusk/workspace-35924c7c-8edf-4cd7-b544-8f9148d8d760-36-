@@ -145,13 +145,20 @@ export default function TournamentsPage() {
 
     async function checkAuth() {
       try {
-        const playerRes = await fetch("/api/auth/check", { signal });
+        const playerRes = await fetch(`/api/auth/check?sport=${sport.toUpperCase()}`, {
+          signal,
+          credentials: "include",
+        });
         if (signal.aborted) return;
         if (playerRes.ok) {
-          setUserType("player");
-          return;
+          const playerData = await playerRes.json();
+          if (signal.aborted) return;
+          if (playerData.authenticated && playerData.userType === "player") {
+            setUserType("player");
+            return;
+          }
         }
-        const orgRes = await fetch("/api/org/me", { signal });
+        const orgRes = await fetch("/api/org/me", { signal, credentials: "include" });
         if (signal.aborted) return;
         if (orgRes.ok) {
           const data = await orgRes.json();
@@ -169,7 +176,7 @@ export default function TournamentsPage() {
     return () => {
       abortController.abort();
     };
-  }, []);
+  }, [sport]);
 
   // Determine if org is School or College
   const isSchoolOrCollege = userType === "org" && (orgType === "SCHOOL" || orgType === "COLLEGE");
