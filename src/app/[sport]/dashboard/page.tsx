@@ -430,7 +430,7 @@ export default function DashboardPage() {
     <div className="mx-auto max-w-7xl space-y-6 p-4 md:p-6">
       {!validRank ? (
         <Card className="border-amber-500/30 bg-amber-500/5 shadow-sm">
-          <CardContent className="flex flex-col gap-4 p-4 md:flex-row md:items-center md:justify-between">
+          <CardContent className="p-4">
             <div>
               <p className="text-sm font-semibold uppercase tracking-wide text-amber-700 dark:text-amber-300">
                 Unranked Player
@@ -442,12 +442,6 @@ export default function DashboardPage() {
                 Your official rank appears after your first completed match in {isCornhole ? "Cornhole" : "Darts"}.
               </p>
             </div>
-            <Link href={`/${sport}/tournaments`}>
-              <Button className={cn("text-white", primaryBtnClass)}>
-                Join Your First Tournament
-                <ChevronRight className="ml-1 h-4 w-4" />
-              </Button>
-            </Link>
           </CardContent>
         </Card>
       ) : null}
@@ -485,7 +479,7 @@ export default function DashboardPage() {
                 ) : null}
               </div>
               <h1 className="text-2xl font-bold tracking-tight text-foreground md:text-4xl">
-                Welcome back, <span className={primaryTextClass}>{user?.firstName || "Player"}</span>
+                Structured Competition Dashboard
               </h1>
               <p className="mt-1 text-muted-foreground">
                 Your dashboard unlocks deeper insights as you progress through structured competition.
@@ -637,7 +631,7 @@ export default function DashboardPage() {
                 title="Performance insights unlock after 3 matches"
                 description="Win rate, chart trends, and streak analysis become meaningful once you have a few recorded results."
                 unlockLabel="Play 3 completed matches"
-                actionLabel="Play More Matches"
+                actionLabel="Complete 3 Matches to Unlock Insights"
                 actionHref={`/${sport}/tournaments`}
                 primaryBtnClass={primaryBtnClass}
                 skeleton
@@ -751,7 +745,7 @@ export default function DashboardPage() {
                 title="You are not ranked yet"
                 description="Play your first completed match to enter the leaderboard and unlock rank tracking."
                 unlockLabel="At least 1 completed match"
-                actionLabel="Find Tournament"
+                actionLabel="View Available Tournaments"
                 actionHref={`/${sport}/tournaments`}
                 primaryBtnClass={primaryBtnClass}
               />
@@ -841,7 +835,7 @@ export default function DashboardPage() {
                 title="Join a tournament to see your upcoming matches"
                 description="Your schedule, pairings, and match timings appear here once you register for an event."
                 unlockLabel="At least 1 joined tournament"
-                actionLabel="Find Tournament"
+                actionLabel="View Available Tournaments"
                 actionHref={`/${sport}/tournaments`}
                 primaryBtnClass={primaryBtnClass}
               />
@@ -897,7 +891,7 @@ export default function DashboardPage() {
                 title="Your match results will appear here after your first completed match"
                 description="This section keeps a running history of verified results, scores, and points earned."
                 unlockLabel="At least 1 completed match"
-                actionLabel="Start Playing"
+                actionLabel="Complete Your First Match"
                 actionHref={`/${sport}/tournaments`}
                 primaryBtnClass={primaryBtnClass}
               />
@@ -957,15 +951,15 @@ export default function DashboardPage() {
         </CardHeader>
         <CardContent>
           {!tournamentModulesUnlocked ? (
-            <LockedModuleState
-              icon={Trophy}
-              title="You are not participating in any tournaments yet"
-              description="Track live event status, wins, and progression here once you join a tournament."
-              unlockLabel="At least 1 joined tournament"
-              actionLabel="Browse Tournaments"
-              actionHref={`/${sport}/tournaments`}
-              primaryBtnClass={primaryBtnClass}
-            />
+              <LockedModuleState
+                icon={Trophy}
+                title="You are not participating in any tournaments yet"
+                description="Track live event status, wins, and progression here once you join a tournament."
+                unlockLabel="At least 1 joined tournament"
+                actionLabel="Explore Ongoing Tournaments"
+                actionHref={`/${sport}/tournaments`}
+                primaryBtnClass={primaryBtnClass}
+              />
           ) : tournaments.active.length === 0 ? (
             <div className="rounded-xl border border-dashed border-border/60 bg-muted/20 p-5 text-center">
               <p className="font-medium text-foreground">No active tournaments right now</p>
@@ -1010,14 +1004,7 @@ export default function DashboardPage() {
           <CardTitle className="text-lg font-bold">Quick Actions</CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
-            <QuickAction
-              icon={Search}
-              label={isNewUser ? "Join First Tournament" : "Find Tournament"}
-              href={`/${sport}/tournaments`}
-              color={classes.primaryText}
-              bgColor={classes.primaryBgSubtle}
-            />
+          <div className="grid grid-cols-2 gap-3 md:grid-cols-3">
             <QuickAction
               icon={BarChart3}
               label="My Stats"
@@ -1057,7 +1044,7 @@ export default function DashboardPage() {
               title="Your activity will appear here once you start playing"
               description="Match wins, tournament joins, and progress events will be tracked here as your season begins."
               unlockLabel="At least 1 completed match"
-              actionLabel="Start Playing"
+              actionLabel="Complete Your First Match"
               actionHref={`/${sport}/tournaments`}
               primaryBtnClass={primaryBtnClass}
             />
@@ -1081,7 +1068,7 @@ export default function DashboardPage() {
               title="Advanced insights unlock after 5 matches"
               description="Deeper performance breakdowns, efficiency metrics, and consistency indicators unlock as your sample size grows."
               unlockLabel="Play 5 completed matches"
-              actionLabel="Play More Matches"
+              actionLabel="Reach 5 Matches to Unlock Advanced Insights"
               actionHref={`/${sport}/tournaments`}
               primaryBtnClass={primaryBtnClass}
               skeleton

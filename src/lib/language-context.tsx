@@ -2,153 +2,176 @@
 
 import {
   createContext,
-  useContext,
-  useState,
   useCallback,
+  useContext,
+  useEffect,
+  useMemo,
+  useState,
   type ReactNode,
 } from "react";
-import { type SupportedLanguage, getAvailableLanguages } from "./translations";
+import { type SupportedLanguage } from "@/lib/translations";
 
-// ============================================
-// Type Definitions
-// ============================================
+interface AvailableLanguage {
+  code: SupportedLanguage;
+  name: string;
+  nativeName: string;
+}
 
 interface LanguageContextType {
   language: SupportedLanguage;
-  setLanguage: (language: SupportedLanguage) => void;
-  availableLanguages: ReturnType<typeof getAvailableLanguages>;
+  setLanguage: (language: SupportedLanguage) => Promise<void>;
+  availableLanguages: AvailableLanguage[];
 }
 
-// ============================================
-// Constants
-// ============================================
-
 const STORAGE_KEY = "valorhive-language";
+const COOKIE_KEY = "language";
 const DEFAULT_LANGUAGE: SupportedLanguage = "en";
-
-// ============================================
-// Context Creation
-// ============================================
 
 const LanguageContext = createContext<LanguageContextType | undefined>(undefined);
 
-// ============================================
-// Helper Functions
-// ============================================
+function isDualLanguage(value: string | null | undefined): value is SupportedLanguage {
+  return value === "en" || value === "hi";
+}
 
-/**
- * Get the initial language from localStorage or default
- * This is called during initial render
- */
+function getCookieLanguage(): SupportedLanguage | null {
+  if (typeof document === "undefined") {
+    return null;
+  }
+
+  const cookieValue = document.cookie
+    .split("; ")
+    .find((item) => item.startsWith(`${COOKIE_KEY}=`))
+    ?.split("=")[1];
+
+  return isDualLanguage(cookieValue) ? cookieValue : null;
+}
+
 function getInitialLanguage(): SupportedLanguage {
   if (typeof window === "undefined") {
     return DEFAULT_LANGUAGE;
   }
 
+  const cookieLanguage = getCookieLanguage();
+  if (cookieLanguage) {
+    return cookieLanguage;
+  }
+
   try {
     const stored = localStorage.getItem(STORAGE_KEY);
-    if (stored) {
-      // Validate that it's a supported language
-      const availableLanguages = getAvailableLanguages();
-      const isValid = availableLanguages.some((lang) => lang.code === stored);
-      if (isValid) {
-        return stored as SupportedLanguage;
-      }
+    if (isDualLanguage(stored)) {
+      return stored;
     }
   } catch (error) {
-    console.error("[LanguageContext] Error reading language from localStorage:", error);
+    console.error("[LanguageContext] Failed to read stored language:", error);
   }
 
   return DEFAULT_LANGUAGE;
 }
 
-// ============================================
-// Provider Component
-// ============================================
+function applyLanguageToDocument(language: SupportedLanguage) {
+  if (typeof document === "undefined") {
+    return;
+  }
 
-interface LanguageProviderProps {
-  children: ReactNode;
+  document.documentElement.lang = language;
+  document.documentElement.dir = "ltr";
 }
 
-export function LanguageProvider({ children }: LanguageProviderProps) {
-  // Use lazy initializer to get language from localStorage on first render
-  const [language, setLanguageState] = useState<SupportedLanguage>(getInitialLanguage);
-  const availableLanguages = getAvailableLanguages();
+function persistLanguageLocally(language: SupportedLanguage) {
+  if (typeof document !== "undefined") {
+    document.cookie = `${COOKIE_KEY}=${language}; path=/; max-age=${60 * 60 * 24 * 365}; samesite=lax`;
+  }
 
-  // Set language and persist to localStorage
-  const setLanguage = useCallback((newLanguage: SupportedLanguage) => {
-    setLanguageState(newLanguage);
-    
-    try {
-      localStorage.setItem(STORAGE_KEY, newLanguage);
-      
-      // Dispatch custom event for other components to react
-      if (typeof window !== "undefined") {
-        window.dispatchEvent(
-          new CustomEvent("languagechange", {
-            detail: { language: newLanguage },
-          })
-        );
-      }
-    } catch (error) {
-      console.error("[LanguageContext] Error saving language to localStorage:", error);
+  if (typeof window !== "undefined") {
+    localStorage.setItem(STORAGE_KEY, language);
+  }
+}
+
+async function persistLanguageRemotely(language: SupportedLanguage) {
+  try {
+    const response = await fetch("/api/user/language", {
+      method: "PUT",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      credentials: "include",
+      body: JSON.stringify({ language }),
+    });
+
+    if (response.status === 401) {
+      return;
     }
-  }, []);
 
-  // Context value
-  const value: LanguageContextType = {
-    language,
-    setLanguage,
-    availableLanguages,
-  };
-
-  return (
-    <LanguageContext.Provider value={value}>
-      {children}
-    </LanguageContext.Provider>
-  );
+    if (!response.ok) {
+      throw new Error(`Language update failed with status ${response.status}`);
+    }
+  } catch (error) {
+    console.error("[LanguageContext] Failed to persist language remotely:", error);
+  }
 }
 
-// ============================================
-// Hook
-// ============================================
+export function LanguageProvider({ children }: { children: ReactNode }) {
+  const [language, setLanguageState] = useState<SupportedLanguage>(getInitialLanguage);
 
-/**
- * Hook to access the current language context
- * Must be used within a LanguageProvider
- */
+  const availableLanguages = useMemo<AvailableLanguage[]>(
+    () => [
+      { code: "en", name: "English", nativeName: "English" },
+      { code: "hi", name: "Hindi", nativeName: "हिंदी" },
+    ],
+    [],
+  );
+
+  useEffect(() => {
+    applyLanguageToDocument(language);
+    persistLanguageLocally(language);
+  }, [language]);
+
+  const setLanguage = useCallback(async (nextLanguage: SupportedLanguage) => {
+    if (!isDualLanguage(nextLanguage) || nextLanguage === language) {
+      return;
+    }
+
+    setLanguageState(nextLanguage);
+    persistLanguageLocally(nextLanguage);
+    applyLanguageToDocument(nextLanguage);
+
+    if (typeof window !== "undefined") {
+      window.dispatchEvent(
+        new CustomEvent("languagechange", {
+          detail: { language: nextLanguage },
+        }),
+      );
+    }
+
+    await persistLanguageRemotely(nextLanguage);
+  }, [language]);
+
+  const value = useMemo<LanguageContextType>(
+    () => ({
+      language,
+      setLanguage,
+      availableLanguages,
+    }),
+    [availableLanguages, language, setLanguage],
+  );
+
+  return <LanguageContext.Provider value={value}>{children}</LanguageContext.Provider>;
+}
+
 export function useLanguage(): LanguageContextType {
   const context = useContext(LanguageContext);
-  
-  if (context === undefined) {
+
+  if (!context) {
     throw new Error("useLanguage must be used within a LanguageProvider");
   }
-  
+
   return context;
 }
 
-// ============================================
-// Utility Hooks
-// ============================================
-
-/**
- * Hook to get just the current language code
- */
 export function useCurrentLanguage(): SupportedLanguage {
-  const { language } = useLanguage();
-  return language;
+  return useLanguage().language;
 }
 
-/**
- * Hook to get the language changer function
- */
 export function useSetLanguage() {
-  const { setLanguage } = useLanguage();
-  return setLanguage;
+  return useLanguage().setLanguage;
 }
-
-// ============================================
-// Export
-// ============================================
-
-export default LanguageContext;

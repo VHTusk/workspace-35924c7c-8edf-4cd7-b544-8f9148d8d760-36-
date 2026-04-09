@@ -208,6 +208,7 @@ export default function PublicPlayerProfilePage() {
                   targetType="user"
                   targetId={profile.player.id}
                   sport={sport.toUpperCase()}
+                  targetName={profile.player.name}
                   size="lg"
                 />
               </div>

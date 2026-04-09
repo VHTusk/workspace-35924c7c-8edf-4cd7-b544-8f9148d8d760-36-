@@ -4,6 +4,7 @@ import "./globals.css";
 import { ThemeProvider } from "@/components/theme-provider";
 import { Toaster } from "@/components/ui/sonner";
 import { getAppUrl } from "@/lib/app-url";
+import { LanguageProvider } from "@/lib/language-context";
 
 export const viewport: Viewport = {
   width: "device-width",
@@ -45,8 +46,10 @@ export default function RootLayout({
           enableSystem
           disableTransitionOnChange
         >
-          {children}
-          <Toaster richColors closeButton duration={4000} />
+          <LanguageProvider>
+            {children}
+            <Toaster richColors closeButton duration={4000} />
+          </LanguageProvider>
         </ThemeProvider>
       </body>
     </html>

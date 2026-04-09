@@ -208,6 +208,7 @@ export default function PublicOrgProfilePage() {
                   targetType="org"
                   targetId={profile.organization.id}
                   sport={sport.toUpperCase()}
+                  targetName={profile.organization.name}
                   size="lg"
                 />
               </div>

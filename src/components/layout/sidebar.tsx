@@ -32,6 +32,7 @@ import { useState, useEffect } from "react";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { useFollowCountRefresh } from "@/hooks/use-follow-count";
+import { useTranslation } from "@/hooks/use-translation";
 
 interface SidebarProps {
   userType?: "player" | "org" | "admin";
@@ -79,6 +80,9 @@ interface SidebarContentProps {
   sport: string;
   isCornhole: boolean;
   pathname: string;
+  logoutLabel: string;
+  manageLabel: string;
+  upgradeLabel: string;
 }
 
 function SidebarContent({
@@ -92,6 +96,9 @@ function SidebarContent({
   onLinkClick,
   sport,
   pathname,
+  logoutLabel,
+  manageLabel,
+  upgradeLabel,
 }: SidebarContentProps) {
   const displayName = user?.name || user?.firstName || (userType === "player" ? "Player" : userType === "admin" ? "Admin" : "Organization");
   const initials = user 
@@ -195,7 +202,7 @@ function SidebarContent({
                     isSubscribed ? manageLinkClass : upgradeLinkClass,
                   )}
                 >
-                  {isSubscribed ? 'Manage' : 'Upgrade'}
+                  {isSubscribed ? manageLabel : upgradeLabel}
                 </Link>
               </div>
             )}
@@ -242,7 +249,7 @@ function SidebarContent({
                 >
                   <item.icon className={cn("w-5 h-5", isActive ? primaryTextClass : "text-muted-foreground")} />
                   {item.label}
-                  {item.label === "Profile" && profileCompletion !== null && profileCompletion < 100 && (
+                  {item.href === `/${sport}/profile` && profileCompletion !== null && profileCompletion < 100 && (
                     <span className="ml-auto rounded-full bg-amber-100 px-2 py-0.5 text-[11px] font-semibold text-amber-800">
                       {profileCompletion}%
                     </span>
@@ -250,7 +257,7 @@ function SidebarContent({
                   {item.hasIndicator && (
                     <span
                       className={cn(
-                        item.label === "Profile" && profileCompletion !== null && profileCompletion < 100
+                        item.href === `/${sport}/profile` && profileCompletion !== null && profileCompletion < 100
                           ? "ml-2"
                           : "ml-auto",
                         "w-2.5 h-2.5 rounded-full",
@@ -276,7 +283,7 @@ function SidebarContent({
           }}
         >
           <LogOut className="w-5 h-5" />
-          Logout
+          {logoutLabel}
         </Button>
       </div>
     </div>
@@ -284,6 +291,7 @@ function SidebarContent({
 }
 
 export default function Sidebar({ userType = "player" }: SidebarProps) {
+  const { language } = useTranslation();
   const pathname = usePathname();
   const params = useParams();
   const router = useRouter();
@@ -299,43 +307,68 @@ export default function Sidebar({ userType = "player" }: SidebarProps) {
   const primaryClass = isCornhole ? "bg-green-600" : "bg-teal-600";
   const primaryTextClass = isCornhole ? "text-green-600" : "text-teal-600";
   const primaryBgClass = isCornhole ? "bg-green-50 dark:bg-green-950/30" : "bg-teal-50 dark:bg-teal-950/30";
+  const common = language === "hi"
+    ? {
+        dashboard: "डैशबोर्ड",
+        tournaments: "टूर्नामेंट",
+        leaderboard: "लीडरबोर्ड",
+        profile: "प्रोफाइल",
+        settings: "सेटिंग्स",
+        subscription: "सब्सक्रिप्शन",
+        logout: "लॉग आउट",
+      }
+    : {
+        dashboard: "Dashboard",
+        tournaments: "Tournaments",
+        leaderboard: "Leaderboard",
+        profile: "Profile",
+        settings: "Settings",
+        subscription: "Subscription",
+        logout: "Logout",
+      };
+  const categories = {
+    play: language === "hi" ? "खेलें" : "Play",
+    performance: language === "hi" ? "प्रदर्शन" : "Performance",
+    growth: language === "hi" ? "विकास" : "Growth",
+    account: language === "hi" ? "खाता" : "Account",
+  };
 
   // Player menu items grouped by intent
   const playerMenuItems: MenuItem[] = [
-    { icon: LayoutDashboard, label: "Dashboard", href: `/${sport}/dashboard`, category: "Play" },
-    { icon: Trophy, label: "Tournaments", href: `/${sport}/tournaments`, category: "Play" },
-    { icon: Users, label: "Teams", href: `/${sport}/teams`, category: "Play" },
-    { icon: Zap, label: "Challenger Mode", href: `/${sport}/dashboard/cities`, category: "Play" },
-    { icon: BarChart3, label: "My Stats", href: `/${sport}/stats`, category: "Performance" },
-    { icon: Award, label: "Leaderboard", href: `/${sport}/leaderboard`, category: "Performance" },
-    { icon: Gift, label: "Referrals", href: `/${sport}/referrals`, category: "Growth" },
-    { icon: User, label: "Profile", href: `/${sport}/profile`, category: "Account" },
-    { icon: CreditCard, label: "Subscription", href: `/${sport}/subscription`, category: "Account", hasIndicator: true },
-    { icon: Settings, label: "Settings", href: `/${sport}/settings`, category: "Account" },
+    { icon: LayoutDashboard, label: common.dashboard, href: `/${sport}/dashboard`, category: categories.play },
+    { icon: Trophy, label: common.tournaments, href: `/${sport}/tournaments`, category: categories.play },
+    { icon: Users, label: language === "hi" ? "टीम्स" : "Teams", href: `/${sport}/teams`, category: categories.play },
+    { icon: Zap, label: language === "hi" ? "चैलेंजर मोड" : "Challenger Mode", href: `/${sport}/dashboard/cities`, category: categories.play },
+    { icon: BarChart3, label: language === "hi" ? "मेरे आँकड़े" : "My Stats", href: `/${sport}/stats`, category: categories.performance },
+    { icon: Award, label: common.leaderboard, href: `/${sport}/leaderboard`, category: categories.performance },
+    { icon: Gift, label: language === "hi" ? "रेफरल्स" : "Referrals", href: `/${sport}/referrals`, category: categories.growth },
+    { icon: User, label: common.profile, href: `/${sport}/profile`, category: categories.account },
+    { icon: CreditCard, label: common.subscription, href: `/${sport}/subscription`, category: categories.account, hasIndicator: true },
+    { icon: Settings, label: common.settings, href: `/${sport}/settings`, category: categories.account },
   ];
 
   // Org menu items - cleaned and reordered by importance
   const orgMenuItems: MenuItem[] = [
-    { icon: LayoutDashboard, label: "Dashboard", href: `/${sport}/org/dashboard` },
-    { icon: Trophy, label: "My Tournaments", href: `/${sport}/org/requests` },
-    { icon: PlusCircle, label: "Request Tournament", href: `/${sport}/org/request-tournament` },
-    { icon: Users, label: "Participants", href: `/${sport}/org/participants` },
-    { icon: Award, label: "Leaderboard", href: `/${sport}/org/leaderboard` },
-    { icon: BarChart3, label: "Analytics", href: `/${sport}/org/analytics` },
-    { icon: Building2, label: "Org Profile", href: `/${sport}/org/profile` },
-    { icon: CreditCard, label: "Subscription", href: `/${sport}/org/subscription`, hasIndicator: true },
-    { icon: Settings, label: "Settings", href: `/${sport}/org/settings` },
+    { icon: LayoutDashboard, label: common.dashboard, href: `/${sport}/org/dashboard` },
+    { icon: Trophy, label: language === "hi" ? "मेरे टूर्नामेंट" : "My Tournaments", href: `/${sport}/org/requests` },
+    { icon: PlusCircle, label: language === "hi" ? "टूर्नामेंट अनुरोध" : "Request Tournament", href: `/${sport}/org/request-tournament` },
+    { icon: Users, label: language === "hi" ? "प्रतिभागी" : "Participants", href: `/${sport}/org/participants` },
+    { icon: Award, label: common.leaderboard, href: `/${sport}/org/leaderboard` },
+    { icon: BarChart3, label: language === "hi" ? "एनालिटिक्स" : "Analytics", href: `/${sport}/org/analytics` },
+    { icon: Building2, label: language === "hi" ? "संगठन प्रोफाइल" : "Org Profile", href: `/${sport}/org/profile` },
+    { icon: CreditCard, label: common.subscription, href: `/${sport}/org/subscription`, hasIndicator: true },
+    { icon: Settings, label: common.settings, href: `/${sport}/org/settings` },
   ];
 
   // Admin menu items
   const adminMenuItems: MenuItem[] = [
-    { icon: LayoutDashboard, label: "Mission Control", href: `/${sport}/admin/mission-control` },
-    { icon: Calendar, label: "Availability", href: `/${sport}/admin/availability` },
-    { icon: Trophy, label: "Assignments", href: `/${sport}/admin/assignments` },
-    { icon: Users, label: "Matches", href: `/${sport}/admin/matches` },
-    { icon: Award, label: "Disputes", href: `/${sport}/admin/disputes` },
-    { icon: BarChart3, label: "Activity", href: `/${sport}/admin/activity` },
-    { icon: Settings, label: "Settings", href: `/${sport}/admin/settings` },
+    { icon: LayoutDashboard, label: language === "hi" ? "मिशन कंट्रोल" : "Mission Control", href: `/${sport}/admin/mission-control` },
+    { icon: Calendar, label: language === "hi" ? "उपलब्धता" : "Availability", href: `/${sport}/admin/availability` },
+    { icon: Trophy, label: language === "hi" ? "असाइनमेंट्स" : "Assignments", href: `/${sport}/admin/assignments` },
+    { icon: Users, label: language === "hi" ? "मैच" : "Matches", href: `/${sport}/admin/matches` },
+    { icon: Award, label: language === "hi" ? "विवाद" : "Disputes", href: `/${sport}/admin/disputes` },
+    { icon: BarChart3, label: language === "hi" ? "गतिविधि" : "Activity", href: `/${sport}/admin/activity` },
+    { icon: Settings, label: common.settings, href: `/${sport}/admin/settings` },
   ];
 
   const menuItems = userType === "player" ? playerMenuItems : userType === "admin" ? adminMenuItems : orgMenuItems;
@@ -399,6 +432,9 @@ export default function Sidebar({ userType = "player" }: SidebarProps) {
     sport,
     isCornhole,
     pathname,
+    logoutLabel: common.logout,
+    manageLabel: language === "hi" ? "मैनेज" : "Manage",
+    upgradeLabel: language === "hi" ? "अपग्रेड" : "Upgrade",
   };
 
   // Mobile: Sheet with trigger button

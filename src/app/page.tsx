@@ -22,6 +22,8 @@ import SiteFooter from "@/components/layout/site-footer";
 import { UniversalLoginModal } from "@/components/auth/universal-login-modal";
 import { UniversalRegisterModal } from "@/components/auth/universal-register-modal";
 import { Button } from "@/components/ui/button";
+import LanguageSelector from "@/components/ui/language-selector";
+import { useTranslation } from "@/hooks/use-translation";
 
 const HERO_OUTCOMES = [
   "Verified match results",
@@ -109,9 +111,19 @@ const HERO_SLIDES = [
 const HERO_VISUAL = HERO_SLIDES[0];
 
 export default function HomePage() {
+  const { language } = useTranslation();
   const router = useRouter();
   const searchParams = useSearchParams();
   const [authView, setAuthView] = useState<"login" | "register" | null>(null);
+  const [sessionStatus, setSessionStatus] = useState<{
+    authenticated: boolean;
+    userType: "player" | "org" | null;
+    sport: string | null;
+  }>({
+    authenticated: false,
+    userType: null,
+    sport: null,
+  });
 
   useEffect(() => {
     const authParam = searchParams.get("auth");
@@ -122,6 +134,45 @@ export default function HomePage() {
 
     setAuthView((current) => (current && !searchParams.get("auth") ? null : current));
   }, [searchParams]);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    const loadSessionStatus = async () => {
+      try {
+        const response = await fetch("/api/auth/status", {
+          credentials: "include",
+        });
+
+        if (!response.ok) {
+          return;
+        }
+
+        const data = await response.json();
+        if (!cancelled) {
+          setSessionStatus({
+            authenticated: data.authenticated === true,
+            userType: data.userType ?? null,
+            sport: typeof data.sport === "string" ? data.sport.toLowerCase() : null,
+          });
+        }
+      } catch {
+        if (!cancelled) {
+          setSessionStatus({
+            authenticated: false,
+            userType: null,
+            sport: null,
+          });
+        }
+      }
+    };
+
+    void loadSessionStatus();
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   const openAuth = (view: "login" | "register") => {
     const params = new URLSearchParams(searchParams.toString());
@@ -140,6 +191,153 @@ export default function HomePage() {
     }
     router.replace(params.size ? `/?${params.toString()}` : "/");
   };
+
+  const loggedInHref = sessionStatus.sport
+    ? sessionStatus.userType === "org"
+      ? `/${sessionStatus.sport}/org/profile`
+      : `/${sessionStatus.sport}/dashboard`
+    : "/";
+  const isHindi = language === "hi";
+  const heroOutcomes = isHindi
+    ? ["सत्यापित मैच परिणाम", "दोहराए जाने वाले सिटी टूर्नामेंट", "लगातार बदलती रैंकिंग"]
+    : HERO_OUTCOMES;
+  const howItWorks = isHindi
+    ? [
+        {
+          title: "रजिस्टर करें",
+          description: "अपना अकाउंट बनाएं और अपनी पहली प्रतियोगी यात्रा शुरू करें।",
+          icon: Users,
+        },
+        {
+          title: "टूर्नामेंट खोजें",
+          description: "फॉर्मैट, शहर और आने वाले मैच शेड्यूल देखें।",
+          icon: Search,
+        },
+        {
+          title: "प्रतिस्पर्धा करें",
+          description: "संरचित प्रतियोगिता में खेलें जहाँ परिणाम रिकॉर्ड होते हैं।",
+          icon: Trophy,
+        },
+        {
+          title: "आगे बढ़ें",
+          description: "देखें कि समय के साथ आपकी रैंक कैसे बदलती है।",
+          icon: ChartNoAxesColumn,
+        },
+      ]
+    : HOW_IT_WORKS;
+  const builtForChampions = isHindi
+    ? [
+        {
+          title: "टूर्नामेंट प्रबंधन",
+          description: "दोहराए जाने वाले प्रतिस्पर्धी फॉर्मैट के लिए संरचित संचालन।",
+          icon: Trophy,
+        },
+        {
+          title: "डुअल रेटिंग सिस्टम",
+          description: "रैंक मूवमेंट और दृश्यमान अंक जो प्रदर्शन दर्शाते हैं।",
+          icon: Target,
+        },
+        {
+          title: "भौगोलिक स्तर",
+          description: "जिला से राष्ट्रीय स्तर तक स्पष्ट प्रतियोगी प्रगति।",
+          icon: MapPinned,
+        },
+        {
+          title: "फेयर प्ले सिस्टम",
+          description: "सत्यापित परिणाम, पारदर्शी मानक और मैच इंटेग्रिटी।",
+          icon: ShieldCheck,
+        },
+      ]
+    : BUILT_FOR_CHAMPIONS;
+  const stats = isHindi
+    ? [
+        { value: "500+", label: "प्रतियोगिताएँ" },
+        { value: "10,000+", label: "खिलाड़ी" },
+        { value: "50+", label: "शहर" },
+        { value: "350L+", label: "प्राइज पूल" },
+      ]
+    : STATS;
+  const landingCopy = isHindi
+    ? {
+        about: "हमारे बारे में",
+        login: "लॉग इन",
+        signUp: "साइन अप",
+        dashboard: "डैशबोर्ड",
+        openProfile: "प्रोफाइल खोलें",
+        eyebrow: "संरचित प्रतियोगिता",
+        heroTitleStart: "भारत का प्रमुख",
+        heroTitleAccent: "समावेशी खेल",
+        heroTitleEnd: "इकोसिस्टम",
+        heroDescription:
+          "हर खेल। हर शहर। एक प्रतिस्पर्धी सिस्टम जहाँ टूर्नामेंट संरचित रहते हैं और रैंकिंग लगातार बदलती रहती है।",
+        primaryCta: "आगामी प्रतियोगिताओं में जुड़ें",
+        primaryCtaLoggedIn: "डैशबोर्ड पर जाएँ",
+        secondaryCta: "टूर्नामेंट देखें",
+        sportsLine: "शुरुआत कॉर्नहोल, डार्ट्स, फ्रिस्बी गोल्फ, पिकलबॉल से",
+        sportsEyebrow: "खेल",
+        sportsTitle: "अपना शुरुआती खेल चुनें",
+        sportsDescription: "पहले उस प्रतियोगी फॉर्मैट को चुनें जिसमें आप प्रवेश करना चाहते हैं।",
+        details: "विवरण देखें",
+        players: "खिलाड़ी",
+        tournaments: "टूर्नामेंट",
+        prizePool: "प्राइज पूल",
+        flowEyebrow: "प्रतियोगिता प्रवाह",
+        flowTitle: "यह कैसे काम करता है",
+        flowDescription: "रजिस्ट्रेशन से दोहराए जाने वाले प्रतिस्पर्धी खेल तक एक सरल रास्ता।",
+        platformEyebrow: "प्लेटफ़ॉर्म फीचर्स",
+        platformTitle: "चैंपियंस के लिए बना",
+        platformDescription: "दोहराए जाने वाले टूर्नामेंट, सत्यापित परिणाम और खिलाड़ी प्रगति के लिए मुख्य सिस्टम।",
+        momentumEyebrow: "गति",
+        momentumTitle: "हर दिन बढ़ रहा है",
+        ctaTitle: "प्रतिस्पर्धा शुरू करने के लिए तैयार हैं?",
+        ctaDescription:
+          "संरचित प्रतियोगिताओं में जुड़ें, अपनी रैंकिंग बनाएं और एक अधिक स्थिर प्रतिस्पर्धी सिस्टम में आगे बढ़ें।",
+        ctaButton: "शुरू करें",
+        ctaButtonLoggedIn: "डैशबोर्ड खोलें",
+        heroVisualEyebrow: "संरचित लीग एक्शन",
+        heroVisualDescription:
+          "हर राउंड के साथ दोहराए जाने वाले मैच, दृश्यमान रैंकिंग और सत्यापित परिणाम।",
+      }
+    : {
+        about: "About",
+        login: "Log in",
+        signUp: "Sign Up",
+        dashboard: "Dashboard",
+        openProfile: "Open Profile",
+        eyebrow: "Structured Competition",
+        heroTitleStart: "India's Premier",
+        heroTitleAccent: "Inclusive Sports",
+        heroTitleEnd: "Ecosystem",
+        heroDescription:
+          "Every sport. Every city. One competitive system where tournaments stay structured and rankings keep moving.",
+        primaryCta: "Join Upcoming Competitions",
+        primaryCtaLoggedIn: "Go to Dashboard",
+        secondaryCta: "View Tournaments",
+        sportsLine: "Starting with Cornhole, Darts, Frisbee Golf, Pickleball",
+        sportsEyebrow: "Sports",
+        sportsTitle: "Pick your starting sport",
+        sportsDescription: "Select the competition format you want to enter first and move into scheduled local play.",
+        details: "View Details",
+        players: "Players",
+        tournaments: "Tournaments",
+        prizePool: "Prize Pool",
+        flowEyebrow: "Competition flow",
+        flowTitle: "How it works",
+        flowDescription: "A simple path from registration to repeat competitive play.",
+        platformEyebrow: "Platform features",
+        platformTitle: "Built for champions",
+        platformDescription:
+          "Core systems designed for repeatable tournaments, verified outcomes, and steady player progress.",
+        momentumEyebrow: "Momentum",
+        momentumTitle: "Growing every day",
+        ctaTitle: "Ready to Start Competing?",
+        ctaDescription:
+          "Join structured competitions, build your ranking, and move through a more consistent competitive system.",
+        ctaButton: "Get Started",
+        ctaButtonLoggedIn: "Open Dashboard",
+        heroVisualEyebrow: HERO_VISUAL.eyebrow,
+        heroVisualDescription: HERO_VISUAL.description,
+      };
 
   return (
     <div className="min-h-screen bg-[#050c10] text-white">
@@ -161,20 +359,40 @@ export default function HomePage() {
                 </Link>
 
                 <div className="flex items-center gap-2">
-                  <button
-                    type="button"
-                    onClick={() => openAuth("login")}
-                    className="rounded-xl border border-[#18AFCE]/35 bg-[#07141c] px-4 py-2 text-sm font-semibold text-[#c6f7ff] shadow-[0_0_14px_rgba(24,175,206,0.14)] transition-all hover:-translate-y-0.5 hover:border-[#18AFCE]/70 hover:bg-[#0a1b24]"
+                  <a
+                    href="#about"
+                    className="rounded-xl border border-[#18AFCE]/30 bg-[#07141c] px-4 py-2 text-sm font-semibold text-[#c6f7ff] shadow-[0_0_14px_rgba(24,175,206,0.12)] transition-all hover:-translate-y-0.5 hover:border-[#18AFCE]/70 hover:bg-[#0a1b24]"
                   >
-                    Log in
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => openAuth("register")}
-                    className="rounded-xl bg-[#d6ff3f] px-4 py-2 text-sm font-semibold text-[#10210f] shadow-[0_0_18px_rgba(214,255,63,0.28)] transition-all hover:-translate-y-0.5 hover:bg-[#c8f12c]"
-                  >
-                    Sign Up
-                  </button>
+                    {landingCopy.about}
+                  </a>
+                  <LanguageSelector variant="compact" className="border-[#18AFCE]/30 bg-[#07141c] text-[#c6f7ff]" />
+                  {sessionStatus.authenticated ? (
+                    <Button
+                      asChild
+                      className="h-10 rounded-xl bg-[#d6ff3f] px-4 text-sm font-semibold text-[#10210f] shadow-[0_0_18px_rgba(214,255,63,0.28)] transition-all hover:-translate-y-0.5 hover:bg-[#c8f12c]"
+                    >
+                      <Link href={loggedInHref}>
+                        {sessionStatus.userType === "org" ? landingCopy.openProfile : landingCopy.dashboard}
+                      </Link>
+                    </Button>
+                  ) : (
+                    <>
+                      <button
+                        type="button"
+                        onClick={() => openAuth("login")}
+                        className="rounded-xl border border-[#18AFCE]/35 bg-[#07141c] px-4 py-2 text-sm font-semibold text-[#c6f7ff] shadow-[0_0_14px_rgba(24,175,206,0.14)] transition-all hover:-translate-y-0.5 hover:border-[#18AFCE]/70 hover:bg-[#0a1b24]"
+                      >
+                        {landingCopy.login}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => openAuth("register")}
+                        className="rounded-xl bg-[#d6ff3f] px-4 py-2 text-sm font-semibold text-[#10210f] shadow-[0_0_18px_rgba(214,255,63,0.28)] transition-all hover:-translate-y-0.5 hover:bg-[#c8f12c]"
+                      >
+                        {landingCopy.signUp}
+                      </button>
+                    </>
+                  )}
                 </div>
               </div>
             </header>
@@ -210,13 +428,13 @@ export default function HomePage() {
                     <div className="absolute inset-x-0 bottom-0 p-5 sm:p-6">
                       <div className="rounded-[22px] border border-white/12 bg-[#07131b]/72 p-4 shadow-[0_0_24px_rgba(24,175,206,0.12)] backdrop-blur-md">
                         <p className="text-[11px] font-semibold uppercase tracking-[0.24em] text-white/45">
-                          {HERO_VISUAL.eyebrow}
+                          {landingCopy.heroVisualEyebrow}
                         </p>
                         <div className="mt-2">
                           <div>
                             <h3 className={`text-2xl font-semibold ${HERO_VISUAL.accent}`}>{HERO_VISUAL.title}</h3>
                             <p className="mt-1 max-w-md text-sm leading-6 text-white/72">
-                              {HERO_VISUAL.description}
+                              {landingCopy.heroVisualDescription}
                             </p>
                           </div>
                         </div>
@@ -227,25 +445,32 @@ export default function HomePage() {
 
                 <div className="flex flex-col justify-center rounded-[26px] border border-[#18AFCE]/22 bg-[linear-gradient(180deg,rgba(9,19,27,0.96),rgba(5,11,15,0.96))] p-6 shadow-[inset_0_0_0_1px_rgba(24,175,206,0.06),0_0_32px_rgba(24,175,206,0.08)] sm:p-8">
                   <div className="inline-flex w-fit items-center rounded-full border border-[#18AFCE]/25 bg-[#0a1922] px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.24em] text-[#7de8ff]">
-                    Structured Competition
+                    {landingCopy.eyebrow}
                   </div>
                   <h1 className="mt-5 max-w-[10ch] text-4xl font-semibold leading-[1.05] tracking-tight sm:text-[3.4rem]">
-                    India&apos;s Premier{" "}
+                    {landingCopy.heroTitleStart}{" "}
                     <span className="text-[#d6ff3f] [text-shadow:0_0_18px_rgba(214,255,63,0.32)]">
-                      Inclusive Sports
+                      {landingCopy.heroTitleAccent}
                     </span>{" "}
-                    Ecosystem
+                    {landingCopy.heroTitleEnd}
                   </h1>
                   <p className="mt-5 max-w-xl text-sm leading-7 text-white/68 sm:text-base">
-                    Every sport. Every city. One competitive system where tournaments stay structured and rankings keep moving.
+                    {landingCopy.heroDescription}
                   </p>
 
                   <div className="mt-7 flex flex-col gap-3 sm:flex-row">
                     <Button
                       className="h-11 rounded-xl bg-[#d6ff3f] px-5 text-sm font-semibold text-[#12230f] shadow-[0_0_22px_rgba(214,255,63,0.28)] transition-all hover:-translate-y-0.5 hover:bg-[#c8f12c]"
-                      onClick={() => openAuth("register")}
+                      onClick={() => {
+                        if (sessionStatus.authenticated) {
+                          router.push(loggedInHref);
+                          return;
+                        }
+
+                        openAuth("register");
+                      }}
                     >
-                      Join Upcoming Competitions
+                      {sessionStatus.authenticated ? landingCopy.primaryCtaLoggedIn : landingCopy.primaryCta}
                     </Button>
                     <Button
                       asChild
@@ -253,20 +478,20 @@ export default function HomePage() {
                       className="h-11 rounded-xl border-[#18AFCE]/40 bg-[#08141c] px-5 text-sm font-semibold text-[#c3f8ff] shadow-[0_0_18px_rgba(24,175,206,0.14)] transition-all hover:-translate-y-0.5 hover:bg-[#0c1c26] hover:text-white"
                     >
                       <Link href="/tournaments">
-                        View Tournaments
+                        {landingCopy.secondaryCta}
                         <ArrowRight className="ml-2 h-4 w-4" />
                       </Link>
                     </Button>
                   </div>
 
                   <p className="mt-4 text-xs font-medium uppercase tracking-[0.22em] text-white/45">
-                    Starting with Cornhole, Darts, Frisbee Golf, Pickleball
+                    {landingCopy.sportsLine}
                   </p>
                 </div>
               </div>
 
               <div className="mt-5 grid gap-3 md:grid-cols-3">
-                {HERO_OUTCOMES.map((item) => (
+                {heroOutcomes.map((item) => (
                   <div
                     key={item}
                     className="rounded-2xl border border-[#18AFCE]/22 bg-[linear-gradient(180deg,rgba(12,25,34,0.9),rgba(7,14,19,0.96))] px-4 py-4 text-center text-sm font-medium text-white/86 shadow-[0_0_18px_rgba(24,175,206,0.12)]"
@@ -279,9 +504,9 @@ export default function HomePage() {
 
             <section id="sports" className="px-4 pb-6 sm:px-6 lg:px-8">
               <SectionHeading
-                eyebrow="Sports"
-                title="Pick your starting sport"
-                description="Select the competition format you want to enter first and move into scheduled local play."
+                eyebrow={landingCopy.sportsEyebrow}
+                title={landingCopy.sportsTitle}
+                description={landingCopy.sportsDescription}
               />
 
               <div className="grid gap-5">
@@ -305,9 +530,9 @@ export default function HomePage() {
                           <div>
                             <h3 className="text-3xl font-semibold">{sport.label}</h3>
                             <div className="mt-3 grid grid-cols-3 gap-5 text-sm">
-                              <SportStat value="5,000+" label="Players" />
-                              <SportStat value="250+" label="Tournaments" />
-                              <SportStat value="INR 25L+" label="Prize Pool" />
+                              <SportStat value="5,000+" label={landingCopy.players} />
+                              <SportStat value="250+" label={landingCopy.tournaments} />
+                              <SportStat value="INR 25L+" label={landingCopy.prizePool} />
                             </div>
                           </div>
                         </div>
@@ -316,7 +541,7 @@ export default function HomePage() {
                           asChild
                           className="h-11 rounded-xl bg-[#d6ff3f] px-5 text-sm font-semibold text-[#13220f] shadow-[0_0_20px_rgba(214,255,63,0.22)] transition-all hover:-translate-y-0.5 hover:bg-[#c8f12c]"
                         >
-                          <Link href={sport.tournamentsHref}>View Details</Link>
+                          <Link href={sport.tournamentsHref}>{landingCopy.details}</Link>
                         </Button>
                       </div>
                     </div>
@@ -327,37 +552,37 @@ export default function HomePage() {
 
             <section className="px-4 pb-6 pt-2 sm:px-6 lg:px-8">
               <SectionHeading
-                eyebrow="Competition flow"
-                title="How it works"
-                description="A simple path from registration to repeat competitive play."
+                eyebrow={landingCopy.flowEyebrow}
+                title={landingCopy.flowTitle}
+                description={landingCopy.flowDescription}
               />
 
               <div className="grid gap-4 md:grid-cols-4">
-                {HOW_IT_WORKS.map((item) => (
+                {howItWorks.map((item) => (
                   <NeonInfoCard key={item.title} title={item.title} description={item.description} icon={item.icon} />
                 ))}
               </div>
             </section>
 
-            <section className="px-4 pb-6 pt-2 sm:px-6 lg:px-8">
+            <section id="about" className="px-4 pb-6 pt-2 sm:px-6 lg:px-8">
               <SectionHeading
-                eyebrow="Platform features"
-                title="Built for champions"
-                description="Core systems designed for repeatable tournaments, verified outcomes, and steady player progress."
+                eyebrow={landingCopy.platformEyebrow}
+                title={landingCopy.platformTitle}
+                description={landingCopy.platformDescription}
               />
 
               <div className="grid gap-4 md:grid-cols-4">
-                {BUILT_FOR_CHAMPIONS.map((item) => (
+                {builtForChampions.map((item) => (
                   <NeonInfoCard key={item.title} title={item.title} description={item.description} icon={item.icon} />
                 ))}
               </div>
             </section>
 
             <section className="px-4 pb-6 pt-2 sm:px-6 lg:px-8">
-              <SectionHeading eyebrow="Momentum" title="Growing every day" />
+              <SectionHeading eyebrow={landingCopy.momentumEyebrow} title={landingCopy.momentumTitle} />
 
               <div className="grid gap-4 md:grid-cols-4">
-                {STATS.map((item, index) => (
+                {stats.map((item, index) => (
                   <div
                     key={item.label}
                     className="rounded-[22px] border border-[#18AFCE]/18 bg-[linear-gradient(180deg,rgba(11,20,28,0.96),rgba(6,11,15,0.96))] px-5 py-6 text-center shadow-[0_0_18px_rgba(24,175,206,0.08)]"
@@ -383,23 +608,30 @@ export default function HomePage() {
 
             <section className="px-4 pb-8 pt-2 sm:px-6 lg:px-8">
               <div className="rounded-[26px] border border-[#18AFCE]/24 bg-[radial-gradient(circle_at_left,rgba(214,255,63,0.18),transparent_32%),radial-gradient(circle_at_right,rgba(24,175,206,0.18),transparent_30%),linear-gradient(180deg,rgba(13,24,32,0.98),rgba(8,13,18,0.98))] px-6 py-8 text-center shadow-[0_0_24px_rgba(24,175,206,0.12)]">
-                <h2 className="text-3xl font-semibold text-white">Ready to Start Competing?</h2>
+                <h2 className="text-3xl font-semibold text-white">{landingCopy.ctaTitle}</h2>
                 <p className="mx-auto mt-3 max-w-2xl text-sm leading-7 text-white/62">
-                  Join structured competitions, build your ranking, and move through a more consistent competitive system.
+                  {landingCopy.ctaDescription}
                 </p>
                 <div className="mt-6 flex flex-col justify-center gap-3 sm:flex-row">
                   <Button
                     className="h-11 rounded-xl bg-[#d6ff3f] px-6 text-sm font-semibold text-[#12220f] shadow-[0_0_22px_rgba(214,255,63,0.28)] transition-all hover:-translate-y-0.5 hover:bg-[#c8f12c]"
-                    onClick={() => openAuth("register")}
+                    onClick={() => {
+                      if (sessionStatus.authenticated) {
+                        router.push(loggedInHref);
+                        return;
+                      }
+
+                      openAuth("register");
+                    }}
                   >
-                    Get Started
+                    {sessionStatus.authenticated ? landingCopy.ctaButtonLoggedIn : landingCopy.ctaButton}
                   </Button>
                   <Button
                     asChild
                     variant="outline"
                     className="h-11 rounded-xl border-[#18AFCE]/40 bg-[#08151d] px-6 text-sm font-semibold text-[#c8f7ff] shadow-[0_0_18px_rgba(24,175,206,0.12)] transition-all hover:-translate-y-0.5 hover:bg-[#0d1b24]"
                   >
-                    <Link href="/tournaments">View Tournaments</Link>
+                    <Link href="/tournaments">{landingCopy.secondaryCta}</Link>
                   </Button>
                 </div>
               </div>

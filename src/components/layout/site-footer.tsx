@@ -1,9 +1,49 @@
+"use client";
+
 import Image from "next/image";
 import Link from "next/link";
 import { Clock, Facebook, Heart, Instagram, Mail, Phone, Twitter, Youtube } from "lucide-react";
+import { useTranslation } from "@/hooks/use-translation";
 
 export default function SiteFooter({ variant = "default" }: { variant?: "default" | "landing" }) {
+  const { language } = useTranslation();
   const isLanding = variant === "landing";
+  const copy =
+    language === "hi"
+      ? {
+          description: "संरचित टूर्नामेंट, सत्यापित परिणाम और रैंकिंग जो हर समर्थित खेल को आगे बढ़ने में मदद करती है।",
+          quickLinks: "क्विक लिंक्स",
+          support: "सहायता",
+          legal: "कानूनी",
+          login: "लॉग इन",
+          register: "रजिस्टर",
+          privacy: "प्राइवेसी पॉलिसी",
+          terms: "टर्म्स ऑफ सर्विस",
+          waiver: "लायबिलिटी वेवर",
+          agreement: "टूर्नामेंट एग्रीमेंट",
+          hours: "सोम-शनि, सुबह 9 बजे - शाम 6 बजे",
+          copyright: `कॉपीराइट ${new Date().getFullYear()} VALORHIVE. सर्वाधिकार सुरक्षित।`,
+          madeWithPrefix: "भारत में",
+          madeWithSuffix: "से बनाया गया",
+          officeOnly: "केवल कार्यालय उपयोग",
+        }
+      : {
+          description: "Structured tournaments, verified results, and rankings that help every supported sport grow.",
+          quickLinks: "Quick Links",
+          support: "Support",
+          legal: "Legal",
+          login: "Log in",
+          register: "Register",
+          privacy: "Privacy Policy",
+          terms: "Terms of Service",
+          waiver: "Liability Waiver",
+          agreement: "Tournament Agreement",
+          hours: "Mon-Sat, 9AM-6PM",
+          copyright: `Copyright ${new Date().getFullYear()} VALORHIVE. All rights reserved.`,
+          madeWithPrefix: "Made with",
+          madeWithSuffix: "in India",
+          officeOnly: "Office Use Only",
+        };
 
   return (
     <footer
@@ -21,7 +61,7 @@ export default function SiteFooter({ variant = "default" }: { variant?: "default
               <span className={isLanding ? "text-xl font-bold text-white" : "text-xl font-bold text-foreground"}>VALORHIVE</span>
             </Link>
             <p className={isLanding ? "mb-4 text-sm text-white/62" : "mb-4 text-sm text-muted-foreground"}>
-              Structured tournaments, verified results, and rankings that help every supported sport grow.
+              {copy.description}
             </p>
             <div className="flex gap-3">
               {[Instagram, Twitter, Facebook, Youtube].map((Icon, index) => (
@@ -41,159 +81,52 @@ export default function SiteFooter({ variant = "default" }: { variant?: "default
           </div>
 
           <div>
-            <h4 className={isLanding ? "mb-4 font-semibold text-white" : "mb-4 font-semibold text-foreground"}>Quick Links</h4>
+            <h4 className={isLanding ? "mb-4 font-semibold text-white" : "mb-4 font-semibold text-foreground"}>{copy.quickLinks}</h4>
             <ul className="space-y-2">
-              <li>
-                <Link
-                  href="/cornhole"
-                  className={
-                    isLanding
-                      ? "text-sm text-white/58 transition-colors hover:text-[#7de8ff]"
-                      : "text-sm text-muted-foreground transition-colors hover:text-primary"
-                  }
-                >
-                  Cornhole
-                </Link>
-              </li>
-              <li>
-                <Link
-                  href="/darts"
-                  className={
-                    isLanding
-                      ? "text-sm text-white/58 transition-colors hover:text-[#7de8ff]"
-                      : "text-sm text-muted-foreground transition-colors hover:text-primary"
-                  }
-                >
-                  Darts
-                </Link>
-              </li>
-              <li>
-                <Link
-                  href="/?auth=login"
-                  className={
-                    isLanding
-                      ? "text-sm text-white/58 transition-colors hover:text-[#7de8ff]"
-                      : "text-sm text-muted-foreground transition-colors hover:text-primary"
-                  }
-                >
-                  Log in
-                </Link>
-              </li>
-              <li>
-                <Link
-                  href="/?auth=register"
-                  className={
-                    isLanding
-                      ? "text-sm text-white/58 transition-colors hover:text-[#7de8ff]"
-                      : "text-sm text-muted-foreground transition-colors hover:text-primary"
-                  }
-                >
-                  Register
-                </Link>
-              </li>
+              <li><Link href="/cornhole" className={isLanding ? "text-sm text-white/58 transition-colors hover:text-[#7de8ff]" : "text-sm text-muted-foreground transition-colors hover:text-primary"}>Cornhole</Link></li>
+              <li><Link href="/darts" className={isLanding ? "text-sm text-white/58 transition-colors hover:text-[#7de8ff]" : "text-sm text-muted-foreground transition-colors hover:text-primary"}>Darts</Link></li>
+              <li><Link href="/?auth=login" className={isLanding ? "text-sm text-white/58 transition-colors hover:text-[#7de8ff]" : "text-sm text-muted-foreground transition-colors hover:text-primary"}>{copy.login}</Link></li>
+              <li><Link href="/?auth=register" className={isLanding ? "text-sm text-white/58 transition-colors hover:text-[#7de8ff]" : "text-sm text-muted-foreground transition-colors hover:text-primary"}>{copy.register}</Link></li>
             </ul>
           </div>
 
           <div>
-            <h4 className={isLanding ? "mb-4 font-semibold text-white" : "mb-4 font-semibold text-foreground"}>Support</h4>
+            <h4 className={isLanding ? "mb-4 font-semibold text-white" : "mb-4 font-semibold text-foreground"}>{copy.support}</h4>
             <ul className="space-y-3">
-              <li className={isLanding ? "flex items-center gap-2 text-sm text-white/58" : "flex items-center gap-2 text-sm text-muted-foreground"}>
-                <Mail className="h-4 w-4" />
-                <span>support@valorhive.com</span>
-              </li>
-              <li className={isLanding ? "flex items-center gap-2 text-sm text-white/58" : "flex items-center gap-2 text-sm text-muted-foreground"}>
-                <Phone className="h-4 w-4" />
-                <span>+91 98765 43210</span>
-              </li>
-              <li className={isLanding ? "flex items-center gap-2 text-sm text-white/58" : "flex items-center gap-2 text-sm text-muted-foreground"}>
-                <Clock className="h-4 w-4" />
-                <span>Mon-Sat, 9AM-6PM</span>
-              </li>
+              <li className={isLanding ? "flex items-center gap-2 text-sm text-white/58" : "flex items-center gap-2 text-sm text-muted-foreground"}><Mail className="h-4 w-4" /><span>support@valorhive.com</span></li>
+              <li className={isLanding ? "flex items-center gap-2 text-sm text-white/58" : "flex items-center gap-2 text-sm text-muted-foreground"}><Phone className="h-4 w-4" /><span>+91 98765 43210</span></li>
+              <li className={isLanding ? "flex items-center gap-2 text-sm text-white/58" : "flex items-center gap-2 text-sm text-muted-foreground"}><Clock className="h-4 w-4" /><span>{copy.hours}</span></li>
             </ul>
           </div>
 
           <div>
-            <h4 className={isLanding ? "mb-4 font-semibold text-white" : "mb-4 font-semibold text-foreground"}>Legal</h4>
+            <h4 className={isLanding ? "mb-4 font-semibold text-white" : "mb-4 font-semibold text-foreground"}>{copy.legal}</h4>
             <ul className="space-y-2">
-              <li>
-                <Link
-                  href="/legal/privacy"
-                  className={
-                    isLanding
-                      ? "text-sm text-white/58 transition-colors hover:text-[#7de8ff]"
-                      : "text-sm text-muted-foreground transition-colors hover:text-primary"
-                  }
-                >
-                  Privacy Policy
-                </Link>
-              </li>
-              <li>
-                <Link
-                  href="/legal/terms"
-                  className={
-                    isLanding
-                      ? "text-sm text-white/58 transition-colors hover:text-[#7de8ff]"
-                      : "text-sm text-muted-foreground transition-colors hover:text-primary"
-                  }
-                >
-                  Terms of Service
-                </Link>
-              </li>
-              <li>
-                <Link
-                  href="/legal/liability-waiver"
-                  className={
-                    isLanding
-                      ? "text-sm text-white/58 transition-colors hover:text-[#7de8ff]"
-                      : "text-sm text-muted-foreground transition-colors hover:text-primary"
-                  }
-                >
-                  Liability Waiver
-                </Link>
-              </li>
-              <li>
-                <Link
-                  href="/legal/tournament-agreement"
-                  className={
-                    isLanding
-                      ? "text-sm text-white/58 transition-colors hover:text-[#7de8ff]"
-                      : "text-sm text-muted-foreground transition-colors hover:text-primary"
-                  }
-                >
-                  Tournament Agreement
-                </Link>
-              </li>
+              <li><Link href="/legal/privacy" className={isLanding ? "text-sm text-white/58 transition-colors hover:text-[#7de8ff]" : "text-sm text-muted-foreground transition-colors hover:text-primary"}>{copy.privacy}</Link></li>
+              <li><Link href="/legal/terms" className={isLanding ? "text-sm text-white/58 transition-colors hover:text-[#7de8ff]" : "text-sm text-muted-foreground transition-colors hover:text-primary"}>{copy.terms}</Link></li>
+              <li><Link href="/legal/liability-waiver" className={isLanding ? "text-sm text-white/58 transition-colors hover:text-[#7de8ff]" : "text-sm text-muted-foreground transition-colors hover:text-primary"}>{copy.waiver}</Link></li>
+              <li><Link href="/legal/tournament-agreement" className={isLanding ? "text-sm text-white/58 transition-colors hover:text-[#7de8ff]" : "text-sm text-muted-foreground transition-colors hover:text-primary"}>{copy.agreement}</Link></li>
             </ul>
           </div>
         </div>
 
-        <div
-          className={
-            isLanding
-              ? "mt-10 flex flex-col items-center justify-between gap-4 border-t border-[#18AFCE]/18 pt-6 sm:flex-row"
-              : "mt-10 flex flex-col items-center justify-between gap-4 border-t border-border pt-6 sm:flex-row"
-          }
-        >
+        <div className={isLanding ? "mt-10 flex flex-col items-center justify-between gap-4 border-t border-[#18AFCE]/18 pt-6 sm:flex-row" : "mt-10 flex flex-col items-center justify-between gap-4 border-t border-border pt-6 sm:flex-row"}>
           <div className="flex items-center gap-2">
             <Image src="/logo.png" alt="VALORHIVE" width={20} height={20} className="h-5 w-auto" />
             <span className={isLanding ? "text-sm text-white/46" : "text-sm text-muted-foreground"}>
-              Copyright {new Date().getFullYear()} VALORHIVE. All rights reserved.
+              {copy.copyright}
             </span>
           </div>
           <div className="flex items-center gap-4">
             <p className={isLanding ? "flex items-center gap-1 text-sm text-white/46" : "flex items-center gap-1 text-sm text-muted-foreground"}>
-              Made with <Heart className="h-4 w-4 text-red-500" /> in India
+              {copy.madeWithPrefix} <Heart className="h-4 w-4 text-red-500" /> {copy.madeWithSuffix}
             </p>
             <Link
               href="/admin/login"
-              className={
-                isLanding
-                  ? "text-xs text-white/30 transition-colors hover:text-white/55"
-                  : "text-xs text-muted-foreground/50 transition-colors hover:text-muted-foreground"
-              }
+              className={isLanding ? "text-xs text-white/30 transition-colors hover:text-white/55" : "text-xs text-muted-foreground/50 transition-colors hover:text-muted-foreground"}
               aria-label="Admin login (office use only)"
             >
-              Office Use Only
+              {copy.officeOnly}
             </Link>
           </div>
         </div>

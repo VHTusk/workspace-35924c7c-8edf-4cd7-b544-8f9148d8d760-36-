@@ -12,6 +12,7 @@ interface FollowButtonProps {
   targetType: 'user' | 'org';
   targetId: string;
   sport: string;
+  targetName?: string;
   showText?: boolean;
   size?: 'sm' | 'default' | 'lg';
   variant?: 'default' | 'outline' | 'ghost';
@@ -21,6 +22,7 @@ export default function FollowButton({
   targetType,
   targetId,
   sport,
+  targetName,
   showText = true,
   size = 'default',
   variant = 'outline'
@@ -28,6 +30,8 @@ export default function FollowButton({
   const [isFollowing, setIsFollowing] = useState(false);
   const [loading, setLoading] = useState(true);
   const [actionLoading, setActionLoading] = useState(false);
+
+  const displayName = targetName?.trim() || (targetType === 'org' ? 'organization' : 'player');
 
   useEffect(() => {
     checkFollowStatus();
@@ -66,7 +70,7 @@ export default function FollowButton({
         const data = await response.json().catch(() => ({}));
         if (response.ok) {
           setIsFollowing(false);
-          toast.success(data.message || "Unfollowed successfully");
+          toast.success(data.message || `You unfollowed ${displayName}`);
           // Dispatch event to refresh sidebar counts
           dispatchFollowChange({ type: 'unfollow', targetType: targetType === 'user' ? 'user' : 'org', targetId });
         } else {
@@ -86,7 +90,7 @@ export default function FollowButton({
         const data = await response.json().catch(() => ({}));
         if (response.ok) {
           setIsFollowing(true);
-          toast.success(data.message || "Following updated");
+          toast.success(data.message || `You are now following ${displayName}`);
           // Dispatch event to refresh sidebar counts
           dispatchFollowChange({ type: 'follow', targetType: targetType === 'user' ? 'user' : 'org', targetId });
         } else {

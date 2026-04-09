@@ -6,7 +6,6 @@ import {
   type SupportedLanguage,
   type TranslationStrings,
   getTranslations,
-  getAvailableLanguages,
 } from "@/lib/translations";
 
 // ============================================
@@ -21,8 +20,8 @@ interface UseTranslationReturn {
   t: (key: string, params?: TranslationParams) => string;
   language: SupportedLanguage;
   translations: TranslationStrings;
-  availableLanguages: ReturnType<typeof getAvailableLanguages>;
-  setLanguage: (language: SupportedLanguage) => void;
+  availableLanguages: Array<{ code: SupportedLanguage; name: string; nativeName: string }>;
+  setLanguage: (language: SupportedLanguage) => Promise<void>;
 }
 
 // ============================================

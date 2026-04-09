@@ -11,6 +11,7 @@ import {
 } from '@prisma/client';
 import { NextRequest } from 'next/server';
 import { ensureUserSportEnrollment } from '@/lib/user-sport';
+import { toNameCase } from '@/lib/name-format';
 
 // Type for ReadonlyRequestCookies (from next/headers)
 type ReadonlyRequestCookies = {
@@ -186,6 +187,8 @@ export async function createUser(data: {
   state?: string;
   referredByCode?: string; // Optional referral code from another user
 }) {
+  const normalizedFirstName = toNameCase(data.firstName);
+  const normalizedLastName = toNameCase(data.lastName);
   const hashedPassword = data.password ? await hashPassword(data.password) : null;
   
   // Generate unique referral code
@@ -219,8 +222,8 @@ export async function createUser(data: {
         email: data.email,
         phone: data.phone,
         password: hashedPassword,
-        firstName: data.firstName,
-        lastName: data.lastName,
+        firstName: normalizedFirstName,
+        lastName: normalizedLastName,
         sport: data.sport,
         city: data.city,
         district: data.district,
@@ -449,13 +452,14 @@ export async function createOrganization(data: {
   tosAccepted?: boolean;
   privacyAccepted?: boolean;
 }) {
+  const normalizedName = toNameCase(data.name);
   const hashedPassword = await hashPassword(data.password);
 
   // Wrap organization and subscription creation in a transaction
   const org = await db.$transaction(async (tx) => {
     const newOrg = await tx.organization.create({
       data: {
-        name: data.name,
+        name: normalizedName,
         type: (data.type || 'CLUB') as 'CLUB' | 'SCHOOL' | 'CORPORATE' | 'ACADEMY',
         email: data.email || undefined,
         phone: data.phone || undefined,

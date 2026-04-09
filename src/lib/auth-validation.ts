@@ -1,4 +1,5 @@
 import { isValidIndianPhone, normalizePhoneNumber } from '@/lib/sms-service';
+import { toNameCase } from '@/lib/name-format';
 
 const EMAIL_REGEX =
   /^[a-zA-Z0-9.!#$%&'*+/=?^_`{|}~-]+@[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(?:\.[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)+$/;
@@ -58,5 +59,5 @@ export function detectIdentifierType(value?: string | null): 'email' | 'phone' |
 }
 
 export function sanitizeName(value?: string | null): string {
-  return value?.trim() ?? '';
+  return toNameCase(value);
 }

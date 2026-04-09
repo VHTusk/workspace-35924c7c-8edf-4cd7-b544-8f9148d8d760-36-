@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 import { getAuthenticatedOrg } from '@/lib/auth';
+import { toNameCase } from '@/lib/name-format';
 
 export async function GET(request: NextRequest) {
   try {
@@ -171,7 +172,7 @@ export async function PUT(request: NextRequest) {
     const updatedOrg = await db.organization.update({
       where: { id: org.id },
       data: {
-        name,
+        name: name === undefined ? undefined : toNameCase(name),
         type,
         city,
         district,

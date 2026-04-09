@@ -116,9 +116,9 @@ export default function TournamentsPage() {
   const [search, setSearch] = useState("");
   const [scopeFilter, setScopeFilter] = useState("all");
   const [statusFilter, setStatusFilter] = useState("all");
+  const [countryFilter, setCountryFilter] = useState("all");
   const [stateFilter, setStateFilter] = useState("all");
   const [districtFilter, setDistrictFilter] = useState("");
-  const [cityFilter, setCityFilter] = useState("");
   const [genderFilter, setGenderFilter] = useState("all");
   const [ageCategoryFilter, setAgeCategoryFilter] = useState("all");
   const [tournaments, setTournaments] = useState<Tournament[]>([]);
@@ -199,7 +199,6 @@ export default function TournamentsPage() {
         if (scopeFilter !== "all") params.set("scope", scopeFilter);
         if (stateFilter !== "all") params.set("state", stateFilter);
         if (districtFilter) params.set("district", districtFilter);
-        if (cityFilter) params.set("city", cityFilter);
         if (genderFilter !== "all") params.set("gender", genderFilter);
         if (ageCategoryFilter !== "all") params.set("ageCategory", ageCategoryFilter);
         if (search) params.set("search", search);
@@ -236,7 +235,7 @@ export default function TournamentsPage() {
         abortControllerRef.current.abort();
       }
     };
-  }, [sport, statusFilter, scopeFilter, stateFilter, districtFilter, cityFilter, genderFilter, ageCategoryFilter, search]);
+  }, [sport, statusFilter, scopeFilter, stateFilter, districtFilter, genderFilter, ageCategoryFilter, search]);
 
   useEffect(() => {
     if (userType !== "player") {
@@ -291,7 +290,7 @@ export default function TournamentsPage() {
     const matchesStatus = statusFilter === "all" || t.status === statusFilter;
     const matchesState = stateFilter === "all" || t.state === stateFilter;
     const matchesDistrict = !districtFilter || t.district?.toLowerCase().includes(districtFilter.toLowerCase());
-    const matchesCity = !cityFilter || t.city?.toLowerCase().includes(cityFilter.toLowerCase());
+    const matchesCountry = countryFilter === "all" || countryFilter === "India";
     const matchesGender = genderFilter === "all" || t.gender === genderFilter || (!t.gender && genderFilter === "all");
     
     // Age category filter: 
@@ -304,8 +303,8 @@ export default function TournamentsPage() {
       matchesAgeCategory = (t.ageMin !== null && t.ageMin >= 14) || (t.ageMin === null && t.ageMax === null);
     }
     
-    return matchesSearch && matchesScope && matchesStatus && matchesState && 
-           matchesDistrict && matchesCity && matchesGender && matchesAgeCategory;
+    return matchesSearch && matchesScope && matchesStatus && matchesState &&
+           matchesDistrict && matchesCountry && matchesGender && matchesAgeCategory;
   });
 
   const upcomingTournaments = filteredTournaments.filter(t => 
@@ -321,16 +320,16 @@ export default function TournamentsPage() {
   const clearAllFilters = () => {
     setScopeFilter("all");
     setStatusFilter("all");
+    setCountryFilter("all");
     setStateFilter("all");
     setDistrictFilter("");
-    setCityFilter("");
     setGenderFilter("all");
     setAgeCategoryFilter("all");
     setSearch("");
   };
 
   const hasActiveFilters = scopeFilter !== "all" || statusFilter !== "all" || 
-    stateFilter !== "all" || districtFilter || cityFilter || 
+    countryFilter !== "all" || stateFilter !== "all" || districtFilter ||
     genderFilter !== "all" || ageCategoryFilter !== "all" || search;
 
   const handleTabChange = (value: string) => {
@@ -433,6 +432,19 @@ export default function TournamentsPage() {
           <Card className="bg-gradient-card border-border/50 mb-6">
             <CardContent className="p-4">
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                <div className="space-y-2">
+                  <label className="text-xs font-medium text-muted-foreground">Country</label>
+                  <Select value={countryFilter} onValueChange={setCountryFilter}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="All Countries" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">All Countries</SelectItem>
+                      <SelectItem value="India">India</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
                 {/* Location Filters */}
                 <div className="space-y-2">
                   <label className="text-xs font-medium text-muted-foreground">State</label>
@@ -458,28 +470,18 @@ export default function TournamentsPage() {
                   />
                 </div>
 
-                <div className="space-y-2">
-                  <label className="text-xs font-medium text-muted-foreground">City</label>
-                  <Input
-                    placeholder="Enter city..."
-                    value={cityFilter}
-                    onChange={(e) => setCityFilter(e.target.value)}
-                  />
-                </div>
-
                 {/* Tournament Scope */}
                 <div className="space-y-2">
                   <label className="text-xs font-medium text-muted-foreground">Scope</label>
                   <Select value={scopeFilter} onValueChange={setScopeFilter}>
                     <SelectTrigger>
-                      <SelectValue placeholder="All Scopes" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="all">All Scopes</SelectItem>
-                      <SelectItem value="CITY">City</SelectItem>
-                      <SelectItem value="DISTRICT">District</SelectItem>
-                      <SelectItem value="STATE">State</SelectItem>
-                      <SelectItem value="NATIONAL">National</SelectItem>
+                    <SelectValue placeholder="All Scopes" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Scopes</SelectItem>
+                    <SelectItem value="DISTRICT">District</SelectItem>
+                    <SelectItem value="STATE">State</SelectItem>
+                    <SelectItem value="NATIONAL">National</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
@@ -554,6 +556,12 @@ export default function TournamentsPage() {
                 <X className="w-3 h-3 cursor-pointer" onClick={() => setScopeFilter("all")} />
               </Badge>
             )}
+            {countryFilter !== "all" && (
+              <Badge variant="secondary" className="gap-1">
+                Country: {countryFilter}
+                <X className="w-3 h-3 cursor-pointer" onClick={() => setCountryFilter("all")} />
+              </Badge>
+            )}
             {stateFilter !== "all" && (
               <Badge variant="secondary" className="gap-1">
                 State: {stateFilter}
@@ -564,12 +572,6 @@ export default function TournamentsPage() {
               <Badge variant="secondary" className="gap-1">
                 District: {districtFilter}
                 <X className="w-3 h-3 cursor-pointer" onClick={() => setDistrictFilter("")} />
-              </Badge>
-            )}
-            {cityFilter && (
-              <Badge variant="secondary" className="gap-1">
-                City: {cityFilter}
-                <X className="w-3 h-3 cursor-pointer" onClick={() => setCityFilter("")} />
               </Badge>
             )}
             {genderFilter !== "all" && (

@@ -22,6 +22,8 @@ import { NotificationDropdown } from "@/components/notifications/notification-dr
 import { GlobalSearch, SearchButton } from "@/components/search/global-search";
 import { cn } from "@/lib/utils";
 import { useEffect, useState, useCallback } from "react";
+import { useTranslation } from "@/hooks/use-translation";
+import LanguageSelector from "@/components/ui/language-selector";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -73,6 +75,7 @@ export default function SportHeader({
   primaryBtnClass,
   sportBadgeClass,
 }: SportHeaderProps) {
+  const { language } = useTranslation();
   const router = useRouter();
   const pathname = usePathname();
   const [authenticated, setAuthenticated] = useState<boolean | null>(null);
@@ -81,6 +84,27 @@ export default function SportHeader({
   const [user, setUser] = useState<UserData | null>(null);
   const [org, setOrg] = useState<OrgData | null>(null);
   const [searchOpen, setSearchOpen] = useState(false);
+  const copy = language === "hi"
+    ? {
+        dashboard: "डैशबोर्ड",
+        profile: "मेरी प्रोफाइल",
+        orgProfile: "संगठन प्रोफाइल",
+        settings: "सेटिंग्स",
+        subscription: "सब्सक्रिप्शन",
+        logout: "लॉग आउट",
+        login: "लॉग इन",
+        register: "रजिस्टर",
+      }
+    : {
+        dashboard: "Dashboard",
+        profile: "My Profile",
+        orgProfile: "Org Profile",
+        settings: "Settings",
+        subscription: "Subscription",
+        logout: "Logout",
+        login: "Login",
+        register: "Register",
+      };
 
   // Check if we're on org pages
   const isOrgPage = pathname?.includes("/org/");
@@ -328,7 +352,7 @@ export default function SportHeader({
             <Link href={`/${sport}/dashboard`}>
               <Button variant="outline" size="sm" className="gap-2 px-2.5 sm:px-3">
                 <LayoutDashboard className="h-4 w-4" />
-                <span className="hidden md:inline">Dashboard</span>
+                <span className="hidden md:inline">{copy.dashboard}</span>
               </Button>
             </Link>
           )}
@@ -375,19 +399,19 @@ export default function SportHeader({
                   ) : (
                     <User className="mr-2 h-4 w-4" />
                   )}
-                  {userType === "org" ? "Org Profile" : "My Profile"}
+                  {userType === "org" ? copy.orgProfile : copy.profile}
                 </Link>
               </DropdownMenuItem>
               <DropdownMenuItem asChild>
                 <Link href={`/${sport}/settings`} className="cursor-pointer">
                   <Settings className="mr-2 h-4 w-4" />
-                  Settings
+                  {copy.settings}
                 </Link>
               </DropdownMenuItem>
               <DropdownMenuItem asChild>
                 <Link href={`/${sport}/${userType === "org" ? "org/" : ""}subscription`} className="cursor-pointer">
                   <Crown className="mr-2 h-4 w-4" />
-                  Subscription
+                  {copy.subscription}
                 </Link>
               </DropdownMenuItem>
               <DropdownMenuSeparator />
@@ -396,7 +420,7 @@ export default function SportHeader({
                 onClick={handleLogout}
               >
                 <LogOut className="mr-2 h-4 w-4" />
-                Logout
+                {copy.logout}
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
@@ -416,13 +440,13 @@ export default function SportHeader({
           <Link href={`/${sport}/org/login`}>
             <Button variant="ghost" size="sm" className="px-2 text-muted-foreground sm:px-3">
               <LogIn className="w-4 h-4 sm:mr-2" />
-              <span className="hidden sm:inline">Login</span>
+              <span className="hidden sm:inline">{copy.login}</span>
             </Button>
           </Link>
           <Link href={`/${sport}/org/register`}>
             <Button size="sm" className={cn("px-2.5 shadow-sm sm:px-3", primaryBtnClass)}>
               <Building2 className="w-4 h-4 sm:mr-2" />
-              <span className="hidden sm:inline">Register Org</span>
+              <span className="hidden sm:inline">{copy.register} Org</span>
               <span className="sm:hidden">Org</span>
             </Button>
           </Link>
@@ -433,15 +457,15 @@ export default function SportHeader({
     return (
       <>
         <Link href={`/${sport}/login`}>
-          <Button variant="ghost" size="sm" className="px-2 text-muted-foreground sm:px-3">
-            <LogIn className="w-4 h-4 sm:mr-2" />
-            <span className="hidden sm:inline">Login</span>
-          </Button>
-        </Link>
+            <Button variant="ghost" size="sm" className="px-2 text-muted-foreground sm:px-3">
+              <LogIn className="w-4 h-4 sm:mr-2" />
+            <span className="hidden sm:inline">{copy.login}</span>
+            </Button>
+          </Link>
         <Link href={`/${sport}/register`}>
           <Button size="sm" className={cn("px-2.5 shadow-sm sm:px-3", primaryBtnClass)}>
             <UserPlus className="w-4 h-4 sm:mr-2" />
-            <span className="hidden sm:inline">Register</span>
+            <span className="hidden sm:inline">{copy.register}</span>
             <span className="sm:hidden">Join</span>
           </Button>
         </Link>
@@ -463,6 +487,8 @@ export default function SportHeader({
             </Link>
 
             <div className="flex items-center gap-1.5 sm:gap-2">
+              <LanguageSelector variant="icon" className="sm:hidden" />
+              <LanguageSelector variant="compact" className="hidden sm:inline-flex" />
               <SearchButton onClick={() => setSearchOpen(true)} />
               {renderAuthButtons()}
             </div>

@@ -17,6 +17,7 @@ import { normalizeEmail } from "@/lib/auth-validation";
 import { getGoogleAuthServerConfig } from "@/lib/google-auth-config";
 import { normalizeSport } from "@/lib/sports";
 import { ensureUserSportEnrollment } from "@/lib/user-sport";
+import { toNameCase } from "@/lib/name-format";
 import {
   GOOGLE_ONE_TAP_PENDING_COOKIE,
   clearPendingGoogleOneTapCookie,
@@ -293,6 +294,8 @@ async function findOrCreateGoogleUser(input: {
   const [firstName, ...lastNameParts] = (input.name?.trim() || "Google User")
     .split(/\s+/)
     .filter(Boolean);
+  const normalizedFirstName = toNameCase(firstName || "Google");
+  const normalizedLastName = toNameCase(lastNameParts.join(" ") || "User");
 
   try {
     user = await db.$transaction(async (tx) => {
@@ -300,8 +303,8 @@ async function findOrCreateGoogleUser(input: {
         data: {
           email: input.email,
           googleId: input.googleId,
-          firstName: firstName || "Google",
-          lastName: lastNameParts.join(" ") || "User",
+          firstName: normalizedFirstName,
+          lastName: normalizedLastName,
           photoUrl: input.picture || undefined,
           sport: input.sport,
           role: Role.PLAYER,

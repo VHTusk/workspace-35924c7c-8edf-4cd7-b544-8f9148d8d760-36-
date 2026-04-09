@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { getAuthenticatedUser } from "@/lib/auth";
 import { shouldEnforceIdentityLock } from "@/lib/identity-lock";
+import { toNameCase } from "@/lib/name-format";
 
 function getAgeFromDobInput(dobValue: string | Date | null | undefined): number | null {
   if (!dobValue) {
@@ -163,8 +164,8 @@ export async function PUT(request: NextRequest) {
       updateData.identityLocked = false;
     }
 
-    if (firstName !== undefined) updateData.firstName = firstName;
-    if (lastName !== undefined) updateData.lastName = lastName;
+    if (firstName !== undefined) updateData.firstName = toNameCase(firstName);
+    if (lastName !== undefined) updateData.lastName = toNameCase(lastName);
     if (email !== undefined) {
       updateData.email = email;
       if (currentUser?.email !== email) {
@@ -201,7 +202,7 @@ export async function PUT(request: NextRequest) {
     if (state !== undefined) updateData.state = state;
     if (district !== undefined) updateData.district = district;
     if (pinCode !== undefined) updateData.pinCode = pinCode;
-    if (emergencyContactName !== undefined) updateData.emergencyContactName = emergencyContactName;
+    if (emergencyContactName !== undefined) updateData.emergencyContactName = toNameCase(emergencyContactName);
     if (emergencyContactPhone !== undefined) updateData.emergencyContactPhone = emergencyContactPhone;
     if (emergencyContactRelation !== undefined) updateData.emergencyContactRelation = emergencyContactRelation;
     if (idDocumentUrl !== undefined) updateData.idDocumentUrl = idDocumentUrl || null;
