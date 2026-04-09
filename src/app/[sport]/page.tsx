@@ -96,15 +96,15 @@ export default async function SportHomePage({ params, searchParams }: Props) {
     : "Leaderboard initializing";
 
   const heroSignals = [
-    { label: "Season status", value: seasonSignal, helper: nextTournament ? `${formatDate(nextTournament.startDate)}${nextTournament.city ? ` • ${nextTournament.city}` : ""}` : "Be among the first players in this ladder." },
-    { label: "Ranking board", value: topPlayers.length > 0 ? `${topPlayers.length} ranked players` : "First rankings initializing", helper: "Leaderboard visibility starts when official matches are recorded." },
-    { label: "Competition path", value: "District ? State ? National", helper: "Progress through higher competition levels over time." },
-    { label: "Player activity", value: activePlayers > 0 ? `${activePlayers} active this month` : "Be among the first players", helper: "Profiles, matches, and rankings build over the season." },
+    { label: "Season", value: seasonSignal, helper: nextTournament ? `${formatDate(nextTournament.startDate)}${nextTournament.city ? ` • ${nextTournament.city}` : ""}` : "Opening soon" },
+    { label: "Ranked", value: topPlayers.length > 0 ? `${topPlayers.length} players` : "Initializing", helper: "Match-based" },
+    { label: "Path", value: "District ? State ? National", helper: "Progression" },
+    { label: "Active", value: activePlayers > 0 ? `${activePlayers} this month` : "Early access", helper: "Player pool" },
   ];
   const activitySignals = [
-    { label: "Matches this week", value: stats.matchesThisWeek > 0 ? `${stats.matchesThisWeek}` : "Starting up", helper: stats.matchesThisWeek > 0 ? "Official results are being recorded." : "Competition activity will appear here as the season opens." },
-    { label: "Players active this month", value: activePlayers > 0 ? `${activePlayers}` : "Early access", helper: activePlayers > 0 ? "Registrations and participation in motion." : "Register early to be part of the first ranked set." },
-    { label: "Last match signal", value: lastMatchText, helper: "Activity signals update as soon as official play is recorded." },
+    { label: "This week", value: stats.matchesThisWeek > 0 ? `${stats.matchesThisWeek} matches` : "Starting up", helper: "Official play" },
+    { label: "This month", value: activePlayers > 0 ? `${activePlayers} players` : "Early access", helper: "Participation" },
+    { label: "Last result", value: lastMatchText, helper: "Live signal" },
   ];
   const announcementItems: SportAnnouncement[] = [
     recentMatch?.playedAt
@@ -153,16 +153,16 @@ export default async function SportHomePage({ params, searchParams }: Props) {
     },
   ];
   const steps = [
-    { step: "01", title: "Start your player profile", description: "Register once and enter the sport system with a trackable identity." },
-    { step: "02", title: "Join tournaments", description: "Enter defined formats with clear dates, slots, and registration deadlines." },
-    { step: "03", title: "Play official matches", description: "Results are recorded into the same competition structure." },
-    { step: "04", title: "Move up the rankings", description: "Rankings update after every match and shape future progression." },
+    { step: "01", title: "Create profile", description: "Enter the system." },
+    { step: "02", title: "Join tournaments", description: "Pick a live event." },
+    { step: "03", title: "Play matches", description: "Results get recorded." },
+    { step: "04", title: "Climb rankings", description: "Move up with each match." },
   ];
   const triggers = [
-    { icon: Users, title: "Limited tournament slots", description: "Entry lists stay finite so registrations carry urgency." },
-    { icon: Clock3, title: "Visible registration deadlines", description: "Players know exactly when entries close." },
-    { icon: Trophy, title: "Official result tracking", description: "Matches feed directly into ranking progression." },
-    { icon: TimerReset, title: "Season-level competition", description: "New competitive cycles open as more tournaments are added." },
+    { icon: Users, title: "Limited slots", description: "Finite entries." },
+    { icon: Clock3, title: "Deadlines", description: "Visible closing dates." },
+    { icon: Trophy, title: "Recorded results", description: "Official outcomes." },
+    { icon: TimerReset, title: "Season play", description: "Recurring cycles." },
   ];
 
   return (
@@ -176,8 +176,8 @@ export default async function SportHomePage({ params, searchParams }: Props) {
               <div className="space-y-4">
                 <Badge variant="outline" className={cn("gap-2 border-current/30 px-3 py-1", softAccentClass)}><Trophy className="h-3.5 w-3.5" />{sportName} Competition Hub</Badge>
                 <div className="space-y-3">
-                  <h1 className="max-w-4xl text-4xl font-bold tracking-tight text-foreground sm:text-5xl lg:text-6xl">Structured {sportName.toLowerCase()} competition with rankings that move after every match.</h1>
-                  <p className="max-w-2xl text-base leading-7 text-muted-foreground sm:text-lg">Tournaments follow defined formats, match results feed into rankings, and players progress through local to higher competition levels.</p>
+                  <h1 className="max-w-4xl text-4xl font-bold tracking-tight text-foreground sm:text-5xl lg:text-6xl">Structured {sportName.toLowerCase()} competition. Live rankings.</h1>
+                  <p className="max-w-2xl text-base leading-7 text-muted-foreground sm:text-lg">Defined formats, recorded results, visible progression.</p>
                 </div>
               </div>
               <div className="flex flex-wrap gap-3">
@@ -188,8 +188,8 @@ export default async function SportHomePage({ params, searchParams }: Props) {
               <SportAnnouncementBar items={announcementItems} />
               <div className="flex flex-wrap gap-2 text-sm text-muted-foreground">
                 <span className="rounded-full border border-border/60 bg-background/80 px-3 py-1.5">Rankings update after every match</span>
-                <span className="rounded-full border border-border/60 bg-background/80 px-3 py-1.5">Structured tournament formats</span>
-                <span className="rounded-full border border-border/60 bg-background/80 px-3 py-1.5">Progress across competition levels</span>
+                <span className="rounded-full border border-border/60 bg-background/80 px-3 py-1.5">Structured tournaments</span>
+                <span className="rounded-full border border-border/60 bg-background/80 px-3 py-1.5">District to national</span>
               </div>
               <div className={cn("grid gap-4 rounded-2xl border bg-gradient-to-r p-5 md:grid-cols-2 xl:grid-cols-4", accentBorderClass, statTintClass)}>{heroSignals.map((item) => <InfoTile key={item.label} accentClass={accentTextClass} {...item} />)}</div>
             </div>
@@ -200,7 +200,7 @@ export default async function SportHomePage({ params, searchParams }: Props) {
                   <div>
                     <p className="text-xs font-semibold uppercase tracking-[0.18em] text-muted-foreground">Live Competition Module</p>
                     <h2 className="mt-2 text-2xl font-semibold text-foreground">{nextTournament ? nextTournament.name : `${sportName} season opening soon`}</h2>
-                    <p className="mt-2 text-sm leading-6 text-muted-foreground">{nextTournament ? "The next competition window is visible here with slots, city, entry fee, and the registration state." : "This module will surface the next official tournament, registration status, and live competition signals as soon as schedules open."}</p>
+                    <p className="mt-2 text-sm leading-6 text-muted-foreground">{nextTournament ? "Next event, slots, fee, and status." : "Next event details will appear here."}</p>
                   </div>
                   <div className="grid gap-3 sm:grid-cols-2">
                     <MiniMetric label="Next event" value={nextTournament ? formatDate(nextTournament.startDate) : `Launching in ${daysUntilStart} days`} helper={nextTournament?.city || "City announcement soon"} />
@@ -225,14 +225,14 @@ export default async function SportHomePage({ params, searchParams }: Props) {
             <div>
               <Badge variant="outline" className={cn("mb-3 px-3 py-1", softAccentClass)}>Competition Structure</Badge>
               <h2 className="text-3xl font-bold tracking-tight text-foreground">How competition works</h2>
-              <p className="mt-2 max-w-2xl text-sm leading-6 text-muted-foreground">One profile, structured tournaments, official match recording, and a progression path that becomes more valuable as participation grows.</p>
+              <p className="mt-2 max-w-2xl text-sm leading-6 text-muted-foreground">Simple, repeatable, ranked.</p>
             </div>
             <Link href={`/${sport}?auth=register`}><Button variant="outline" className="gap-2">Start your player profile<ArrowRight className="h-4 w-4" /></Button></Link>
           </div>
           <div className="grid gap-5 lg:grid-cols-[1.1fr_0.9fr]">
             <Card className="border-border/70 bg-card"><CardContent className="grid gap-4 p-6 md:grid-cols-2 xl:grid-cols-4">{steps.map((item) => <div key={item.step} className="rounded-2xl border border-border/60 bg-muted/25 p-5"><div className={cn("mb-4 inline-flex rounded-full px-3 py-1 text-xs font-semibold", softAccentClass)}>Step {item.step}</div><h3 className="text-base font-semibold text-foreground">{item.title}</h3><p className="mt-2 text-sm leading-6 text-muted-foreground">{item.description}</p></div>)}</CardContent></Card>
             <div className="grid gap-5">
-              <Card className="border-border/70 bg-card"><CardHeader className="pb-3"><CardTitle className="text-xl">Progression pathway</CardTitle></CardHeader><CardContent className="space-y-4"><div className="flex flex-wrap items-center gap-3">{["District", "State", "National"].map((level, i) => <div key={level} className="flex items-center gap-3"><div className={cn("rounded-full border px-4 py-2 text-sm font-semibold", softAccentClass)}>{level}</div>{i < 2 ? <ArrowRight className="h-4 w-4 text-muted-foreground" /> : null}</div>)}</div><p className="text-sm leading-6 text-muted-foreground">Join tournaments, get results recorded, and keep moving toward higher-level competition as the structure grows.</p></CardContent></Card>
+              <Card className="border-border/70 bg-card"><CardHeader className="pb-3"><CardTitle className="text-xl">Progression pathway</CardTitle></CardHeader><CardContent className="space-y-4"><div className="flex flex-wrap items-center gap-3">{["District", "State", "National"].map((level, i) => <div key={level} className="flex items-center gap-3"><div className={cn("rounded-full border px-4 py-2 text-sm font-semibold", softAccentClass)}>{level}</div>{i < 2 ? <ArrowRight className="h-4 w-4 text-muted-foreground" /> : null}</div>)}</div><p className="text-sm leading-6 text-muted-foreground">Play. Record. Progress.</p></CardContent></Card>
               <Card className="border-border/70 bg-card"><CardHeader className="pb-3"><CardTitle className="text-xl">Competitive triggers</CardTitle></CardHeader><CardContent className="grid gap-3 sm:grid-cols-2">{triggers.map((item) => <ReasonRow key={item.title} accentClass={softAccentClass} {...item} />)}</CardContent></Card>
             </div>
           </div>
@@ -244,15 +244,15 @@ export default async function SportHomePage({ params, searchParams }: Props) {
           <div className="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
             <div>
               <Badge variant="outline" className={cn("mb-3 px-3 py-1", softAccentClass)}>Upcoming Tournaments</Badge>
-              <h2 className="text-3xl font-bold tracking-tight text-foreground">Find the next competition window</h2>
-              <p className="mt-2 max-w-2xl text-sm leading-6 text-muted-foreground">Tournament cards show the information players need to act: city, date, entry fee, slot pressure, and registration timing.</p>
+              <h2 className="text-3xl font-bold tracking-tight text-foreground">Upcoming tournaments</h2>
+              <p className="mt-2 max-w-2xl text-sm leading-6 text-muted-foreground">Date, location, fee, slots.</p>
             </div>
             <Link href={`/${sport}/tournaments`}><Button variant="ghost" size="sm" className="gap-2 text-muted-foreground hover:text-foreground">View all tournaments<ChevronRight className="h-4 w-4" /></Button></Link>
           </div>
           {tournaments.length === 0 ? (
             <div className="grid gap-5 lg:grid-cols-[1fr_1fr]">
               <Card className="border-border/70 bg-card"><CardContent className="space-y-4 p-6"><div className="flex items-center justify-between"><p className="text-xs font-semibold uppercase tracking-[0.18em] text-muted-foreground">Upcoming tournaments loading</p><Badge variant="outline" className={cn("px-2.5 py-1", softAccentClass)}>Registrations opening soon</Badge></div><Skeleton className="h-52 w-full rounded-2xl" /><Skeleton className="h-5 w-2/3" /><Skeleton className="h-4 w-full" /><Skeleton className="h-4 w-4/5" /></CardContent></Card>
-              <Card className="border-border/70 bg-card"><CardContent className="flex h-full flex-col justify-center p-8"><Badge variant="outline" className={cn("mb-4 w-fit px-3 py-1", softAccentClass)}>Be early</Badge><h3 className="text-2xl font-semibold text-foreground">New tournaments launching in your city.</h3><p className="mt-3 max-w-md text-sm leading-6 text-muted-foreground">Registration windows, slot counts, and event formats will appear here as soon as schedules go live. Starting early helps you enter the first ranking cycle.</p><div className="mt-6 flex flex-wrap gap-3"><Link href={`/${sport}?auth=register`}><Button className={cn("text-white", primaryBtnClass)}>Register early access</Button></Link><Link href={`/${sport}/tournaments`}><Button variant="outline">Check tournament board</Button></Link></div></CardContent></Card>
+              <Card className="border-border/70 bg-card"><CardContent className="flex h-full flex-col justify-center p-8"><Badge variant="outline" className={cn("mb-4 w-fit px-3 py-1", softAccentClass)}>Be early</Badge><h3 className="text-2xl font-semibold text-foreground">New tournaments launching soon.</h3><p className="mt-3 max-w-md text-sm leading-6 text-muted-foreground">Register early for the first ranking cycle.</p><div className="mt-6 flex flex-wrap gap-3"><Link href={`/${sport}?auth=register`}><Button className={cn("text-white", primaryBtnClass)}>Register early access</Button></Link><Link href={`/${sport}/tournaments`}><Button variant="outline">Check tournament board</Button></Link></div></CardContent></Card>
             </div>
           ) : (
             <div className="grid gap-5 md:grid-cols-2 xl:grid-cols-3">{tournaments.slice(0, 3).map((tournament, index) => <Link key={tournament.id} href={`/${sport}/tournaments/${tournament.id}`} className="group h-full"><Card className="flex h-full flex-col overflow-hidden border-border/70 bg-card transition-all duration-200 hover:-translate-y-1 hover:shadow-lg"><div className="relative h-52 overflow-hidden"><MediaImage src={visuals[index % visuals.length]?.src} alt={tournament.name} gradientClass={gradientClass} /><div className="absolute inset-x-3 top-3 flex items-center justify-between gap-3"><Badge className="shadow-sm" variant="secondary">{tournament.scope || "Open play"}</Badge><Badge variant="outline" className="border-white/30 bg-black/35 text-white backdrop-blur-sm">{tournament._count.registrations}/{tournament.maxPlayers} filled</Badge></div></div><CardContent className="flex flex-1 flex-col gap-4 p-5"><div className="space-y-2"><h3 className="line-clamp-2 text-lg font-semibold text-foreground">{tournament.name}</h3><div className="space-y-1.5 text-sm text-muted-foreground"><div className="flex items-center gap-2"><Calendar className="h-3.5 w-3.5" /><span>{formatDate(tournament.startDate)}</span></div><div className="flex items-center gap-2"><MapPin className="h-3.5 w-3.5" /><span className="line-clamp-1">{tournament.city || tournament.district || tournament.state || "Venue to be announced"}</span></div></div></div><div className="grid gap-3 rounded-2xl border border-border/60 bg-muted/25 p-4 text-sm"><div className="flex items-center justify-between gap-3"><span className="text-muted-foreground">Entry fee</span><span className={cn("font-semibold", accentTextClass)}>{tournament.entryFee > 0 ? formatCurrency(tournament.entryFee) : "Free entry"}</span></div><div className="flex items-center justify-between gap-3"><span className="text-muted-foreground">Registration</span><span className="font-semibold text-foreground">{Math.max(0, Math.ceil((tournament.regDeadline.getTime() - now.getTime()) / 86400000))} days left</span></div><div className="flex items-center justify-between gap-3"><span className="text-muted-foreground">Competition signal</span><span className="font-semibold text-foreground">Limited slots</span></div></div><Button variant="outline" className="mt-auto gap-2">Join your first tournament<ArrowRight className="h-4 w-4" /></Button></CardContent></Card></Link>)}</div>
@@ -264,18 +264,18 @@ export default async function SportHomePage({ params, searchParams }: Props) {
         <div className="container mx-auto">
           <div className="grid gap-6 lg:grid-cols-[1.05fr_0.95fr]">
             <Card className="border-border/70 bg-card">
-              <CardHeader className="flex flex-row items-start justify-between gap-4 pb-4"><div><Badge variant="outline" className={cn("mb-3 px-3 py-1", softAccentClass)}>Leaderboard</Badge><CardTitle className="text-2xl">Ranking progression</CardTitle><p className="mt-2 max-w-xl text-sm leading-6 text-muted-foreground">Top players stay visible here, and higher performance builds a path toward the next level of competition.</p></div><Link href={`/${sport}/leaderboard`}><Button variant="ghost" size="sm" className="gap-2 text-muted-foreground hover:text-foreground">View rankings<ChevronRight className="h-4 w-4" /></Button></Link></CardHeader>
+              <CardHeader className="flex flex-row items-start justify-between gap-4 pb-4"><div><Badge variant="outline" className={cn("mb-3 px-3 py-1", softAccentClass)}>Leaderboard</Badge><CardTitle className="text-2xl">Ranking progression</CardTitle><p className="mt-2 max-w-xl text-sm leading-6 text-muted-foreground">Top players move first.</p></div><Link href={`/${sport}/leaderboard`}><Button variant="ghost" size="sm" className="gap-2 text-muted-foreground hover:text-foreground">View rankings<ChevronRight className="h-4 w-4" /></Button></Link></CardHeader>
               <CardContent className="p-0">{topPlayers.length === 0 ? <div className="space-y-4 p-6"><div className="flex items-center justify-between"><p className="text-xs font-semibold uppercase tracking-[0.18em] text-muted-foreground">Leaderboard initializing</p><Badge variant="outline" className={cn("px-2.5 py-1", softAccentClass)}>First ranked players</Badge></div><div className="grid gap-3">{[1, 2, 3].map((i) => <div key={i} className="flex items-center gap-4 rounded-2xl border border-border/60 p-4"><Skeleton className="h-10 w-10 rounded-full" /><div className="flex-1 space-y-2"><Skeleton className="h-4 w-32" /><Skeleton className="h-3 w-40" /></div><Skeleton className="h-4 w-16" /></div>)}</div><div className="rounded-2xl border border-border/60 bg-muted/25 p-4"><p className="font-medium text-foreground">Leaderboard starts once official matches are played.</p><p className="mt-1 text-sm leading-6 text-muted-foreground">Be one of the first ranked players and put yourself in position for the next competition level.</p><div className="mt-4"><Link href={`/${sport}?auth=register`}><Button size="sm" className={cn("text-white", primaryBtnClass)}>Start your player profile</Button></Link></div></div></div> : <div className="divide-y divide-border/60">{topPlayers.map((player, index) => <Link key={player.id} href={`/${sport}/players/${player.id}`} className="flex items-center gap-4 p-5 transition-colors hover:bg-muted/40"><div className={cn("flex h-10 w-10 items-center justify-center rounded-full text-sm font-bold", index === 0 ? "bg-yellow-500/15 text-yellow-700 dark:text-yellow-400" : index === 1 ? "bg-slate-500/15 text-slate-700 dark:text-slate-300" : index === 2 ? "bg-orange-500/15 text-orange-700 dark:text-orange-400" : "bg-muted text-muted-foreground")}>{index + 1}</div><div className="flex-1"><p className="font-medium text-foreground">{player.firstName} {player.lastName}</p><p className="text-sm text-muted-foreground">Elo {Math.round(player.hiddenElo)}</p></div><div className="text-right"><p className={cn("font-semibold", accentTextClass)}>{player.visiblePoints} pts</p><p className="text-xs text-muted-foreground">Visible ranking points</p></div></Link>)}</div>}</CardContent>
             </Card>
             <div className="grid gap-5">
-              <Card className="border-border/70 bg-card"><CardHeader className="pb-3"><CardTitle className="text-xl">Why players return</CardTitle></CardHeader><CardContent className="grid gap-3"><ReasonRow icon={ShieldCheck} title="Results are verified" description="Official outcomes matter because rankings depend on them." accentClass={softAccentClass} /><ReasonRow icon={TrendingUp} title="Progression stays visible" description="Players can see movement through repeated competition." accentClass={softAccentClass} /><ReasonRow icon={Medal} title="Higher levels stay in view" description="Top performances create a path toward stronger tournaments." accentClass={softAccentClass} /></CardContent></Card>
-              <Card className="overflow-hidden border-border/70 bg-card"><div className="grid gap-0 md:grid-cols-[1fr_1fr]"><div className="border-b border-border/60 md:border-b-0 md:border-r"><MediaPane visual={visuals[1]} fallback={visuals[0]} gradientClass={gradientClass} compact /></div><CardContent className="flex flex-col justify-between p-6"><div><Badge variant="outline" className={cn("mb-3 px-3 py-1", softAccentClass)}>Early advantage</Badge><h3 className="text-2xl font-semibold text-foreground">Be among the first ranked players.</h3><p className="mt-3 text-sm leading-6 text-muted-foreground">Early registrations matter because the first official matches set the opening movement on the board and establish the first visible competition signals.</p></div><div className="mt-6 flex flex-wrap gap-3"><Link href={`/${sport}?auth=register`}><Button className={cn("text-white", primaryBtnClass)}>Register early access</Button></Link><Link href={`/${sport}/leaderboard`}><Button variant="outline">View rankings</Button></Link></div></CardContent></div></Card>
+              <Card className="border-border/70 bg-card"><CardHeader className="pb-3"><CardTitle className="text-xl">Why players return</CardTitle></CardHeader><CardContent className="grid gap-3"><ReasonRow icon={ShieldCheck} title="Verified results" description="Official outcomes." accentClass={softAccentClass} /><ReasonRow icon={TrendingUp} title="Visible progress" description="Ranks keep moving." accentClass={softAccentClass} /><ReasonRow icon={Medal} title="Higher levels" description="Play toward bigger stages." accentClass={softAccentClass} /></CardContent></Card>
+              <Card className="overflow-hidden border-border/70 bg-card"><div className="grid gap-0 md:grid-cols-[1fr_1fr]"><div className="border-b border-border/60 md:border-b-0 md:border-r"><MediaPane visual={visuals[1]} fallback={visuals[0]} gradientClass={gradientClass} compact /></div><CardContent className="flex flex-col justify-between p-6"><div><Badge variant="outline" className={cn("mb-3 px-3 py-1", softAccentClass)}>Early advantage</Badge><h3 className="text-2xl font-semibold text-foreground">Be among the first ranked players.</h3><p className="mt-3 text-sm leading-6 text-muted-foreground">Start early. Move first.</p></div><div className="mt-6 flex flex-wrap gap-3"><Link href={`/${sport}?auth=register`}><Button className={cn("text-white", primaryBtnClass)}>Register early access</Button></Link><Link href={`/${sport}/leaderboard`}><Button variant="outline">View rankings</Button></Link></div></CardContent></div></Card>
             </div>
           </div>
         </div>
       </section>
 
-      <section className={cn("px-4 py-12", isCornhole ? "bg-green-600" : "bg-teal-600")}><div className="container mx-auto text-center"><h2 className="text-3xl font-bold text-white">Start competing in {sportName.toLowerCase()}.</h2><p className="mx-auto mt-3 max-w-2xl text-sm leading-6 text-white/85 sm:text-base">Build your player profile, enter your first tournament, and return as rankings, tournaments, and progression keep expanding.</p><div className="mt-6 flex flex-wrap items-center justify-center gap-3"><Link href={`/${sport}?auth=register`}><Button size="lg" className="bg-white text-slate-950 hover:bg-slate-100">Start your player profile</Button></Link><Link href={`/${sport}/tournaments`}><Button size="lg" variant="outline" className="border-white/40 bg-transparent text-white hover:bg-white/10 hover:text-white">Join your first tournament</Button></Link></div></div></section>
+      <section className={cn("px-4 py-12", isCornhole ? "bg-green-600" : "bg-teal-600")}><div className="container mx-auto text-center"><h2 className="text-3xl font-bold text-white">Start competing in {sportName.toLowerCase()}.</h2><p className="mx-auto mt-3 max-w-2xl text-sm leading-6 text-white/85 sm:text-base">Create profile. Join tournament. Get ranked.</p><div className="mt-6 flex flex-wrap items-center justify-center gap-3"><Link href={`/${sport}?auth=register`}><Button size="lg" className="bg-white text-slate-950 hover:bg-slate-100">Start your player profile</Button></Link><Link href={`/${sport}/tournaments`}><Button size="lg" variant="outline" className="border-white/40 bg-transparent text-white hover:bg-white/10 hover:text-white">Join your first tournament</Button></Link></div></div></section>
       <SiteFooter />
     </>
   );
@@ -294,7 +294,7 @@ function ReasonRow({ icon: Icon, title, description, accentClass }: { icon: type
 }
 
 function MediaPane({ visual, fallback, gradientClass, compact = false }: { visual: Visual; fallback: Visual; gradientClass: string; compact?: boolean }) {
-  return <div className={cn("relative overflow-hidden", compact ? "min-h-[250px]" : "min-h-[360px]")}><MediaImage src={visual.src} alt={visual.title} gradientClass={gradientClass} /><div className="absolute inset-0 flex flex-col justify-end p-5"><div className="max-w-sm rounded-2xl border border-white/15 bg-black/45 p-4 text-white backdrop-blur-md"><div className="mb-3 flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.18em] text-white/80"><PlayCircle className="h-4 w-4" />{visual.label}</div><p className="text-base font-semibold">{visual.title}</p><p className="mt-2 text-sm leading-6 text-white/80">Real-action clips can play here as muted loops. Until then, the visual frame stays active and stable for live competition media.</p></div></div>{!visual.src ? <div className="absolute inset-0 flex items-center justify-center p-8"><div className="w-full max-w-sm rounded-2xl border border-white/10 bg-black/30 p-5 backdrop-blur-sm"><p className="text-sm font-medium text-white">Match footage slot</p><p className="mt-2 text-sm text-white/75">{fallback.title}</p></div></div> : null}</div>;
+  return <div className={cn("relative overflow-hidden", compact ? "min-h-[250px]" : "min-h-[360px]")}><MediaImage src={visual.src} alt={visual.title} gradientClass={gradientClass} /><div className="absolute inset-0 flex flex-col justify-end p-5"><div className="max-w-sm rounded-2xl border border-white/15 bg-black/45 p-4 text-white backdrop-blur-md"><div className="mb-3 flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.18em] text-white/80"><PlayCircle className="h-4 w-4" />{visual.label}</div><p className="text-base font-semibold">{visual.title}</p><p className="mt-2 text-sm leading-6 text-white/80">Media slot for real match action.</p></div></div>{!visual.src ? <div className="absolute inset-0 flex items-center justify-center p-8"><div className="w-full max-w-sm rounded-2xl border border-white/10 bg-black/30 p-5 backdrop-blur-sm"><p className="text-sm font-medium text-white">Match footage slot</p><p className="mt-2 text-sm text-white/75">{fallback.title}</p></div></div> : null}</div>;
 }
 
 function MediaImage({ src, alt, gradientClass }: { src?: string; alt: string; gradientClass: string }) {

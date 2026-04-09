@@ -3,7 +3,6 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useRef, useState } from "react";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -21,13 +20,11 @@ import {
   Lock,
   Medal,
   Play,
-  Search,
   Sparkles,
   Target,
   TrendingUp,
   Trophy,
   UserCheck,
-  Users,
   Zap,
 } from "lucide-react";
 import { Area, AreaChart, Cell, Pie, PieChart, ResponsiveContainer, Tooltip, XAxis } from "recharts";
@@ -55,6 +52,8 @@ interface UserData {
   bestStreak: number;
   followersCount: number;
   followingCount: number;
+  sessionCreatedAt?: string | null;
+  sessionLastActivityAt?: string | null;
 }
 
 interface PlayerStatsData {
@@ -132,6 +131,20 @@ function formatDate(value: string) {
 
 function formatLocation(city: string | null, state: string | null) {
   return [city, state].filter(Boolean).join(", ") || "Location will be announced";
+}
+
+function formatLastLogin(value: string | null | undefined) {
+  if (!value) {
+    return "Last login: Current session";
+  }
+
+  return `Last login: ${new Date(value).toLocaleString("en-IN", {
+    day: "2-digit",
+    month: "short",
+    year: "numeric",
+    hour: "numeric",
+    minute: "2-digit",
+  })}`;
 }
 
 function MilestoneStatCard({
@@ -230,34 +243,6 @@ function LockedModuleState({
         </Link>
       </div>
     </div>
-  );
-}
-
-function QuickAction({
-  icon: Icon,
-  label,
-  href,
-  color,
-  bgColor,
-}: {
-  icon: React.ElementType;
-  label: string;
-  href: string;
-  color: string;
-  bgColor: string;
-}) {
-  return (
-    <Link href={href}>
-      <Button
-        variant="outline"
-        className="h-auto w-full flex-col gap-2 border-2 px-5 py-4 transition-all hover:border-current hover:shadow-md"
-      >
-        <div className={cn("rounded-lg p-2", bgColor)}>
-          <Icon className={cn("h-5 w-5", color)} />
-        </div>
-        <span className="text-sm font-medium">{label}</span>
-      </Button>
-    </Link>
   );
 }
 
@@ -389,10 +374,6 @@ export default function DashboardPage() {
     );
   }
 
-  const initials = user
-    ? `${user.firstName?.charAt(0) || ""}${user.lastName?.charAt(0) || ""}`
-    : "P";
-
   const wins = stats?.matchesWon ?? user?.wins ?? 0;
   const losses = stats?.matchesLost ?? user?.losses ?? 0;
   const settledMatches = wins + losses;
@@ -425,6 +406,7 @@ export default function DashboardPage() {
   const recentMatches = stats?.recentMatches || [];
   const performanceHistory = stats?.performanceHistory || [];
   const winLossByMonth = stats?.winLossByMonth || [];
+  const lastLoginLabel = formatLastLogin(user?.sessionCreatedAt);
 
   return (
     <div className="mx-auto max-w-7xl space-y-6 p-4 md:p-6">
@@ -442,6 +424,14 @@ export default function DashboardPage() {
                 Your official rank appears after your first completed match in {isCornhole ? "Cornhole" : "Darts"}.
               </p>
             </div>
+            <div className="mt-4">
+              <Link href={`/${sport}/tournaments`}>
+                <Button className={cn("text-white", primaryBtnClass)}>
+                  Join Your First Tournament
+                  <ChevronRight className="ml-1 h-4 w-4" />
+                </Button>
+              </Link>
+            </div>
           </CardContent>
         </Card>
       ) : null}
@@ -449,70 +439,21 @@ export default function DashboardPage() {
       <div className="relative overflow-hidden rounded-2xl border border-border/50 bg-gradient-to-br from-card via-card to-muted/20 p-6 md:p-8">
         <div className="absolute right-0 top-0 h-64 w-64 translate-x-1/2 -translate-y-1/2 rounded-full bg-gradient-to-br from-transparent to-muted/30 blur-3xl" />
 
-        <div className="relative flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between">
-          <div className="flex items-center gap-5">
-            <div className="relative">
-              <div className={cn("absolute -inset-1 rounded-full opacity-75 blur-md", classes.primaryBgSubtle)} />
-              <Avatar
-                className={cn(
-                  "relative h-20 w-20 border-4 border-background ring-4 ring-background md:h-24 md:w-24",
-                  classes.glowPrimary,
-                )}
-              >
-                <AvatarImage src={user?.photoUrl || undefined} />
-                <AvatarFallback className={cn("text-2xl font-bold md:text-3xl", classes.primaryBgSubtle, classes.primaryText)}>
-                  {initials}
-                </AvatarFallback>
-              </Avatar>
-            </div>
-
-            <div>
-              <div className="mb-1 flex items-center gap-2">
-                <span className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
-                  {isCornhole ? "Cornhole" : "Darts"} Player Dashboard
-                </span>
-                {tournamentsWon > 0 ? (
-                  <span className="inline-flex items-center gap-1 rounded-full bg-amber-500/15 px-2 py-0.5 text-xs font-medium text-amber-600 dark:text-amber-400">
-                    <Crown className="h-3 w-3" />
-                    Champion
-                  </span>
-                ) : null}
-              </div>
-              <h1 className="text-2xl font-bold tracking-tight text-foreground md:text-4xl">
-                Structured Competition Dashboard
-              </h1>
-              <p className="mt-1 text-muted-foreground">
-                Your dashboard unlocks deeper insights as you progress through structured competition.
-              </p>
-            </div>
+        <div className="relative">
+          <div className="mb-1 flex items-center gap-2">
+            {tournamentsWon > 0 ? (
+              <span className="inline-flex items-center gap-1 rounded-full bg-amber-500/15 px-2 py-0.5 text-xs font-medium text-amber-600 dark:text-amber-400">
+                <Crown className="h-3 w-3" />
+                Champion
+              </span>
+            ) : null}
           </div>
-
-          <div className="flex flex-wrap gap-3">
-            <Link href={`/${sport}/tournaments`}>
-              <Button
-                size="lg"
-                className={cn(
-                  "h-12 rounded-xl px-6 font-semibold text-white shadow-lg transition-all hover:-translate-y-0.5 hover:shadow-xl",
-                  primaryBtnClass,
-                )}
-              >
-                <Search className="mr-2 h-4 w-4" />
-                {isNewUser ? "Join Your First Tournament" : "Find Tournament"}
-              </Button>
-            </Link>
-            <Link href={`/${sport}/players`}>
-              <Button size="lg" variant="outline" className="h-12 rounded-xl border-2 px-6 font-medium">
-                <Users className="mr-2 h-4 w-4" />
-                Find Players
-              </Button>
-            </Link>
-            <Link href={`/${sport}/dashboard/cities`}>
-              <Button size="lg" variant="outline" className="h-12 rounded-xl border-2 px-6 font-medium">
-                <Zap className="mr-2 h-4 w-4" />
-                Play Duel
-              </Button>
-            </Link>
-          </div>
+          <h1 className="text-2xl font-bold tracking-tight text-foreground md:text-4xl">
+            Dashboard
+          </h1>
+          <p className="mt-1 text-sm text-muted-foreground">
+            {lastLoginLabel}
+          </p>
         </div>
 
         <div className={cn("mt-6 grid grid-cols-2 gap-4 border-t pt-6 md:grid-cols-4", classes.primaryBorderLight)}>
@@ -999,37 +940,6 @@ export default function DashboardPage() {
         </CardContent>
       </Card>
       
-      <Card className="border-border/50 shadow-sm">
-        <CardHeader className="pb-3">
-          <CardTitle className="text-lg font-bold">Quick Actions</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-2 gap-3 md:grid-cols-3">
-            <QuickAction
-              icon={BarChart3}
-              label="My Stats"
-              href={`/${sport}/stats`}
-              color="text-blue-500"
-              bgColor="bg-blue-500/10"
-            />
-            <QuickAction
-              icon={Users}
-              label="Find Players"
-              href={`/${sport}/players`}
-              color="text-purple-500"
-              bgColor="bg-purple-500/10"
-            />
-            <QuickAction
-              icon={Zap}
-              label="Play Duel"
-              href={`/${sport}/dashboard/cities`}
-              color="text-amber-500"
-              bgColor="bg-amber-500/10"
-            />
-          </div>
-        </CardContent>
-      </Card>
-
       {!recentActivityUnlocked ? (
         <Card className="border-border/50 shadow-sm">
           <CardHeader className="pb-3">
@@ -1131,3 +1041,4 @@ export default function DashboardPage() {
     </div>
   );
 }
+

@@ -217,6 +217,8 @@ export async function GET(request: NextRequest) {
       verificationNotes: user.verificationNotes,
       // Profile update timestamp
       profileUpdatedAt: user.profileUpdatedAt,
+      sessionCreatedAt: session.createdAt ?? null,
+      sessionLastActivityAt: session.lastActivityAt ?? null,
       createdAt: user.createdAt,
       // Social stats
       followersCount,

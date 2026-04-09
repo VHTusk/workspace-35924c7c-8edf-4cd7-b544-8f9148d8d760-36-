@@ -10,7 +10,6 @@ import {
   LogIn,
   UserPlus,
   Loader2,
-  ChevronDown,
   LayoutDashboard,
   User,
   Settings,
@@ -363,15 +362,13 @@ export default function SportHeader({
           {/* User Dropdown */}
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button variant="ghost" className="gap-1.5 pl-1.5 pr-2 sm:gap-2 sm:pl-2 sm:pr-3">
+              <Button variant="ghost" size="icon" className="h-9 w-9 rounded-full">
                 <Avatar className="h-7 w-7">
                   <AvatarImage src={user?.photoUrl || org?.photoUrl || undefined} />
                   <AvatarFallback className={cn("text-white text-xs", primaryBtnClass)}>
                     {userType === "org" ? <Building2 className="w-4 h-4" /> : getInitials()}
                   </AvatarFallback>
                 </Avatar>
-                <span className="hidden lg:inline text-sm font-medium">{getDisplayName()}</span>
-                <ChevronDown className="h-4 w-4 text-muted-foreground" />
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="w-56">
@@ -487,10 +484,10 @@ export default function SportHeader({
             </Link>
 
             <div className="flex items-center gap-1.5 sm:gap-2">
-              <LanguageSelector variant="icon" className="sm:hidden" />
-              <LanguageSelector variant="compact" className="hidden sm:inline-flex" />
               <SearchButton onClick={() => setSearchOpen(true)} />
               {renderAuthButtons()}
+              <LanguageSelector variant="icon" className="sm:hidden" />
+              <LanguageSelector variant="compact" className="hidden sm:inline-flex" />
             </div>
           </div>
         </div>

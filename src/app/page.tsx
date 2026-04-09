@@ -22,8 +22,16 @@ import SiteFooter from "@/components/layout/site-footer";
 import { UniversalLoginModal } from "@/components/auth/universal-login-modal";
 import { UniversalRegisterModal } from "@/components/auth/universal-register-modal";
 import { Button } from "@/components/ui/button";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import LanguageSelector from "@/components/ui/language-selector";
 import { useTranslation } from "@/hooks/use-translation";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { LogOut } from "lucide-react";
 
 const HERO_OUTCOMES = [
   "Verified match results",
@@ -192,12 +200,12 @@ export default function HomePage() {
     router.replace(params.size ? `/?${params.toString()}` : "/");
   };
 
+  const isHindi = language === "hi";
   const loggedInHref = sessionStatus.sport
     ? sessionStatus.userType === "org"
       ? `/${sessionStatus.sport}/org/profile`
       : `/${sessionStatus.sport}/dashboard`
     : "/";
-  const isHindi = language === "hi";
   const heroOutcomes = isHindi
     ? ["सत्यापित मैच परिणाम", "दोहराए जाने वाले सिटी टूर्नामेंट", "लगातार बदलती रैंकिंग"]
     : HERO_OUTCOMES;
@@ -339,6 +347,24 @@ export default function HomePage() {
         heroVisualDescription: HERO_VISUAL.description,
       };
 
+  const handleLandingLogout = async () => {
+    try {
+      await fetch("/api/auth/logout", {
+        method: "POST",
+        credentials: "include",
+      });
+    } catch {
+      // ignore
+    }
+
+    setSessionStatus({
+      authenticated: false,
+      userType: null,
+      sport: null,
+    });
+    router.refresh();
+  };
+
   return (
     <div className="min-h-screen bg-[#050c10] text-white">
       <GoogleOneTap showButton={false} autoPrompt />
@@ -365,16 +391,31 @@ export default function HomePage() {
                   >
                     {landingCopy.about}
                   </a>
-                  <LanguageSelector variant="compact" className="border-[#18AFCE]/30 bg-[#07141c] text-[#c6f7ff]" />
                   {sessionStatus.authenticated ? (
-                    <Button
-                      asChild
-                      className="h-10 rounded-xl bg-[#d6ff3f] px-4 text-sm font-semibold text-[#10210f] shadow-[0_0_18px_rgba(214,255,63,0.28)] transition-all hover:-translate-y-0.5 hover:bg-[#c8f12c]"
-                    >
-                      <Link href={loggedInHref}>
-                        {sessionStatus.userType === "org" ? landingCopy.openProfile : landingCopy.dashboard}
-                      </Link>
-                    </Button>
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-10 w-10 rounded-full border border-[#18AFCE]/35 bg-[#07141c] text-[#c6f7ff] shadow-[0_0_14px_rgba(24,175,206,0.14)] transition-all hover:-translate-y-0.5 hover:border-[#18AFCE]/70 hover:bg-[#0a1b24]"
+                        >
+                          <Avatar className="h-7 w-7">
+                            <AvatarFallback className="bg-transparent text-xs font-semibold text-[#c6f7ff]">
+                              {sessionStatus.userType === "org" ? "O" : "P"}
+                            </AvatarFallback>
+                          </Avatar>
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end" className="w-44">
+                        <DropdownMenuItem
+                          className="cursor-pointer text-red-600"
+                          onClick={handleLandingLogout}
+                        >
+                          <LogOut className="mr-2 h-4 w-4" />
+                          {isHindi ? "à¤²à¥‰à¤— à¤†à¤‰à¤Ÿ" : "Logout"}
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
                   ) : (
                     <>
                       <button
@@ -393,6 +434,7 @@ export default function HomePage() {
                       </button>
                     </>
                   )}
+                  <LanguageSelector variant="compact" className="border-[#18AFCE]/30 bg-[#07141c] text-[#c6f7ff]" />
                 </div>
               </div>
             </header>

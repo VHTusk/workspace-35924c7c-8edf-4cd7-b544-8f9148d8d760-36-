@@ -15,6 +15,8 @@ interface SessionData {
   sport?: string;
   accountType?: string;
   role?: string;
+  createdAt?: Date;
+  lastActivityAt?: Date;
   isAuthenticated: boolean;
   sportMismatch?: boolean;  // True if session sport doesn't match expected sport
   sessionSport?: string;    // The sport stored in the session
@@ -120,6 +122,8 @@ export async function validateSession(expectedSport?: string): Promise<SessionDa
       sport: session.sport || undefined,
       accountType: session.accountType || undefined,
       role: session.user?.role || undefined,
+      createdAt: session.createdAt || undefined,
+      lastActivityAt: session.lastActivityAt || undefined,
       isAuthenticated: true,
     };
   } catch (error) {

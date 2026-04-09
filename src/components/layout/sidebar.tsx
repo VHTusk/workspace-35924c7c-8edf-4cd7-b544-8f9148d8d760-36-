@@ -338,7 +338,7 @@ export default function Sidebar({ userType = "player" }: SidebarProps) {
     { icon: LayoutDashboard, label: common.dashboard, href: `/${sport}/dashboard`, category: categories.play },
     { icon: Trophy, label: common.tournaments, href: `/${sport}/tournaments`, category: categories.play },
     { icon: Users, label: language === "hi" ? "टीम्स" : "Teams", href: `/${sport}/teams`, category: categories.play },
-    { icon: Zap, label: language === "hi" ? "चैलेंजर मोड" : "Challenger Mode", href: `/${sport}/dashboard/cities`, category: categories.play },
+    { icon: Zap, label: "Play Duel", href: `/${sport}/dashboard/cities`, category: categories.play },
     { icon: BarChart3, label: language === "hi" ? "मेरे आँकड़े" : "My Stats", href: `/${sport}/stats`, category: categories.performance },
     { icon: Award, label: common.leaderboard, href: `/${sport}/leaderboard`, category: categories.performance },
     { icon: Gift, label: language === "hi" ? "रेफरल्स" : "Referrals", href: `/${sport}/referrals`, category: categories.growth },
@@ -465,3 +465,4 @@ export default function Sidebar({ userType = "player" }: SidebarProps) {
     </aside>
   );
 }
+
