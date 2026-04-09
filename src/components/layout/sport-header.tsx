@@ -11,6 +11,7 @@ import {
   UserPlus,
   Loader2,
   ChevronDown,
+  LayoutDashboard,
   User,
   Settings,
   Crown,
@@ -323,6 +324,15 @@ export default function SportHeader({
       // Show notification bell + user dropdown when logged in
       return (
         <div className="flex items-center gap-2">
+          {userType === "player" && (
+            <Link href={`/${sport}/dashboard`}>
+              <Button variant="outline" size="sm" className="gap-2">
+                <LayoutDashboard className="h-4 w-4" />
+                <span className="hidden sm:inline">Dashboard</span>
+              </Button>
+            </Link>
+          )}
+
           {/* Notification Bell */}
           {userType === "player" && <NotificationDropdown sport={sport} />}
 

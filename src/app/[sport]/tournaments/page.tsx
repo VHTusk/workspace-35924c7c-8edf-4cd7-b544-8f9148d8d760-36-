@@ -24,6 +24,7 @@ import {
   AlertCircle,
 } from "lucide-react";
 import { useState, useEffect, useRef } from "react";
+import Sidebar from "@/components/layout/sidebar";
 
 interface Tournament {
   id: string;
@@ -336,7 +337,10 @@ export default function TournamentsPage() {
   };
 
   return (
-    <div className="py-8 px-4">
+    <div className="bg-muted/30 min-h-screen">
+      {userType && <Sidebar userType={userType} />}
+      <main className={userType ? "ml-0 md:ml-72" : ""}>
+      <div className="py-8 px-4">
       <div className="container mx-auto">
         {/* Header */}
         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-6">
@@ -693,6 +697,8 @@ export default function TournamentsPage() {
           )}
         </Tabs>
       </div>
+      </div>
+      </main>
     </div>
   );
 }
