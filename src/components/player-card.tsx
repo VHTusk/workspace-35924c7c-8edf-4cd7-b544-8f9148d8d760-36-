@@ -50,6 +50,23 @@ export const PlayerCard = forwardRef<HTMLDivElement, PlayerCardProps>(
       stats && stats.matchesPlayed > 0
         ? Math.round((stats.wins / stats.matchesPlayed) * 100)
         : 0;
+    const compactGender = player.gender === "MALE"
+      ? "M"
+      : player.gender === "FEMALE"
+        ? "F"
+        : player.gender === "MIXED"
+          ? "X"
+          : player.gender === "OTHER"
+            ? "O"
+            : null;
+    const nameMeta =
+      compactGender && player.age
+        ? `(${compactGender}/${player.age})`
+        : compactGender
+          ? `(${compactGender})`
+          : player.age
+            ? `(${player.age})`
+            : null;
 
     return (
       <div
@@ -113,7 +130,8 @@ export const PlayerCard = forwardRef<HTMLDivElement, PlayerCardProps>(
             </div>
             <div className="flex-1">
               <h2 className="text-xl font-bold text-white">
-                {player.firstName} {player.lastName}
+                {player.firstName} {player.lastName}{" "}
+                {nameMeta ? <span className="text-base font-semibold text-slate-300">{nameMeta}</span> : null}
               </h2>
               {player.organization && (
                 <p className="text-slate-400 text-sm mt-0.5">
@@ -124,20 +142,6 @@ export const PlayerCard = forwardRef<HTMLDivElement, PlayerCardProps>(
                 <p className="text-slate-500 text-xs mt-1">
                   {player.district}, {player.state}
                 </p>
-              )}
-              {(player.age || player.gender) && (
-                <div className="mt-2 flex flex-wrap gap-2">
-                  {player.age ? (
-                    <Badge className="border-0 bg-white/10 text-slate-100">
-                      {player.age} yrs
-                    </Badge>
-                  ) : null}
-                  {player.gender ? (
-                    <Badge className="border-0 bg-white/10 text-slate-100">
-                      {player.gender.charAt(0) + player.gender.slice(1).toLowerCase()}
-                    </Badge>
-                  ) : null}
-                </div>
               )}
             </div>
           </div>

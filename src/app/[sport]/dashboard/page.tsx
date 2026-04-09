@@ -2,44 +2,38 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import {
-  ChartConfig,
-  ChartContainer,
-} from "@/components/ui/chart";
-import {
-  Trophy,
-  Calendar,
-  Medal,
-  Target,
-  Flame,
-  Zap,
-  Heart,
-  UserCheck,
-  TrendingUp,
-  ArrowUpRight,
-  ArrowDownRight,
-  Minus,
-  Loader2,
-  Search,
-  BarChart3,
-  Play,
-  CheckCircle2,
-  XCircle,
-  Users,
-  Crown,
   Activity,
+  BarChart3,
+  Calendar,
+  CheckCircle2,
   ChevronRight,
+  Crown,
+  Flame,
+  Heart,
+  Loader2,
+  Lock,
+  Medal,
+  Play,
+  Search,
   Sparkles,
+  Target,
+  TrendingUp,
+  Trophy,
+  UserCheck,
+  Users,
+  Zap,
 } from "lucide-react";
-import { cn } from "@/lib/utils";
-import { useState, useEffect, useCallback, useRef } from "react";
+import { Area, AreaChart, Cell, Pie, PieChart, ResponsiveContainer, Tooltip, XAxis } from "recharts";
 import FollowersModal from "@/components/follow/followers-modal";
 import { ActivityFeedCard } from "@/components/activity/activity-feed-card";
-import { PieChart, Pie, Cell, ResponsiveContainer, AreaChart, Area, XAxis, YAxis, Tooltip } from "recharts";
+import { cn } from "@/lib/utils";
 import { useSportStyling } from "@/hooks/use-sport-styling";
 import { useFollowCountRefresh } from "@/hooks/use-follow-count";
 
@@ -52,216 +46,193 @@ interface UserData {
   score: number;
   elo: number;
   rank: number;
-  tournaments: number;
   tournamentsPlayed: number;
   tournamentsWon: number;
   wins: number;
   losses: number;
   matches: number;
-  winRate: string;
   currentStreak: number;
   bestStreak: number;
   followersCount: number;
   followingCount: number;
 }
 
-// Mini sparkline component for stat cards
-function MiniSparkline({ data, color, isPositive }: { data: number[]; color: string; isPositive: boolean }) {
-  const chartData = data.map((value, index) => ({ index, value }));
-  
-  return (
-    <div className="w-20 h-8">
-      <ResponsiveContainer width="100%" height="100%">
-        <AreaChart data={chartData}>
-          <defs>
-            <linearGradient id={`gradient-${color}`} x1="0" y1="0" x2="0" y2="1">
-              <stop offset="0%" stopColor={color} stopOpacity={0.3} />
-              <stop offset="100%" stopColor={color} stopOpacity={0} />
-            </linearGradient>
-          </defs>
-          <Area
-            type="monotone"
-            dataKey="value"
-            stroke={color}
-            strokeWidth={2}
-            fill={`url(#gradient-${color})`}
-          />
-        </AreaChart>
-      </ResponsiveContainer>
-    </div>
-  );
+interface PlayerStatsData {
+  visiblePoints: number;
+  hiddenElo: number;
+  highestElo: number;
+  rank: number;
+  totalPlayers: number;
+  tier: string;
+  tierProgress: number;
+  nextTier: string;
+  pointsToNextTier: number;
+  matchesPlayed: number;
+  matchesWon: number;
+  matchesLost: number;
+  winRate: number;
+  currentStreak: number;
+  bestStreak: number;
+  tournamentsPlayed: number;
+  tournamentsWon: number;
+  podiumFinishes: number;
+  averagePointsPerMatch: number;
+  recentMatches: Array<{
+    id: string;
+    tournamentName: string;
+    opponent: string;
+    result: "WIN" | "LOSS";
+    score: string;
+    pointsEarned: number;
+    eloChange: number;
+    date: string;
+  }>;
+  performanceHistory: Array<{
+    month: string;
+    elo: number;
+    points: number;
+    matches: number;
+  }>;
+  winLossByMonth: Array<{
+    month: string;
+    wins: number;
+    losses: number;
+  }>;
 }
 
-// Win/Loss Donut Chart
-function WinLossChart({ wins, losses, primaryColor }: { wins: number; losses: number; primaryColor: string }) {
-  const total = wins + losses;
-  const winPercent = total > 0 ? Math.round((wins / total) * 100) : 0;
-  
-  const data = [
-    { name: "Wins", value: wins, color: "#22c55e" },
-    { name: "Losses", value: losses, color: "#ef4444" },
-  ];
-  
-  const chartConfig = {
-    wins: { label: "Wins", color: "#22c55e" },
-    losses: { label: "Losses", color: "#ef4444" },
-  } satisfies ChartConfig;
-
-  if (total === 0) {
-    return (
-      <div className="flex flex-col items-center justify-center h-40">
-        <div className="w-28 h-28 rounded-full border-8 border-dashed border-muted-foreground/20 flex items-center justify-center">
-          <span className="text-muted-foreground text-sm">No data</span>
-        </div>
-      </div>
-    );
-  }
-
-  return (
-    <div className="flex flex-col items-center">
-      <div className="relative w-36 h-36">
-        <ResponsiveContainer width="100%" height="100%">
-          <PieChart>
-            <Pie
-              data={data}
-              cx="50%"
-              cy="50%"
-              innerRadius={45}
-              outerRadius={60}
-              paddingAngle={2}
-              dataKey="value"
-            >
-              {data.map((entry, index) => (
-                <Cell key={`cell-${index}`} fill={entry.color} />
-              ))}
-            </Pie>
-          </PieChart>
-        </ResponsiveContainer>
-        <div className="absolute inset-0 flex flex-col items-center justify-center">
-          <span className="text-3xl font-bold text-foreground">{winPercent}%</span>
-          <span className="text-xs text-muted-foreground">Win Rate</span>
-        </div>
-      </div>
-    </div>
-  );
+interface PlayerTournament {
+  id: string;
+  name: string;
+  status: string;
+  startDate: string;
+  endDate: string;
+  city: string | null;
+  state: string | null;
+  scope: string;
+  registrationStatus: string;
+  matchesPlayed: number;
+  matchesWon: number;
+  finalRank: number | null;
 }
 
-// Recent form badges (W/L sequence)
-function RecentForm({ wins, losses }: { wins: number; losses: number }) {
-  // Generate simulated recent form based on win/loss ratio
-  const total = wins + losses;
-  const form: ("W" | "L")[] = [];
-  
-  if (total === 0) {
-    return (
-      <div className="text-sm text-muted-foreground text-center py-2">
-        No matches played yet
-      </div>
-    );
-  }
-  
-  // Create a realistic form based on actual win/loss ratio
-  const winRate = wins / total;
-  for (let i = 0; i < 5; i++) {
-    form.push(Math.random() < winRate ? "W" : "L");
-  }
-  
-  return (
-    <div className="flex items-center justify-center gap-2">
-      <span className="text-xs text-muted-foreground mr-2">Recent Form:</span>
-      {form.map((result, index) => (
-        <div
-          key={index}
-          className={cn(
-            "w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold transition-transform hover:scale-110",
-            result === "W"
-              ? "bg-green-500/20 text-green-600 dark:text-green-400 ring-2 ring-green-500/30"
-              : "bg-red-500/20 text-red-600 dark:text-red-400 ring-2 ring-red-500/30"
-          )}
-        >
-          {result}
-        </div>
-      ))}
-    </div>
-  );
+interface PlayerTournamentsResponse {
+  upcoming: PlayerTournament[];
+  active: PlayerTournament[];
+  completed: PlayerTournament[];
+  total: number;
 }
 
-// Stat card component
-function StatCard({
+function formatDate(value: string) {
+  return new Date(value).toLocaleDateString("en-IN", {
+    day: "2-digit",
+    month: "short",
+    year: "numeric",
+  });
+}
+
+function formatLocation(city: string | null, state: string | null) {
+  return [city, state].filter(Boolean).join(", ") || "Location will be announced";
+}
+
+function MilestoneStatCard({
   title,
   value,
   icon: Icon,
-  trend,
-  trendValue,
-  sparklineData,
-  color,
-  bgColor,
-  isPrimary = false,
+  colorClass,
+  bgClass,
+  locked = false,
+  lockedText,
 }: {
   title: string;
   value: string | number;
   icon: React.ElementType;
-  trend?: "up" | "down" | "neutral";
-  trendValue?: string;
-  sparklineData?: number[];
-  color: string;
-  bgColor: string;
-  isPrimary?: boolean;
+  colorClass: string;
+  bgClass: string;
+  locked?: boolean;
+  lockedText?: string;
 }) {
   return (
-    <Card
-      className={cn(
-        "relative overflow-hidden transition-all duration-300 hover:shadow-lg hover:-translate-y-1 group",
-        bgColor
-      )}
-    >
-      <CardContent className={cn("p-4", isPrimary && "p-6")}>
-        <div className="flex items-start justify-between mb-3">
-          <div
-            className={cn(
-              "p-2.5 rounded-xl transition-transform group-hover:scale-110",
-              bgColor
-            )}
-          >
-            <Icon className={cn("w-5 h-5", color)} />
+    <Card className={cn("border-border/50 shadow-sm transition-all", locked && "opacity-75")}>
+      <CardContent className="p-4">
+        <div className="flex items-start justify-between gap-3">
+          <div className={cn("rounded-xl p-2.5", bgClass)}>
+            <Icon className={cn("h-5 w-5", colorClass)} />
           </div>
-          {sparklineData && (
-            <MiniSparkline
-              data={sparklineData}
-              color={trend === "up" ? "#22c55e" : trend === "down" ? "#ef4444" : "#94a3b8"}
-              isPositive={trend === "up"}
-            />
-          )}
+          {locked ? (
+            <Badge variant="outline" className="gap-1 text-xs">
+              <Lock className="h-3 w-3" />
+              Locked
+            </Badge>
+          ) : null}
         </div>
-        <div className="space-y-1">
-          <p className={cn("font-bold tracking-tight", isPrimary ? "text-4xl" : "text-2xl")}>
-            {value}
-          </p>
-          <div className="flex items-center gap-2">
-            <p className="text-sm text-muted-foreground">{title}</p>
-            {trend && trendValue && (
-              <span
-                className={cn(
-                  "inline-flex items-center gap-0.5 text-xs font-medium px-1.5 py-0.5 rounded-full",
-                  trend === "up" && "bg-green-500/15 text-green-600 dark:text-green-400",
-                  trend === "down" && "bg-red-500/15 text-red-600 dark:text-red-400",
-                  trend === "neutral" && "bg-slate-500/15 text-slate-600 dark:text-slate-400"
-                )}
-              >
-                {trend === "up" && <ArrowUpRight className="w-3 h-3" />}
-                {trend === "down" && <ArrowDownRight className="w-3 h-3" />}
-                {trend === "neutral" && <Minus className="w-3 h-3" />}
-                {trendValue}
-              </span>
-            )}
-          </div>
+        <div className="mt-4 space-y-1">
+          <p className="text-sm text-muted-foreground">{title}</p>
+          {locked ? (
+            <p className="text-sm font-medium text-foreground">{lockedText}</p>
+          ) : (
+            <p className="text-3xl font-bold tracking-tight text-foreground">{value}</p>
+          )}
         </div>
       </CardContent>
     </Card>
   );
 }
 
-// Quick action button
+function LockedModuleState({
+  icon: Icon,
+  title,
+  description,
+  unlockLabel,
+  actionLabel,
+  actionHref,
+  primaryBtnClass,
+  skeleton = false,
+}: {
+  icon: React.ElementType;
+  title: string;
+  description: string;
+  unlockLabel: string;
+  actionLabel: string;
+  actionHref: string;
+  primaryBtnClass: string;
+  skeleton?: boolean;
+}) {
+  return (
+    <div className="space-y-4">
+      {skeleton ? (
+        <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
+          <div className="rounded-xl border border-dashed border-border/60 bg-muted/30 p-4">
+            <div className="h-3 w-28 rounded bg-muted" />
+            <div className="mt-3 h-28 rounded-lg bg-muted/80" />
+          </div>
+          <div className="space-y-3 rounded-xl border border-dashed border-border/60 bg-muted/30 p-4">
+            <div className="h-3 w-24 rounded bg-muted" />
+            <div className="h-12 rounded-lg bg-muted/80" />
+            <div className="h-12 rounded-lg bg-muted/80" />
+            <div className="h-12 rounded-lg bg-muted/80" />
+          </div>
+        </div>
+      ) : null}
+      <div className="rounded-xl border border-dashed border-border/60 bg-muted/30 p-5 text-center">
+        <div className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-full bg-background shadow-sm">
+          <Icon className="h-5 w-5 text-muted-foreground" />
+        </div>
+        <h3 className="font-semibold text-foreground">{title}</h3>
+        <p className="mt-1 text-sm text-muted-foreground">{description}</p>
+        <p className="mt-3 text-xs font-medium uppercase tracking-wide text-muted-foreground">
+          Unlock condition: {unlockLabel}
+        </p>
+        <Link href={actionHref}>
+          <Button className={cn("mt-4 text-white", primaryBtnClass)}>
+            {actionLabel}
+            <ChevronRight className="ml-1 h-4 w-4" />
+          </Button>
+        </Link>
+      </div>
+    </div>
+  );
+}
+
 function QuickAction({
   icon: Icon,
   label,
@@ -279,13 +250,10 @@ function QuickAction({
     <Link href={href}>
       <Button
         variant="outline"
-        className={cn(
-          "h-auto flex-col gap-2 py-4 px-5 w-full border-2 hover:shadow-md transition-all",
-          "hover:border-current"
-        )}
+        className="h-auto w-full flex-col gap-2 border-2 px-5 py-4 transition-all hover:border-current hover:shadow-md"
       >
-        <div className={cn("p-2 rounded-lg", bgColor)}>
-          <Icon className={cn("w-5 h-5", color)} />
+        <div className={cn("rounded-lg p-2", bgColor)}>
+          <Icon className={cn("h-5 w-5", color)} />
         </div>
         <span className="text-sm font-medium">{label}</span>
       </Button>
@@ -293,38 +261,31 @@ function QuickAction({
   );
 }
 
-// Empty state component
-function EmptyState({
-  icon: Icon,
-  title,
-  description,
-  actionLabel,
-  actionHref,
-  primaryBtnClass,
-}: {
-  icon: React.ElementType;
-  title: string;
-  description: string;
-  actionLabel: string;
-  actionHref: string;
-  primaryBtnClass: string;
-}) {
+function WinLossChart({ wins, losses }: { wins: number; losses: number }) {
+  const total = wins + losses;
+  const data = [
+    { name: "Wins", value: wins, color: "#22c55e" },
+    { name: "Losses", value: losses, color: "#ef4444" },
+  ];
+  const winPercent = total > 0 ? Math.round((wins / total) * 100) : 0;
+
   return (
-    <div className="flex flex-col items-center justify-center py-10 text-center">
-      <div className="relative mb-4">
-        <div className="absolute inset-0 bg-gradient-to-r from-muted to-muted/50 rounded-full blur-xl opacity-50" />
-        <div className="relative p-4 rounded-full bg-muted/50">
-          <Icon className="w-10 h-10 text-muted-foreground" />
+    <div className="flex flex-col items-center">
+      <div className="relative h-36 w-36">
+        <ResponsiveContainer width="100%" height="100%">
+          <PieChart>
+            <Pie data={data} cx="50%" cy="50%" innerRadius={45} outerRadius={60} dataKey="value" paddingAngle={2}>
+              {data.map((entry) => (
+                <Cell key={entry.name} fill={entry.color} />
+              ))}
+            </Pie>
+          </PieChart>
+        </ResponsiveContainer>
+        <div className="absolute inset-0 flex flex-col items-center justify-center">
+          <span className="text-3xl font-bold text-foreground">{winPercent}%</span>
+          <span className="text-xs text-muted-foreground">Win Rate</span>
         </div>
       </div>
-      <h3 className="font-semibold text-foreground mb-1">{title}</h3>
-      <p className="text-sm text-muted-foreground mb-4 max-w-xs">{description}</p>
-      <Link href={actionHref}>
-        <Button className={cn("text-white", primaryBtnClass)}>
-          {actionLabel}
-          <ChevronRight className="w-4 h-4 ml-1" />
-        </Button>
-      </Link>
     </div>
   );
 }
@@ -333,86 +294,96 @@ export default function DashboardPage() {
   const router = useRouter();
   const { sport, isCornhole, classes, theme } = useSportStyling();
   const [user, setUser] = useState<UserData | null>(null);
+  const [stats, setStats] = useState<PlayerStatsData | null>(null);
+  const [tournaments, setTournaments] = useState<PlayerTournamentsResponse>({
+    upcoming: [],
+    active: [],
+    completed: [],
+    total: 0,
+  });
   const [loading, setLoading] = useState(true);
   const [showFollowersModal, setShowFollowersModal] = useState(false);
   const abortControllerRef = useRef<AbortController | null>(null);
   const followRefreshKey = useFollowCountRefresh();
 
-  // Extract class names for easier use
   const primaryTextClass = classes.primaryText;
-  const primaryBgClass = classes.primaryBgSubtle;
   const primaryBtnClass = classes.primaryBtn;
 
-  const fetchUserData = useCallback(async () => {
-    // Abort any in-flight request from previous effect
+  const fetchDashboardData = useCallback(async () => {
     if (abortControllerRef.current) {
       abortControllerRef.current.abort();
     }
+
     abortControllerRef.current = new AbortController();
     const signal = abortControllerRef.current.signal;
 
     try {
-      const response = await fetch(`/api/player/me?sport=${sport}`, {
+      const userResponse = await fetch(`/api/player/me?sport=${sport}`, {
         signal,
         cache: "no-store",
       });
-      
+
       if (signal.aborted) return;
-      
-      if (response.status === 403) {
-        // SPORT_MISMATCH - User is logged in for a different sport
-        const data = await response.json();
-        console.log(`[Dashboard] Sport mismatch: logged in for ${data.sessionSport}, accessing ${sport}`);
-        // Redirect to login for this sport
+
+      if (userResponse.status === 403) {
         router.push(`/${sport}/login?error=sport_mismatch`);
         return;
       }
-      
-      if (response.status === 401) {
-        // Not authenticated - redirect to login
+
+      if (userResponse.status === 401) {
         router.push(`/${sport}/login`);
         return;
       }
-      
-      if (response.ok) {
-        const data = await response.json();
-        if (!signal.aborted) {
-          setUser(data);
-        }
+
+      if (!userResponse.ok) {
+        throw new Error("Failed to fetch player data");
+      }
+
+      const userData = await userResponse.json();
+      if (signal.aborted) return;
+      setUser(userData);
+
+      const [statsResponse, tournamentsResponse] = await Promise.all([
+        fetch("/api/player/stats", { signal, cache: "no-store" }),
+        fetch("/api/player/tournaments", { signal, cache: "no-store" }),
+      ]);
+
+      if (!signal.aborted && statsResponse.ok) {
+        setStats(await statsResponse.json());
+      }
+
+      if (!signal.aborted && tournamentsResponse.ok) {
+        setTournaments(await tournamentsResponse.json());
       }
     } catch (error) {
-      // Ignore abort errors
-      if (error instanceof Error && error.name === 'AbortError') return;
-      console.error("Failed to fetch user data:", error);
+      if (error instanceof Error && error.name === "AbortError") {
+        return;
+      }
+      console.error("Failed to fetch dashboard data:", error);
     } finally {
       if (!signal.aborted) {
         setLoading(false);
       }
     }
-  }, [sport, router]);
+  }, [router, sport]);
 
   useEffect(() => {
     setLoading(true);
-    fetchUserData();
+    fetchDashboardData();
 
     return () => {
-      // Abort in-flight request on unmount
       if (abortControllerRef.current) {
         abortControllerRef.current.abort();
       }
     };
-  }, [fetchUserData, followRefreshKey]);
-
-  // Get colors from theme for charts
-  const primaryColor = theme.primaryColor;
-  const accentColor = theme.accentColor;
+  }, [fetchDashboardData, followRefreshKey]);
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center min-h-[500px]">
+      <div className="flex min-h-[500px] items-center justify-center">
         <div className="flex flex-col items-center gap-3">
-          <Loader2 className={cn("w-10 h-10 animate-spin", classes.primaryText)} />
-          <span className="text-muted-foreground text-sm">Loading your dashboard...</span>
+          <Loader2 className={cn("h-10 w-10 animate-spin", classes.primaryText)} />
+          <span className="text-sm text-muted-foreground">Loading your dashboard...</span>
         </div>
       </div>
     );
@@ -422,366 +393,438 @@ export default function DashboardPage() {
     ? `${user.firstName?.charAt(0) || ""}${user.lastName?.charAt(0) || ""}`
     : "P";
 
-  // Calculate derived stats
-  const totalMatches = user?.matches || 0;
-  const winRatePercent = totalMatches > 0
-    ? Math.round(((user?.wins || 0) / totalMatches) * 100)
-    : 0;
-  
-  // Simulated trend data for sparklines
-  const rankTrendData = [10, 8, 12, 9, 7, 8, 5];
-  const winsTrendData = [0, 1, 1, 2, 2, 3, 5];
-  const pointsTrendData = [0, 50, 100, 150, 180, 220, 280];
-
-  // Recent rank change simulation (in a real app this would come from API)
-  const rankChange = 5; // Moved up 5 positions
-  const pointsToNextRank = 250;
+  const wins = stats?.matchesWon ?? user?.wins ?? 0;
+  const losses = stats?.matchesLost ?? user?.losses ?? 0;
+  const settledMatches = wins + losses;
+  const matchesPlayed = stats?.matchesPlayed ?? settledMatches;
+  const winRatePercent = stats?.winRate ?? (matchesPlayed > 0 ? Math.round((wins / matchesPlayed) * 100) : 0);
+  const tournamentsWon = stats?.tournamentsWon ?? user?.tournamentsWon ?? 0;
+  const currentStreak = stats?.currentStreak ?? user?.currentStreak ?? 0;
+  const bestStreak = stats?.bestStreak ?? user?.bestStreak ?? 0;
+  const points = stats?.visiblePoints ?? user?.score ?? 0;
+  const elo = stats?.hiddenElo ?? user?.elo ?? 1000;
+  const totalPlayers = stats?.totalPlayers ?? 0;
+  const validRank = matchesPlayed >= 1 && Boolean(stats?.rank && stats.rank > 0 && totalPlayers > 0);
+  const rank = validRank ? stats?.rank ?? null : null;
+  const isNewUser = matchesPlayed <= 1;
+  const performanceUnlocked = matchesPlayed >= 3;
+  const recentResultsUnlocked = matchesPlayed >= 1;
+  const recentActivityUnlocked = matchesPlayed >= 1;
+  const advancedUnlocked = matchesPlayed >= 5;
+  const rankProgressUnlocked = Boolean(validRank && matchesPlayed >= 3);
+  const joinedTournaments = tournaments.total;
+  const tournamentModulesUnlocked = joinedTournaments >= 1;
+  const hasPendingResults = matchesPlayed > settledMatches;
+  const topTenProgress =
+    rankProgressUnlocked && rank
+      ? totalPlayers <= 10
+        ? 100
+        : Math.max(0, Math.min(100, ((totalPlayers - rank) / Math.max(totalPlayers - 10, 1)) * 100))
+      : 0;
+  const nextTopTenTarget = rank && rank > 10 ? rank - 10 : 0;
+  const recentMatches = stats?.recentMatches || [];
+  const performanceHistory = stats?.performanceHistory || [];
+  const winLossByMonth = stats?.winLossByMonth || [];
 
   return (
-    <div className="p-4 md:p-6 max-w-7xl mx-auto space-y-6">
-      {/* Hero Header Section */}
-      <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-card via-card to-muted/20 border border-border/50 p-6 md:p-8">
-        {/* Background decoration */}
-        <div className="absolute top-0 right-0 w-64 h-64 bg-gradient-to-br from-transparent to-muted/30 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2" />
-        
-        <div className="relative flex flex-col lg:flex-row lg:items-center lg:justify-between gap-6">
-          {/* Player Info */}
+    <div className="mx-auto max-w-7xl space-y-6 p-4 md:p-6">
+      {!validRank ? (
+        <Card className="border-amber-500/30 bg-amber-500/5 shadow-sm">
+          <CardContent className="flex flex-col gap-4 p-4 md:flex-row md:items-center md:justify-between">
+            <div>
+              <p className="text-sm font-semibold uppercase tracking-wide text-amber-700 dark:text-amber-300">
+                Unranked Player
+              </p>
+              <h2 className="mt-1 text-lg font-bold text-foreground">
+                You are currently unranked. Play matches to enter leaderboard.
+              </h2>
+              <p className="mt-1 text-sm text-muted-foreground">
+                Your official rank appears after your first completed match in {isCornhole ? "Cornhole" : "Darts"}.
+              </p>
+            </div>
+            <Link href={`/${sport}/tournaments`}>
+              <Button className={cn("text-white", primaryBtnClass)}>
+                Join Your First Tournament
+                <ChevronRight className="ml-1 h-4 w-4" />
+              </Button>
+            </Link>
+          </CardContent>
+        </Card>
+      ) : null}
+
+      <div className="relative overflow-hidden rounded-2xl border border-border/50 bg-gradient-to-br from-card via-card to-muted/20 p-6 md:p-8">
+        <div className="absolute right-0 top-0 h-64 w-64 translate-x-1/2 -translate-y-1/2 rounded-full bg-gradient-to-br from-transparent to-muted/30 blur-3xl" />
+
+        <div className="relative flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between">
           <div className="flex items-center gap-5">
-            {/* Avatar with glow */}
             <div className="relative">
-              <div
-                className={cn(
-                  "absolute -inset-1 rounded-full opacity-75 blur-md",
-                  classes.primaryBgSubtle
-                )}
-              />
-              <div
-                className={cn(
-                  "absolute -inset-2 rounded-full opacity-50 blur-lg",
-                  classes.primaryBgSubtle
-                )}
-              />
+              <div className={cn("absolute -inset-1 rounded-full opacity-75 blur-md", classes.primaryBgSubtle)} />
               <Avatar
                 className={cn(
-                  "relative h-20 w-20 md:h-24 md:w-24 border-4 border-background ring-4 ring-background",
-                  classes.glowPrimary
+                  "relative h-20 w-20 border-4 border-background ring-4 ring-background md:h-24 md:w-24",
+                  classes.glowPrimary,
                 )}
               >
                 <AvatarImage src={user?.photoUrl || undefined} />
-                <AvatarFallback
-                  className={cn(
-                    "text-2xl md:text-3xl font-bold",
-                    classes.primaryBgSubtle,
-                    classes.primaryText
-                  )}
-                >
+                <AvatarFallback className={cn("text-2xl font-bold md:text-3xl", classes.primaryBgSubtle, classes.primaryText)}>
                   {initials}
                 </AvatarFallback>
               </Avatar>
-              {/* Online indicator */}
-              <div className="absolute bottom-1 right-1 w-5 h-5 bg-green-500 rounded-full border-3 border-background ring-2 ring-green-500/30" />
             </div>
 
-            {/* Welcome message */}
             <div>
-              <div className="flex items-center gap-2 mb-1">
-                <span className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
-                  {isCornhole ? "Cornhole" : "Darts"} Player
+              <div className="mb-1 flex items-center gap-2">
+                <span className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
+                  {isCornhole ? "Cornhole" : "Darts"} Player Dashboard
                 </span>
-                {user?.tournamentsWon && user.tournamentsWon > 0 && (
-                  <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-amber-500/15 text-amber-600 dark:text-amber-400 text-xs font-medium">
-                    <Crown className="w-3 h-3" />
+                {tournamentsWon > 0 ? (
+                  <span className="inline-flex items-center gap-1 rounded-full bg-amber-500/15 px-2 py-0.5 text-xs font-medium text-amber-600 dark:text-amber-400">
+                    <Crown className="h-3 w-3" />
                     Champion
                   </span>
-                )}
+                ) : null}
               </div>
-              <h1 className="text-2xl md:text-3xl lg:text-4xl font-bold text-foreground tracking-tight">
-                Welcome back, <span className={classes.primaryText}>{user?.firstName || "Player"}</span>!
+              <h1 className="text-2xl font-bold tracking-tight text-foreground md:text-4xl">
+                Welcome back, <span className={primaryTextClass}>{user?.firstName || "Player"}</span>
               </h1>
-              <p className="text-muted-foreground mt-1">
-                Ready to dominate the competition today?
+              <p className="mt-1 text-muted-foreground">
+                Your dashboard unlocks deeper insights as you progress through structured competition.
               </p>
             </div>
           </div>
 
-          {/* Quick Actions */}
           <div className="flex flex-wrap gap-3">
             <Link href={`/${sport}/tournaments`}>
               <Button
                 size="lg"
                 className={cn(
-                  "text-white font-semibold h-12 px-6 rounded-xl shadow-lg transition-all hover:shadow-xl hover:-translate-y-0.5",
-                  classes.primaryBtn
+                  "h-12 rounded-xl px-6 font-semibold text-white shadow-lg transition-all hover:-translate-y-0.5 hover:shadow-xl",
+                  primaryBtnClass,
                 )}
               >
-                <Search className="w-4 h-4 mr-2" />
-                Find Tournament
+                <Search className="mr-2 h-4 w-4" />
+                {isNewUser ? "Join Your First Tournament" : "Find Tournament"}
               </Button>
             </Link>
-            <Link href={`/${sport}/tournaments?tab=my-tournaments`}>
-              <Button
-                size="lg"
-                variant="outline"
-                className="h-12 px-6 rounded-xl font-medium border-2"
-              >
-                <Trophy className="w-4 h-4 mr-2" />
-                My Tournaments
+            <Link href={`/${sport}/players`}>
+              <Button size="lg" variant="outline" className="h-12 rounded-xl border-2 px-6 font-medium">
+                <Users className="mr-2 h-4 w-4" />
+                Find Players
+              </Button>
+            </Link>
+            <Link href={`/${sport}/dashboard/cities`}>
+              <Button size="lg" variant="outline" className="h-12 rounded-xl border-2 px-6 font-medium">
+                <Zap className="mr-2 h-4 w-4" />
+                Play Duel
               </Button>
             </Link>
           </div>
         </div>
 
-        {/* Quick Stats Row */}
-        <div
-          className={cn(
-            "mt-6 pt-6 border-t grid grid-cols-2 md:grid-cols-4 gap-4",
-            classes.primaryBorderLight
-          )}
-        >
+        <div className={cn("mt-6 grid grid-cols-2 gap-4 border-t pt-6 md:grid-cols-4", classes.primaryBorderLight)}>
           <button
             onClick={() => setShowFollowersModal(true)}
-            className="group flex items-center gap-3 p-3 rounded-xl hover:bg-muted/50 transition-colors text-left"
+            className="group rounded-xl p-3 text-left transition-colors hover:bg-muted/50"
             aria-label="View followers"
           >
-            <div className={cn("p-2 rounded-lg", classes.primaryBgSubtle)}>
-              <Heart className={cn("w-4 h-4", classes.primaryText)} />
-            </div>
-            <div>
-              <p className="text-xl font-bold text-foreground">{user?.followersCount || 0}</p>
-              <p className="text-xs text-muted-foreground">Followers</p>
+            <div className="flex items-center gap-3">
+              <div className={cn("rounded-lg p-2", classes.primaryBgSubtle)}>
+                <Heart className={cn("h-4 w-4", classes.primaryText)} />
+              </div>
+              <div>
+                <p className="text-xl font-bold text-foreground">{user?.followersCount || 0}</p>
+                <p className="text-xs text-muted-foreground">Followers</p>
+              </div>
             </div>
           </button>
           <button
             onClick={() => setShowFollowersModal(true)}
-            className="group flex items-center gap-3 p-3 rounded-xl hover:bg-muted/50 transition-colors text-left"
+            className="group rounded-xl p-3 text-left transition-colors hover:bg-muted/50"
             aria-label="View following"
           >
-            <div className={cn("p-2 rounded-lg", classes.primaryBgSubtle)}>
-              <UserCheck className={cn("w-4 h-4", classes.primaryText)} />
-            </div>
-            <div>
-              <p className="text-xl font-bold text-foreground">{user?.followingCount || 0}</p>
-              <p className="text-xs text-muted-foreground">Following</p>
+            <div className="flex items-center gap-3">
+              <div className={cn("rounded-lg p-2", classes.primaryBgSubtle)}>
+                <UserCheck className={cn("h-4 w-4", classes.primaryText)} />
+              </div>
+              <div>
+                <p className="text-xl font-bold text-foreground">{user?.followingCount || 0}</p>
+                <p className="text-xs text-muted-foreground">Following</p>
+              </div>
             </div>
           </button>
-          <div className="flex items-center gap-3 p-3 rounded-xl">
-            <div className={cn("p-2 rounded-lg", classes.primaryBgSubtle)}>
-              <Sparkles className={cn("w-4 h-4", classes.primaryText)} />
-            </div>
-            <div>
-              <p className="text-xl font-bold text-foreground">{user?.score || 0}</p>
-              <p className="text-xs text-muted-foreground">Total Points</p>
+          <div className="rounded-xl p-3">
+            <div className="flex items-center gap-3">
+              <div className={cn("rounded-lg p-2", classes.primaryBgSubtle)}>
+                <Sparkles className={cn("h-4 w-4", classes.primaryText)} />
+              </div>
+              <div>
+                <p className="text-xl font-bold text-foreground">{points}</p>
+                <p className="text-xs text-muted-foreground">Total Points</p>
+              </div>
             </div>
           </div>
-          <div className="flex items-center gap-3 p-3 rounded-xl">
-            <div className={cn("p-2 rounded-lg", classes.primaryBgSubtle)}>
-              <Medal className={cn("w-4 h-4", classes.primaryText)} />
-            </div>
-            <div>
-              <p className="text-xl font-bold text-foreground">#{user?.rank || "-"}</p>
-              <p className="text-xs text-muted-foreground">Global Rank</p>
+          <div className="rounded-xl p-3">
+            <div className="flex items-center gap-3">
+              <div className={cn("rounded-lg p-2", classes.primaryBgSubtle)}>
+                <Medal className={cn("h-4 w-4", classes.primaryText)} />
+              </div>
+              <div>
+                <p className="text-xl font-bold text-foreground">{validRank && rank ? `#${rank}` : "Unranked"}</p>
+                <p className="text-xs text-muted-foreground">
+                  {validRank ? "Current Rank" : "Play your first match"}
+                </p>
+              </div>
             </div>
           </div>
         </div>
       </div>
 
-      {/* Primary Stats Cards Row */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        <StatCard
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        <MilestoneStatCard
           title="Tournaments Won"
-          value={user?.tournamentsWon || 0}
+          value={tournamentsWon}
           icon={Trophy}
-          trend={user?.tournamentsWon && user.tournamentsWon > 0 ? "up" : "neutral"}
-          trendValue={user?.tournamentsWon && user.tournamentsWon > 0 ? "+1 this month" : undefined}
-          sparklineData={pointsTrendData}
-          color="text-amber-500"
-          bgColor="bg-amber-500/5 dark:bg-amber-500/10"
+          colorClass="text-amber-500"
+          bgClass="bg-amber-500/10"
         />
-        <StatCard
+        <MilestoneStatCard
           title="Total Matches"
-          value={user?.matches || 0}
+          value={matchesPlayed}
           icon={Target}
-          trend={user?.matches && user.matches > 5 ? "up" : "neutral"}
-          trendValue={user?.matches && user.matches > 5 ? "+3 this week" : undefined}
-          sparklineData={winsTrendData}
-          color="text-blue-500"
-          bgColor="bg-blue-500/5 dark:bg-blue-500/10"
+          colorClass="text-blue-500"
+          bgClass="bg-blue-500/10"
         />
-        <StatCard
+        <MilestoneStatCard
           title="Current Streak"
-          value={user?.currentStreak || 0}
+          value={currentStreak}
           icon={Flame}
-          trend={user?.currentStreak && user.currentStreak > 0 ? "up" : "neutral"}
-          trendValue={
-            user?.currentStreak && user.currentStreak > 0
-              ? `Best: ${user?.bestStreak || 0}`
-              : undefined
-          }
-          sparklineData={rankTrendData}
-          color="text-orange-500"
-          bgColor="bg-orange-500/5 dark:bg-orange-500/10"
+          colorClass="text-orange-500"
+          bgClass="bg-orange-500/10"
+          locked={!performanceUnlocked}
+          lockedText="Unlocks after 3 matches"
         />
-        <StatCard
+        <MilestoneStatCard
           title="Best Streak"
-          value={user?.bestStreak || 0}
+          value={bestStreak}
           icon={Zap}
-          trend="neutral"
-          color="text-purple-500"
-          bgColor="bg-purple-500/5 dark:bg-purple-500/10"
+          colorClass="text-purple-500"
+          bgClass="bg-purple-500/10"
+          locked={!performanceUnlocked}
+          lockedText="Unlocks after 3 matches"
         />
       </div>
 
-      {/* Performance and Ranking Section */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Performance Overview Card */}
-        <Card className="lg:col-span-2 border-border/50 shadow-sm">
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
+        <Card className="border-border/50 shadow-sm lg:col-span-2">
           <CardHeader className="pb-4">
             <div className="flex items-center justify-between">
-              <CardTitle className="text-xl font-bold flex items-center gap-2">
-                <Activity className={cn("w-5 h-5", classes.primaryText)} />
+              <CardTitle className="flex items-center gap-2 text-xl font-bold">
+                <Activity className={cn("h-5 w-5", classes.primaryText)} />
                 Performance Overview
               </CardTitle>
               <Link href={`/${sport}/stats`}>
                 <Button variant="ghost" size="sm" className="text-muted-foreground hover:text-foreground">
                   View Details
-                  <ChevronRight className="w-4 h-4 ml-1" />
+                  <ChevronRight className="ml-1 h-4 w-4" />
                 </Button>
               </Link>
             </div>
           </CardHeader>
           <CardContent>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              {/* Win/Loss Chart */}
-              <div className="flex flex-col items-center justify-center">
-                <WinLossChart
-                  wins={user?.wins || 0}
-                  losses={user?.losses || 0}
-                  primaryColor={primaryColor}
-                />
-                <div className="flex items-center gap-6 mt-4">
-                  <div className="flex items-center gap-2">
-                    <div className="w-3 h-3 rounded-full bg-green-500" />
-                    <span className="text-sm text-muted-foreground">
-                      Wins: <span className="font-semibold text-foreground">{user?.wins || 0}</span>
-                    </span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <div className="w-3 h-3 rounded-full bg-red-500" />
-                    <span className="text-sm text-muted-foreground">
-                      Losses: <span className="font-semibold text-foreground">{user?.losses || 0}</span>
-                    </span>
-                  </div>
-                </div>
-              </div>
-
-              {/* Stats and Form */}
-              <div className="space-y-4">
-                {/* Win Rate Display */}
-                <div className="p-4 rounded-xl bg-muted/50 border border-border/50">
-                  <div className="flex items-center justify-between mb-2">
-                    <span className="text-sm font-medium text-muted-foreground">Win Rate</span>
-                    <span className="text-2xl font-bold text-foreground">{winRatePercent}%</span>
-                  </div>
-                  <Progress value={winRatePercent} className="h-3" />
-                </div>
-
-                {/* Recent Form */}
-                <div className="p-4 rounded-xl bg-muted/50 border border-border/50">
-                  <RecentForm wins={user?.wins || 0} losses={user?.losses || 0} />
-                </div>
-
-                {/* Quick Stats */}
-                <div className="grid grid-cols-2 gap-3">
-                  <div className="p-3 rounded-xl bg-green-500/5 border border-green-500/20">
-                    <div className="flex items-center gap-2 mb-1">
-                      <CheckCircle2 className="w-4 h-4 text-green-500" />
-                      <span className="text-xs text-muted-foreground">Wins</span>
+            {!performanceUnlocked ? (
+              <LockedModuleState
+                icon={Activity}
+                title="Performance insights unlock after 3 matches"
+                description="Win rate, chart trends, and streak analysis become meaningful once you have a few recorded results."
+                unlockLabel="Play 3 completed matches"
+                actionLabel="Play More Matches"
+                actionHref={`/${sport}/tournaments`}
+                primaryBtnClass={primaryBtnClass}
+                skeleton
+              />
+            ) : (
+              <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
+                <div className="space-y-4">
+                  <div className="flex flex-col items-center justify-center rounded-2xl border border-border/50 bg-muted/30 p-4">
+                    <WinLossChart wins={wins} losses={losses} />
+                    <div className="mt-4 flex items-center gap-6">
+                      <div className="flex items-center gap-2">
+                        <div className="h-3 w-3 rounded-full bg-green-500" />
+                        <span className="text-sm text-muted-foreground">
+                          Wins <span className="font-semibold text-foreground">{wins}</span>
+                        </span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <div className="h-3 w-3 rounded-full bg-red-500" />
+                        <span className="text-sm text-muted-foreground">
+                          Losses <span className="font-semibold text-foreground">{losses}</span>
+                        </span>
+                      </div>
                     </div>
-                    <p className="text-xl font-bold text-green-600 dark:text-green-400">
-                      {user?.wins || 0}
-                    </p>
                   </div>
-                  <div className="p-3 rounded-xl bg-red-500/5 border border-red-500/20">
-                    <div className="flex items-center gap-2 mb-1">
-                      <XCircle className="w-4 h-4 text-red-500" />
-                      <span className="text-xs text-muted-foreground">Losses</span>
+
+                  <div className="rounded-xl border border-border/50 bg-muted/30 p-4">
+                    <div className="mb-2 flex items-center justify-between">
+                      <span className="text-sm font-medium text-muted-foreground">Win Rate</span>
+                      <span className="text-2xl font-bold text-foreground">{Math.round(winRatePercent)}%</span>
                     </div>
-                    <p className="text-xl font-bold text-red-600 dark:text-red-400">
-                      {user?.losses || 0}
+                    <Progress value={Math.max(0, Math.min(100, Math.round(winRatePercent)))} className="h-3" />
+                    <p className="mt-2 text-xs text-muted-foreground">
+                      Based on {matchesPlayed} completed matches.
                     </p>
                   </div>
                 </div>
+
+                <div className="space-y-4">
+                  <div className="rounded-xl border border-border/50 bg-muted/30 p-4">
+                    <div className="mb-3 flex items-center justify-between">
+                      <span className="text-sm font-medium text-muted-foreground">Performance Trend</span>
+                      <span className="text-xs text-muted-foreground">Last 6 months</span>
+                    </div>
+                    <div className="h-40">
+                      <ResponsiveContainer width="100%" height="100%">
+                        <AreaChart data={performanceHistory}>
+                          <defs>
+                            <linearGradient id="dashboard-points" x1="0" y1="0" x2="0" y2="1">
+                              <stop offset="0%" stopColor={theme.primaryColor} stopOpacity={0.35} />
+                              <stop offset="100%" stopColor={theme.primaryColor} stopOpacity={0.02} />
+                            </linearGradient>
+                          </defs>
+                          <XAxis dataKey="month" axisLine={false} tickLine={false} fontSize={12} />
+                          <Tooltip
+                            contentStyle={{
+                              borderRadius: 12,
+                              border: "1px solid hsl(var(--border))",
+                              background: "hsl(var(--background))",
+                            }}
+                          />
+                          <Area
+                            type="monotone"
+                            dataKey="points"
+                            stroke={theme.primaryColor}
+                            strokeWidth={2.5}
+                            fill="url(#dashboard-points)"
+                          />
+                        </AreaChart>
+                      </ResponsiveContainer>
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-3">
+                    <div className="rounded-xl border border-green-500/20 bg-green-500/5 p-3">
+                      <div className="mb-1 flex items-center gap-2">
+                        <CheckCircle2 className="h-4 w-4 text-green-500" />
+                        <span className="text-xs text-muted-foreground">Current Streak</span>
+                      </div>
+                      <p className="text-xl font-bold text-green-600 dark:text-green-400">{currentStreak}</p>
+                    </div>
+                    <div className="rounded-xl border border-orange-500/20 bg-orange-500/5 p-3">
+                      <div className="mb-1 flex items-center gap-2">
+                        <Flame className="h-4 w-4 text-orange-500" />
+                        <span className="text-xs text-muted-foreground">Best Streak</span>
+                      </div>
+                      <p className="text-xl font-bold text-orange-600 dark:text-orange-400">{bestStreak}</p>
+                    </div>
+                  </div>
+
+                  {hasPendingResults ? (
+                    <div className="rounded-xl border border-amber-500/30 bg-amber-500/5 p-3 text-sm text-amber-700 dark:text-amber-300">
+                      Match result pending. Some recent matches are still awaiting final result confirmation.
+                    </div>
+                  ) : null}
+                </div>
               </div>
-            </div>
+            )}
           </CardContent>
         </Card>
-
-        {/* Ranking Card */}
         <Card className="border-border/50 shadow-sm">
           <CardHeader className="pb-4">
-            <CardTitle className="text-xl font-bold flex items-center gap-2">
-              <BarChart3 className={cn("w-5 h-5", classes.primaryText)} />
+            <CardTitle className="flex items-center gap-2 text-xl font-bold">
+              <BarChart3 className={cn("h-5 w-5", classes.primaryText)} />
               Your Ranking
             </CardTitle>
           </CardHeader>
-          <CardContent className="space-y-6">
-            {/* Current Rank */}
-            <div className="text-center p-6 rounded-xl bg-gradient-to-br from-muted/50 to-muted/30 border border-border/50">
-              <p className="text-sm text-muted-foreground mb-2">Current Rank</p>
-              <div className="flex items-center justify-center gap-2">
-                <span
-                  className={cn(
-                    "text-5xl font-bold",
-                    classes.primaryText
-                  )}
-                >
-                  #{user?.rank || "-"}
-                </span>
-              </div>
-              <div className="flex items-center justify-center gap-1 mt-3">
-                <ArrowUpRight className="w-4 h-4 text-green-500" />
-                <span className="text-sm font-medium text-green-600 dark:text-green-400">
-                  ↑ {rankChange} positions this month
-                </span>
-              </div>
-            </div>
-
-            {/* Progress to Next Rank */}
-            <div className="space-y-2">
-              <div className="flex items-center justify-between text-sm">
-                <span className="text-muted-foreground">Progress to #{Math.max(1, (user?.rank || 10) - 5)}</span>
-                <span className="font-medium text-foreground">{pointsToNextRank} pts</span>
-              </div>
-              <Progress value={65} className="h-2" />
-              <p className="text-xs text-muted-foreground text-center">
-                Earn {pointsToNextRank} more points to advance
-              </p>
-            </div>
-
-            {/* Elo Rating */}
-            <div className="p-4 rounded-xl bg-muted/50 border border-border/50">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-xs text-muted-foreground mb-1">Elo Rating</p>
-                  <p className="text-2xl font-bold text-foreground">{user?.elo || 1000}</p>
+          <CardContent className="space-y-5">
+            {!validRank ? (
+              <LockedModuleState
+                icon={Medal}
+                title="You are not ranked yet"
+                description="Play your first completed match to enter the leaderboard and unlock rank tracking."
+                unlockLabel="At least 1 completed match"
+                actionLabel="Find Tournament"
+                actionHref={`/${sport}/tournaments`}
+                primaryBtnClass={primaryBtnClass}
+              />
+            ) : (
+              <>
+                <div className="rounded-xl border border-border/50 bg-gradient-to-br from-muted/50 to-muted/30 p-6 text-center">
+                  <p className="mb-2 text-sm text-muted-foreground">Current Rank</p>
+                  <p className={cn("text-5xl font-bold", classes.primaryText)}>#{rank}</p>
+                  <div className="mt-4 grid grid-cols-2 gap-3 text-left">
+                    <div className="rounded-lg border border-border/50 bg-background/80 p-3">
+                      <p className="text-xs text-muted-foreground">Points</p>
+                      <p className="text-xl font-semibold text-foreground">{points}</p>
+                    </div>
+                    <div className="rounded-lg border border-border/50 bg-background/80 p-3">
+                      <p className="text-xs text-muted-foreground">ELO</p>
+                      <p className="text-xl font-semibold text-foreground">{elo}</p>
+                    </div>
+                  </div>
                 </div>
-                <div className={cn("p-3 rounded-lg", classes.primaryBgSubtle)}>
-                  <TrendingUp className={cn("w-6 h-6", classes.primaryText)} />
+
+                {rankProgressUnlocked ? (
+                  <div className="rounded-xl border border-border/50 bg-muted/30 p-4">
+                    <div className="mb-2 flex items-center justify-between">
+                      <span className="text-sm font-medium text-foreground">Top 10 Tracking</span>
+                      <span className="text-xs text-muted-foreground">
+                        {rank && rank <= 10 ? "Inside top 10" : `${nextTopTenTarget} places to go`}
+                      </span>
+                    </div>
+                    <Progress value={topTenProgress} className="h-2.5" />
+                    <p className="mt-2 text-xs text-muted-foreground">
+                      Progress tracking unlocks once you are ranked and have enough matches to compare performance trends.
+                    </p>
+                  </div>
+                ) : (
+                  <div className="rounded-xl border border-dashed border-border/60 bg-muted/20 p-4">
+                    <p className="text-sm font-medium text-foreground">Progress tracking unlocks once you are ranked</p>
+                    <p className="mt-1 text-xs text-muted-foreground">
+                      Complete at least 3 matches to unlock top-10 tracking and deeper rank context.
+                    </p>
+                  </div>
+                )}
+
+                <div className="rounded-xl border border-border/50 bg-muted/30 p-4">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-xs text-muted-foreground">Current Tier</p>
+                      <p className="text-lg font-semibold text-foreground">{stats?.tier || "Bronze"}</p>
+                    </div>
+                    <div className={cn("rounded-lg p-3", classes.primaryBgSubtle)}>
+                      <TrendingUp className={cn("h-6 w-6", classes.primaryText)} />
+                    </div>
+                  </div>
+                  <div className="mt-3">
+                    <Progress value={stats?.tierProgress || 0} className="h-2" />
+                    <p className="mt-2 text-xs text-muted-foreground">
+                      {stats?.pointsToNextTier
+                        ? `${stats.pointsToNextTier} ELO to ${stats.nextTier}`
+                        : "You are at the highest available tier right now."}
+                    </p>
+                  </div>
                 </div>
-              </div>
-            </div>
+              </>
+            )}
           </CardContent>
         </Card>
       </div>
 
-      {/* Activity Section - Upcoming Matches & Recent Results */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Upcoming Matches */}
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
         <Card className="border-border/50 shadow-sm">
           <CardHeader className="pb-3">
             <div className="flex items-center justify-between">
-              <CardTitle className="text-lg font-bold flex items-center gap-2">
-                <Calendar className={cn("w-5 h-5", classes.primaryText)} />
+              <CardTitle className="flex items-center gap-2 text-lg font-bold">
+                <Calendar className={cn("h-5 w-5", classes.primaryText)} />
                 Upcoming Matches
               </CardTitle>
               <Link href={`/${sport}/tournaments?tab=my-tournaments`}>
@@ -792,23 +835,52 @@ export default function DashboardPage() {
             </div>
           </CardHeader>
           <CardContent>
-            <EmptyState
-              icon={Calendar}
-              title="No upcoming matches"
-              description="Join a tournament to get started and find your next match."
-              actionLabel="Find Tournaments"
-              actionHref={`/${sport}/tournaments`}
-              primaryBtnClass={classes.primaryBtn}
-            />
+            {!tournamentModulesUnlocked ? (
+              <LockedModuleState
+                icon={Calendar}
+                title="Join a tournament to see your upcoming matches"
+                description="Your schedule, pairings, and match timings appear here once you register for an event."
+                unlockLabel="At least 1 joined tournament"
+                actionLabel="Find Tournament"
+                actionHref={`/${sport}/tournaments`}
+                primaryBtnClass={primaryBtnClass}
+              />
+            ) : tournaments.upcoming.length === 0 ? (
+              <div className="rounded-xl border border-dashed border-border/60 bg-muted/20 p-5 text-center">
+                <p className="font-medium text-foreground">No upcoming matches scheduled yet</p>
+                <p className="mt-1 text-sm text-muted-foreground">
+                  You have joined tournaments. Your upcoming rounds will appear here once the schedule is published.
+                </p>
+              </div>
+            ) : (
+              <div className="space-y-3">
+                {tournaments.upcoming.slice(0, 3).map((tournament) => (
+                  <div key={tournament.id} className="rounded-xl border border-border/50 bg-muted/20 p-4">
+                    <div className="flex items-start justify-between gap-3">
+                      <div>
+                        <p className="font-semibold text-foreground">{tournament.name}</p>
+                        <p className="text-sm text-muted-foreground">
+                          {formatLocation(tournament.city, tournament.state)}
+                        </p>
+                      </div>
+                      <Badge variant="outline">{tournament.scope}</Badge>
+                    </div>
+                    <div className="mt-3 flex flex-wrap gap-3 text-xs text-muted-foreground">
+                      <span>Starts {formatDate(tournament.startDate)}</span>
+                      <span>Status: {tournament.registrationStatus}</span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
           </CardContent>
         </Card>
 
-        {/* Recent Results */}
         <Card className="border-border/50 shadow-sm">
           <CardHeader className="pb-3">
             <div className="flex items-center justify-between">
-              <CardTitle className="text-lg font-bold flex items-center gap-2">
-                <Play className={cn("w-5 h-5", classes.primaryText)} />
+              <CardTitle className="flex items-center gap-2 text-lg font-bold">
+                <Play className={cn("h-5 w-5", classes.primaryText)} />
                 Recent Results
               </CardTitle>
               <Link href={`/${sport}/stats`}>
@@ -819,24 +891,61 @@ export default function DashboardPage() {
             </div>
           </CardHeader>
           <CardContent>
-            <EmptyState
-              icon={Trophy}
-              title="No match results yet"
-              description="Complete a tournament match to see your results here."
-              actionLabel="Start Playing"
-              actionHref={`/${sport}/tournaments`}
-              primaryBtnClass={classes.primaryBtn}
-            />
+            {!recentResultsUnlocked ? (
+              <LockedModuleState
+                icon={Trophy}
+                title="Your match results will appear here after your first completed match"
+                description="This section keeps a running history of verified results, scores, and points earned."
+                unlockLabel="At least 1 completed match"
+                actionLabel="Start Playing"
+                actionHref={`/${sport}/tournaments`}
+                primaryBtnClass={primaryBtnClass}
+              />
+            ) : recentMatches.length === 0 ? (
+              <div className="rounded-xl border border-dashed border-border/60 bg-muted/20 p-5 text-center">
+                <p className="font-medium text-foreground">Results will appear soon</p>
+                <p className="mt-1 text-sm text-muted-foreground">
+                  Your completed matches are being verified and will appear here once results are finalized.
+                </p>
+              </div>
+            ) : (
+              <div className="space-y-3">
+                {recentMatches.slice(0, 4).map((match) => (
+                  <div key={match.id} className="rounded-xl border border-border/50 bg-muted/20 p-4">
+                    <div className="flex items-start justify-between gap-3">
+                      <div>
+                        <p className="font-semibold text-foreground">{match.tournamentName}</p>
+                        <p className="text-sm text-muted-foreground">vs {match.opponent}</p>
+                      </div>
+                      <Badge
+                        className={cn(
+                          "border-0",
+                          match.result === "WIN"
+                            ? "bg-green-500/15 text-green-700 dark:text-green-300"
+                            : "bg-red-500/15 text-red-700 dark:text-red-300",
+                        )}
+                      >
+                        {match.result}
+                      </Badge>
+                    </div>
+                    <div className="mt-3 flex flex-wrap gap-3 text-xs text-muted-foreground">
+                      <span>Score {match.score}</span>
+                      <span>{match.pointsEarned >= 0 ? `+${match.pointsEarned}` : match.pointsEarned} pts</span>
+                      <span>{formatDate(match.date)}</span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
           </CardContent>
         </Card>
       </div>
 
-      {/* Tournament Progress */}
       <Card className="border-border/50 shadow-sm">
         <CardHeader className="pb-3">
           <div className="flex items-center justify-between">
-            <CardTitle className="text-lg font-bold flex items-center gap-2">
-              <Trophy className={cn("w-5 h-5", classes.primaryText)} />
+            <CardTitle className="flex items-center gap-2 text-lg font-bold">
+              <Trophy className={cn("h-5 w-5", classes.primaryText)} />
               Active Tournaments
             </CardTitle>
             <Link href={`/${sport}/tournaments?tab=my-tournaments`}>
@@ -847,27 +956,64 @@ export default function DashboardPage() {
           </div>
         </CardHeader>
         <CardContent>
-          <EmptyState
-            icon={Trophy}
-            title="No active tournaments"
-            description="You're not currently participating in any tournaments. Join one to track your progress!"
-            actionLabel="Browse Tournaments"
-            actionHref={`/${sport}/tournaments`}
-            primaryBtnClass={classes.primaryBtn}
-          />
+          {!tournamentModulesUnlocked ? (
+            <LockedModuleState
+              icon={Trophy}
+              title="You are not participating in any tournaments yet"
+              description="Track live event status, wins, and progression here once you join a tournament."
+              unlockLabel="At least 1 joined tournament"
+              actionLabel="Browse Tournaments"
+              actionHref={`/${sport}/tournaments`}
+              primaryBtnClass={primaryBtnClass}
+            />
+          ) : tournaments.active.length === 0 ? (
+            <div className="rounded-xl border border-dashed border-border/60 bg-muted/20 p-5 text-center">
+              <p className="font-medium text-foreground">No active tournaments right now</p>
+              <p className="mt-1 text-sm text-muted-foreground">
+                Your currently running tournaments will appear here once play begins.
+              </p>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+              {tournaments.active.map((tournament) => (
+                <div key={tournament.id} className="rounded-xl border border-border/50 bg-muted/20 p-4">
+                  <div className="flex items-start justify-between gap-3">
+                    <div>
+                      <p className="font-semibold text-foreground">{tournament.name}</p>
+                      <p className="text-sm text-muted-foreground">
+                        {formatLocation(tournament.city, tournament.state)}
+                      </p>
+                    </div>
+                    <Badge className="border-0 bg-emerald-500/15 text-emerald-700 dark:text-emerald-300">
+                      Live
+                    </Badge>
+                  </div>
+                  <div className="mt-3 grid grid-cols-2 gap-3 text-sm">
+                    <div className="rounded-lg border border-border/50 bg-background/80 p-3">
+                      <p className="text-xs text-muted-foreground">Matches Played</p>
+                      <p className="font-semibold text-foreground">{tournament.matchesPlayed}</p>
+                    </div>
+                    <div className="rounded-lg border border-border/50 bg-background/80 p-3">
+                      <p className="text-xs text-muted-foreground">Matches Won</p>
+                      <p className="font-semibold text-foreground">{tournament.matchesWon}</p>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
         </CardContent>
       </Card>
-
-      {/* Quick Actions Grid */}
+      
       <Card className="border-border/50 shadow-sm">
         <CardHeader className="pb-3">
           <CardTitle className="text-lg font-bold">Quick Actions</CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+          <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
             <QuickAction
               icon={Search}
-              label="Find Tournament"
+              label={isNewUser ? "Join First Tournament" : "Find Tournament"}
               href={`/${sport}/tournaments`}
               color={classes.primaryText}
               bgColor={classes.primaryBgSubtle}
@@ -881,27 +1027,112 @@ export default function DashboardPage() {
             />
             <QuickAction
               icon={Users}
-              label="Leaderboard"
-              href={`/${sport}/leaderboard`}
-              color="text-amber-500"
-              bgColor="bg-amber-500/10"
-            />
-            <QuickAction
-              icon={UserCheck}
               label="Find Players"
               href={`/${sport}/players`}
               color="text-purple-500"
               bgColor="bg-purple-500/10"
             />
+            <QuickAction
+              icon={Zap}
+              label="Play Duel"
+              href={`/${sport}/dashboard/cities`}
+              color="text-amber-500"
+              bgColor="bg-amber-500/10"
+            />
           </div>
         </CardContent>
       </Card>
 
-      {/* Activity Feed */}
-      <ActivityFeedCard sport={sport} limit={5} />
+      {!recentActivityUnlocked ? (
+        <Card className="border-border/50 shadow-sm">
+          <CardHeader className="pb-3">
+            <CardTitle className="flex items-center gap-2 text-base">
+              <Activity className={cn("h-5 w-5", primaryTextClass)} />
+              Recent Activity
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <LockedModuleState
+              icon={Activity}
+              title="Your activity will appear here once you start playing"
+              description="Match wins, tournament joins, and progress events will be tracked here as your season begins."
+              unlockLabel="At least 1 completed match"
+              actionLabel="Start Playing"
+              actionHref={`/${sport}/tournaments`}
+              primaryBtnClass={primaryBtnClass}
+            />
+          </CardContent>
+        </Card>
+      ) : (
+        <ActivityFeedCard sport={sport} limit={5} />
+      )}
 
-      {/* Followers Modal */}
-      {user && (
+      <Card className="border-border/50 shadow-sm">
+        <CardHeader className="pb-3">
+          <CardTitle className="flex items-center gap-2 text-lg font-bold">
+            <TrendingUp className={cn("h-5 w-5", classes.primaryText)} />
+            Advanced Analytics
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          {!advancedUnlocked ? (
+            <LockedModuleState
+              icon={TrendingUp}
+              title="Advanced insights unlock after 5 matches"
+              description="Deeper performance breakdowns, efficiency metrics, and consistency indicators unlock as your sample size grows."
+              unlockLabel="Play 5 completed matches"
+              actionLabel="Play More Matches"
+              actionHref={`/${sport}/tournaments`}
+              primaryBtnClass={primaryBtnClass}
+              skeleton
+            />
+          ) : (
+            <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
+              <div className="rounded-xl border border-border/50 bg-muted/20 p-4">
+                <p className="text-sm text-muted-foreground">Highest ELO</p>
+                <p className="mt-1 text-2xl font-bold text-foreground">{stats?.highestElo || elo}</p>
+              </div>
+              <div className="rounded-xl border border-border/50 bg-muted/20 p-4">
+                <p className="text-sm text-muted-foreground">Average Points / Match</p>
+                <p className="mt-1 text-2xl font-bold text-foreground">{stats?.averagePointsPerMatch || 0}</p>
+              </div>
+              <div className="rounded-xl border border-border/50 bg-muted/20 p-4">
+                <p className="text-sm text-muted-foreground">Podium Finishes</p>
+                <p className="mt-1 text-2xl font-bold text-foreground">{stats?.podiumFinishes || 0}</p>
+              </div>
+              <div className="rounded-xl border border-border/50 bg-muted/20 p-4 md:col-span-3">
+                <div className="mb-3 flex items-center justify-between">
+                  <p className="text-sm font-medium text-foreground">Monthly Match Volume</p>
+                  <span className="text-xs text-muted-foreground">Verified activity only</span>
+                </div>
+                <div className="h-40">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <AreaChart data={winLossByMonth}>
+                      <defs>
+                        <linearGradient id="dashboard-wins" x1="0" y1="0" x2="0" y2="1">
+                          <stop offset="0%" stopColor="#22c55e" stopOpacity={0.3} />
+                          <stop offset="100%" stopColor="#22c55e" stopOpacity={0.02} />
+                        </linearGradient>
+                      </defs>
+                      <XAxis dataKey="month" axisLine={false} tickLine={false} fontSize={12} />
+                      <Tooltip
+                        contentStyle={{
+                          borderRadius: 12,
+                          border: "1px solid hsl(var(--border))",
+                          background: "hsl(var(--background))",
+                        }}
+                      />
+                      <Area type="monotone" dataKey="wins" stroke="#22c55e" fill="url(#dashboard-wins)" strokeWidth={2.5} />
+                    </AreaChart>
+                  </ResponsiveContainer>
+                </div>
+              </div>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      {user ? (
         <FollowersModal
           open={showFollowersModal}
           onOpenChange={setShowFollowersModal}
@@ -909,7 +1140,7 @@ export default function DashboardPage() {
           sport={sport}
           isCornhole={isCornhole}
         />
-      )}
+      ) : null}
     </div>
   );
 }

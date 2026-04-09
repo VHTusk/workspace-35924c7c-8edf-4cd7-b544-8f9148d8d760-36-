@@ -1,12 +1,24 @@
 "use client";
 
+import { useCallback, useEffect, useMemo, useState } from "react";
+import Link from "next/link";
 import { useParams } from "next/navigation";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  ChevronDown,
+  ChevronUp,
+  Crown,
+  Filter,
+  Search,
+  Trophy,
+  Users,
+} from "lucide-react";
+import Sidebar from "@/components/layout/sidebar";
+import FollowButton from "@/components/follow/follow-button";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   Select,
   SelectContent,
@@ -14,857 +26,719 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import {
-  Trophy,
-  Search,
-  Crown,
-  Medal,
-  TrendingUp,
-  ChevronUp,
-  ChevronDown,
-  Minus,
-  User,
-  Sparkles,
-  Users,
-  School,
-  Building2,
-  MapPin,
-  Globe,
-  Landmark,
-  Filter,
-  X,
-  PersonStanding,
-  Calendar,
-  UsersRound,
-  UserPlus,
-  UserCheck,
-  Loader2
-} from "lucide-react";
-import { useState, useEffect, useCallback } from "react";
-import Link from "next/link";
-import Sidebar from "@/components/layout/sidebar";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { cn } from "@/lib/utils";
-import { Button } from "@/components/ui/button";
-import FollowButton from "@/components/follow/follow-button";
+import { toast } from "sonner";
+
+type LeaderboardView = "ranked" | "all" | "unranked";
+type GeographyScope = "all" | "district" | "state" | "national";
+type AgeGroup = "JUNIOR" | "ADULT" | "MASTERS";
 
 interface LeaderboardPlayer {
-  rank: number;
+  rank: number | null;
   id: string;
   name: string;
-  city: string | null;
-  state: string | null;
-  district: string | null;
-  gender: string | null;
-  ageCategory: string | null;
+  location: string;
+  genderLabel: string | null;
+  ageGroup: AgeGroup | null;
   points: number;
+  rating: number;
   tier: string;
-  matches: number;
+  matchesPlayed: number;
   wins: number;
   winRate: number;
+  joinedOnLabel: string;
+  status: "Ranked" | "Unranked" | "Inactive";
 }
 
 interface LeaderboardStats {
-  totalPlayers: number;
+  totalRegisteredPlayers: number;
+  totalRankedPlayers: number;
+  totalUnrankedPlayers: number;
   activeThisMonth: number;
-  topPlayer: string | null;
-  topPlayerCity: string | null;
 }
 
 interface LeaderboardFilters {
   districts: string[];
   states: string[];
-  genders: string[];
-  ageCategories: string[];
 }
 
-interface CurrentUser {
+interface CurrentUserSummary {
   id: string;
   name: string;
-  rank: number | null;
+  matchesPlayed: number;
   points: number;
+  rating: number;
+  rank: number | null;
   tier: string;
 }
 
-const tierColors: Record<string, string> = {
-  Diamond: "text-blue-400 bg-blue-500/10 border-blue-500/30",
-  Platinum: "text-teal-400 bg-teal-500/10 border-teal-500/30",
-  Gold: "text-amber-400 bg-amber-500/10 border-amber-500/30",
-  Silver: "text-gray-400 bg-gray-500/10 border-gray-500/30",
-  Bronze: "text-orange-400 bg-orange-500/10 border-orange-500/30",
-};
-
-const tierIcons: Record<string, string> = {
-  Diamond: "💎",
-  Platinum: "🔷",
-  Gold: "🥇",
-  Silver: "🥈",
-  Bronze: "🥉",
-};
-
-const genderLabels: Record<string, string> = {
-  MALE: "Male",
-  FEMALE: "Female",
-  MIXED: "Mixed",
-};
-
-const ageCategoryLabels: Record<string, string> = {
-  JUNIOR: "Junior (Under 18)",
-  ADULT: "Adult (18-35)",
-  SENIOR: "Senior (35-50)",
-  VETERAN: "Veteran (50+)",
-};
-
-// Tab configuration with icons and labels - Only District, State, National
-const leaderboardTabs = [
-  { value: "district", label: "District", icon: Landmark, scope: "district" },
-  { value: "state", label: "State", icon: MapPin, scope: "state" },
-  { value: "national", label: "National", icon: Globe, scope: "national" },
+const viewTabs: { value: LeaderboardView; label: string }[] = [
+  { value: "ranked", label: "Ranked" },
+  { value: "all", label: "All Players" },
+  { value: "unranked", label: "Unranked" },
 ];
 
-// Skeleton components for loading states
+const scopeOptions: { value: GeographyScope; label: string }[] = [
+  { value: "all", label: "All" },
+  { value: "district", label: "District" },
+  { value: "state", label: "State" },
+  { value: "national", label: "National" },
+];
+
+const ageGroupLabels: Record<AgeGroup, string> = {
+  JUNIOR: "Junior",
+  ADULT: "Adult",
+  MASTERS: "Masters",
+};
+
+const statusClasses: Record<LeaderboardPlayer["status"], string> = {
+  Ranked: "bg-emerald-500/10 text-emerald-600 border-emerald-500/30",
+  Unranked: "bg-slate-500/10 text-slate-600 border-slate-500/30",
+  Inactive: "bg-muted text-muted-foreground border-border",
+};
+
 function StatCardSkeleton() {
   return (
     <Card className="bg-card border-border/50">
-      <CardContent className="p-6">
-        <div className="flex items-center gap-4">
-          <Skeleton className="w-12 h-12 rounded-xl" />
-          <div className="space-y-2">
-            <Skeleton className="h-4 w-24" />
-            <Skeleton className="h-6 w-32" />
-          </div>
+      <CardContent className="p-4">
+        <div className="space-y-2">
+          <Skeleton className="h-4 w-28" />
+          <Skeleton className="h-8 w-20" />
         </div>
       </CardContent>
     </Card>
   );
 }
 
-function PodiumSkeleton() {
+function TableSkeleton({ showRank }: { showRank: boolean }) {
   return (
-    <div className="grid grid-cols-3 gap-4 mb-8">
-      {[1, 2, 3].map((i) => (
-        <Card key={i} className="bg-card border-border/50">
-          <CardContent className="p-4 text-center">
-            <Skeleton className="w-8 h-8 mx-auto mb-2 rounded-full" />
-            <Skeleton className="w-12 h-12 mx-auto mb-2 rounded-full" />
-            <Skeleton className="h-4 w-24 mx-auto mb-1" />
-            <Skeleton className="h-3 w-16 mx-auto mb-2" />
-            <Skeleton className="h-5 w-16 mx-auto mb-2" />
-            <Skeleton className="h-6 w-12 mx-auto mb-1" />
-            <Skeleton className="h-5 w-8 mx-auto" />
-          </CardContent>
-        </Card>
+    <div className="space-y-3 p-4">
+      {Array.from({ length: 8 }).map((_, index) => (
+        <div key={index} className="grid grid-cols-12 gap-3 items-center">
+          {showRank ? <Skeleton className="col-span-1 h-5 w-8" /> : null}
+          <Skeleton className={cn(showRank ? "col-span-3" : "col-span-4", "h-10")} />
+          <Skeleton className="col-span-2 h-5" />
+          <Skeleton className="col-span-2 h-5" />
+          <Skeleton className="col-span-2 h-5" />
+          <Skeleton className="col-span-2 h-5" />
+        </div>
       ))}
     </div>
   );
 }
 
-function TableRowSkeleton() {
-  return (
-    <tr className="border-b border-border/40">
-      <td className="px-4 py-3"><Skeleton className="h-5 w-8" /></td>
-      <td className="px-4 py-3">
-        <div className="flex items-center gap-3">
-          <Skeleton className="w-8 h-8 rounded-full" />
-          <div className="space-y-1">
-            <Skeleton className="h-4 w-24" />
-            <Skeleton className="h-3 w-16" />
-          </div>
-        </div>
-      </td>
-      <td className="px-4 py-3 hidden sm:table-cell"><Skeleton className="h-5 w-16" /></td>
-      <td className="px-4 py-3"><Skeleton className="h-4 w-12 ml-auto" /></td>
-      <td className="px-4 py-3 hidden md:table-cell"><Skeleton className="h-4 w-8 ml-auto" /></td>
-      <td className="px-4 py-3 hidden md:table-cell"><Skeleton className="h-4 w-10 ml-auto" /></td>
-    </tr>
-  );
+function formatJoinedOn(value: string) {
+  return new Date(value).toLocaleDateString("en-IN", {
+    day: "2-digit",
+    month: "short",
+    year: "numeric",
+  });
 }
 
 export default function LeaderboardPage() {
   const params = useParams();
   const sport = params.sport as string;
+  const sportType = sport.toUpperCase();
   const isCornhole = sport === "cornhole";
   const sportName = isCornhole ? "Cornhole" : "Darts";
-  const sportType = isCornhole ? "CORNHOLE" : "DARTS";
-
-  const primaryTextClass = isCornhole ? "text-green-500" : "text-teal-500";
+  const primaryTextClass = isCornhole ? "text-green-600" : "text-teal-600";
   const primaryBgClass = isCornhole ? "bg-green-500/10" : "bg-teal-500/10";
+  const primaryBorderClass = isCornhole ? "border-green-500/30" : "border-teal-500/30";
 
-  const [activeTab, setActiveTab] = useState("national");
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [currentUserId, setCurrentUserId] = useState<string | null>(null);
+  const [currentUserSummary, setCurrentUserSummary] = useState<CurrentUserSummary | null>(null);
+
+  const [view, setView] = useState<LeaderboardView>("ranked");
+  const [scope, setScope] = useState<GeographyScope>("all");
+  const [region, setRegion] = useState("all");
   const [search, setSearch] = useState("");
-  const [leaderboard, setLeaderboard] = useState<LeaderboardPlayer[]>([]);
+  const [gender, setGender] = useState("all");
+  const [ageGroup, setAgeGroup] = useState("all");
+  const [sort, setSort] = useState("rank");
+  const [showPrimaryFilters, setShowPrimaryFilters] = useState(false);
+  const [showSecondaryFilters, setShowSecondaryFilters] = useState(false);
+  const [minMatches, setMinMatches] = useState("");
+  const [minWinRate, setMinWinRate] = useState("");
+  const [minPoints, setMinPoints] = useState("");
+  const [maxPoints, setMaxPoints] = useState("");
+  const [minRating, setMinRating] = useState("");
+  const [maxRating, setMaxRating] = useState("");
+  const [players, setPlayers] = useState<LeaderboardPlayer[]>([]);
   const [stats, setStats] = useState<LeaderboardStats>({
-    totalPlayers: 0,
+    totalRegisteredPlayers: 0,
+    totalRankedPlayers: 0,
+    totalUnrankedPlayers: 0,
     activeThisMonth: 0,
-    topPlayer: null,
-    topPlayerCity: null
   });
-  const [filters, setFilters] = useState<LeaderboardFilters>({
-    districts: [],
-    states: [],
-    genders: ['MALE', 'FEMALE', 'MIXED'],
-    ageCategories: ['JUNIOR', 'ADULT', 'SENIOR', 'VETERAN']
-  });
-  const [currentUser, setCurrentUser] = useState<CurrentUser | null>(null);
+  const [filters, setFilters] = useState<LeaderboardFilters>({ districts: [], states: [] });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
 
-  // Dynamic filter state
-  const [genderFilter, setGenderFilter] = useState<string>("all");
-  const [ageCategoryFilter, setAgeCategoryFilter] = useState<string>("all");
-  const [locationFilter, setLocationFilter] = useState<string>("all");
-  const [showFilters, setShowFilters] = useState(false);
+  const hasPrimaryFilters =
+    scope !== "all" || region !== "all" || gender !== "all" || ageGroup !== "all" || search.trim().length > 0;
+  const hasSecondaryFilters = minMatches || minWinRate || minPoints || maxPoints || minRating || maxRating;
+  const currentRegionOptions = scope === "district" ? filters.districts : scope === "state" ? filters.states : [];
 
-  // Get the scope for the current tab
-  const getCurrentScope = useCallback(() => {
-    const tab = leaderboardTabs.find(t => t.value === activeTab);
-    return tab?.scope || "national";
-  }, [activeTab]);
+  useEffect(() => {
+    if (view === "ranked") {
+      if (!["rank", "points", "winRate"].includes(sort)) {
+        setSort("rank");
+      }
+    } else if (!["joinedOn_desc", "joinedOn_asc", "name_asc", "name_desc"].includes(sort)) {
+      setSort("joinedOn_desc");
+    }
+  }, [sort, view]);
 
-  // Check if any filters are active
-  const hasActiveFilters = genderFilter !== "all" || ageCategoryFilter !== "all" || locationFilter !== "all";
+  useEffect(() => {
+    setRegion("all");
+  }, [scope]);
 
-  // Clear all filters
-  const clearFilters = () => {
-    setGenderFilter("all");
-    setAgeCategoryFilter("all");
-    setLocationFilter("all");
-  };
+  useEffect(() => {
+    const fetchAuth = async () => {
+      try {
+        const authRes = await fetch(`/api/auth/check?sport=${sportType}`, { credentials: "include" });
+        if (!authRes.ok) return;
+        const authData = await authRes.json();
+        if (authData.authenticated === true) {
+          setIsAuthenticated(true);
+          const meRes = await fetch(`/api/player/me?sport=${sportType}`, { credentials: "include" });
+          if (meRes.ok) {
+            const meData = await meRes.json();
+            setCurrentUserId(meData.id);
+          }
+        }
+      } catch (fetchError) {
+        console.error("Failed to check auth for leaderboard:", fetchError);
+      }
+    };
+
+    fetchAuth();
+  }, [sportType]);
 
   const fetchLeaderboard = useCallback(async () => {
     setLoading(true);
     setError(null);
     try {
-      const scope = getCurrentScope();
-      const queryParams = new URLSearchParams({
+      const params = new URLSearchParams({
         sport: sportType,
-        scope: scope,
-        limit: "100"
+        view,
+        scope,
+        sort,
+        limit: "250",
       });
-      
-      // Add search filter
-      if (search) {
-        queryParams.set("search", search);
+
+      if (region !== "all") params.set("region", region);
+      if (search.trim()) params.set("search", search.trim());
+      if (gender !== "all") params.set("gender", gender);
+      if (ageGroup !== "all") params.set("ageGroup", ageGroup);
+      if (view === "ranked") {
+        if (minMatches) params.set("minMatches", minMatches);
+        if (minWinRate) params.set("minWinRate", minWinRate);
+        if (minPoints) params.set("minPoints", minPoints);
+        if (maxPoints) params.set("maxPoints", maxPoints);
+        if (minRating) params.set("minRating", minRating);
+        if (maxRating) params.set("maxRating", maxRating);
       }
 
-      // Add gender filter
-      if (genderFilter && genderFilter !== "all") {
-        queryParams.set("gender", genderFilter);
-      }
-
-      // Add age category filter
-      if (ageCategoryFilter && ageCategoryFilter !== "all") {
-        queryParams.set("ageCategory", ageCategoryFilter);
-      }
-
-      // Add location filter for district/state tabs
-      if (locationFilter && locationFilter !== "all" && scope !== "national") {
-        queryParams.set("location", locationFilter);
-      }
-
-      const response = await fetch(`/api/leaderboard?${queryParams}`);
-      if (!response.ok) {
-        throw new Error("Failed to fetch leaderboard");
-      }
-
+      const response = await fetch(`/api/leaderboard?${params.toString()}`);
+      if (!response.ok) throw new Error("Failed to fetch leaderboard");
       const data = await response.json();
-      setLeaderboard(data.leaderboard || []);
+
+      setPlayers(data.players || data.leaderboard || []);
       setStats({
-        totalPlayers: data.total || 0,
-        activeThisMonth: data.activeThisMonth || 0,
-        topPlayer: data.leaderboard?.[0]?.name || null,
-        topPlayerCity: data.leaderboard?.[0]?.city || null
+        totalRegisteredPlayers: data.stats?.totalRegisteredPlayers || data.totalRegisteredPlayers || 0,
+        totalRankedPlayers: data.stats?.totalRankedPlayers || data.totalRankedPlayers || 0,
+        totalUnrankedPlayers: data.stats?.totalUnrankedPlayers || data.totalUnrankedPlayers || 0,
+        activeThisMonth: data.stats?.activeThisMonth || data.activeThisMonth || 0,
       });
-      
-      // Update available filters
-      if (data.filters) {
-        setFilters(prev => ({
-          ...prev,
-          districts: data.filters.districts || prev.districts,
-          states: data.filters.states || prev.states,
-        }));
-      }
-    } catch (err) {
-      console.error("Error fetching leaderboard:", err);
+      setFilters({
+        districts: data.filters?.districts || [],
+        states: data.filters?.states || [],
+      });
+    } catch (fetchError) {
+      console.error("Failed to fetch leaderboard:", fetchError);
       setError("Failed to load leaderboard. Please try again.");
     } finally {
       setLoading(false);
     }
-  }, [sportType, activeTab, search, genderFilter, ageCategoryFilter, locationFilter, getCurrentScope]);
+  }, [ageGroup, gender, maxPoints, maxRating, minMatches, minPoints, minRating, minWinRate, region, scope, search, sort, sportType, view]);
 
-  // Fetch current user data and check authentication
-  useEffect(() => {
-    const fetchCurrentUser = async () => {
-      try {
-        const response = await fetch(`/api/auth/check?sport=${sport.toUpperCase()}`, {
-          credentials: "include",
-        });
-        if (response.ok) {
-          const data = await response.json();
-          setIsAuthenticated(data.authenticated === true);
-          
-          if (data.authenticated) {
-            const userRes = await fetch(`/api/player/me?sport=${sport.toUpperCase()}`, {
-              credentials: "include",
-            });
-            if (userRes.ok) {
-              const userData = await userRes.json();
-              setCurrentUser({
-                id: userData.id,
-                name: `${userData.firstName} ${userData.lastName}`,
-                rank: userData.rank || null,
-                points: userData.visiblePoints || userData.score || 0,
-                tier: userData.tier || "Bronze"
-              });
-            }
-          }
-        }
-      } catch (err) {
-        console.error("Failed to fetch current user:", err);
-      }
-    };
-    fetchCurrentUser();
-  }, []);
+  const fetchCurrentUserSummary = useCallback(async () => {
+    if (!currentUserId) return;
+    try {
+      const params = new URLSearchParams({
+        sport: sportType,
+        view: "ranked",
+        scope: "all",
+        currentUserId,
+        limit: "1",
+      });
+      const response = await fetch(`/api/leaderboard?${params.toString()}`);
+      if (!response.ok) return;
+      const data = await response.json();
+      setCurrentUserSummary(data.currentUser || null);
+    } catch (fetchError) {
+      console.error("Failed to fetch current user leaderboard summary:", fetchError);
+    }
+  }, [currentUserId, sportType]);
 
   useEffect(() => {
     const timer = setTimeout(() => {
       fetchLeaderboard();
-    }, search ? 300 : 0);
-
+    }, search ? 250 : 0);
     return () => clearTimeout(timer);
-  }, [fetchLeaderboard]);
+  }, [fetchLeaderboard, search]);
 
-  // Reset location filter when tab changes
   useEffect(() => {
-    setLocationFilter("all");
-  }, [activeTab]);
+    fetchCurrentUserSummary();
+  }, [fetchCurrentUserSummary]);
 
-  // Handle tab change
-  const handleTabChange = (value: string) => {
-    setActiveTab(value);
-    setSearch(""); // Reset search when changing tabs
+  const clearAllFilters = () => {
+    setScope("all");
+    setRegion("all");
+    setSearch("");
+    setGender("all");
+    setAgeGroup("all");
+    setMinMatches("");
+    setMinWinRate("");
+    setMinPoints("");
+    setMaxPoints("");
+    setMinRating("");
+    setMaxRating("");
+    setSort(view === "ranked" ? "rank" : "joinedOn_desc");
   };
 
-  const getInitials = (name: string) => {
-    return name.split(" ").map(n => n[0]).join("").toUpperCase();
-  };
-
-  // Find current user in leaderboard
-  const userInLeaderboard = currentUser 
-    ? leaderboard.find(p => p.id === currentUser.id)
-    : null;
-
-  // Get tab title based on active tab
-  const getTabTitle = () => {
-    const tab = leaderboardTabs.find(t => t.value === activeTab);
-    return tab ? `${tab.label} Rankings` : "Rankings";
-  };
-
-  // Get available locations based on current scope
-  const getAvailableLocations = () => {
-    if (activeTab === "district") {
-      return filters.districts;
-    } else if (activeTab === "state") {
-      return filters.states;
+  const shareRegistrationLink = async () => {
+    const shareUrl = `${window.location.origin}/${sport}?auth=register`;
+    try {
+      if (navigator.share) {
+        await navigator.share({
+          title: `${sportName} on ValorHive`,
+          text: `Join ${sportName} on ValorHive and start competing.`,
+          url: shareUrl,
+        });
+      } else {
+        await navigator.clipboard.writeText(shareUrl);
+        toast.success("Registration link copied");
+      }
+    } catch (shareError) {
+      console.error("Failed to share leaderboard link:", shareError);
     }
-    return [];
   };
+
+  const rankCardLocked = !currentUserSummary || currentUserSummary.matchesPlayed === 0 || stats.totalRankedPlayers === 0;
+
+  const emptyState = useMemo(() => {
+    if (stats.totalRegisteredPlayers === 0) {
+      return {
+        title: "No players registered in this sport yet",
+        description: "Invite players to join early and help start the competitive ladder in this sport.",
+        primaryLabel: "Invite players",
+        primaryAction: shareRegistrationLink,
+        secondaryHref: `/${sport}?auth=register`,
+        secondaryLabel: "Start your profile",
+      };
+    }
+    if (view === "ranked" && stats.totalRankedPlayers === 0) {
+      return {
+        title: "No ranked players yet",
+        description: "Play the first official match to appear on the ranked leaderboard.",
+        primaryHref: `/${sport}/tournaments`,
+        primaryLabel: "Play your first match",
+      };
+    }
+    if (hasPrimaryFilters || (view === "ranked" && hasSecondaryFilters)) {
+      return {
+        title: "No players match your filters",
+        description: "Try clearing some filters or searching a broader region.",
+        primaryLabel: "Clear filters",
+        primaryAction: clearAllFilters,
+      };
+    }
+    if (view === "unranked") {
+      return {
+        title: "No unranked players right now",
+        description: "Everyone visible here has already played at least one official match.",
+      };
+    }
+    return {
+      title: "No players found",
+      description: "Try again in a moment or adjust your filters.",
+    };
+  }, [hasPrimaryFilters, hasSecondaryFilters, sport, sportName, stats.totalRankedPlayers, stats.totalRegisteredPlayers, view]);
 
   return (
-    <div className="bg-muted/30 min-h-screen">
-      {/* Only show sidebar when authenticated */}
-      {isAuthenticated && <Sidebar userType="player" />}
-      <main className={cn(isAuthenticated ? "ml-0 md:ml-72" : "", "overflow-x-hidden")}>
+    <div className="min-h-screen bg-muted/30">
+      {isAuthenticated ? <Sidebar userType="player" /> : null}
+      <main className={cn(isAuthenticated ? "ml-0 md:ml-72" : "", "min-h-screen overflow-x-hidden")}>
         <div className="px-4 py-4 sm:px-6 sm:py-6">
-          {/* Header */}
           <div className="mb-6">
-            <h1 className="text-2xl font-bold text-foreground flex items-center gap-3">
-              <Trophy className={cn("w-7 h-7", primaryTextClass)} />
+            <h1 className="flex items-center gap-3 text-2xl font-bold text-foreground">
+              <Trophy className={cn("h-7 w-7", primaryTextClass)} />
               {sportName} Leaderboard
             </h1>
-            <p className="text-muted-foreground mt-1">Top players ranked by points</p>
+            <p className="mt-1 text-muted-foreground">
+              Separate competitive rankings from player discovery, with ranked, all-player, and unranked views.
+            </p>
           </div>
 
-          {/* Your Rank Card - Show if logged in */}
-          {currentUser && !loading && (
+          {isAuthenticated && currentUserSummary ? (
             <Card className={cn("mb-6 border-l-4", isCornhole ? "border-l-green-500" : "border-l-teal-500")}>
-              <CardContent className="p-4">
-                <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-                  <div className="flex items-center gap-3 sm:gap-4">
-                    <div className={cn("p-3 rounded-xl", primaryBgClass)}>
-                      <Sparkles className={cn("w-6 h-6", primaryTextClass)} />
-                    </div>
-                    <div>
-                      <p className="text-sm text-muted-foreground">Your Rank</p>
-                      <div className="flex items-center gap-2">
-                        <span className="text-2xl font-bold text-foreground">
-                          #{userInLeaderboard?.rank || currentUser.rank || "—"}
-                        </span>
-                        {userInLeaderboard && (
-                          <Badge variant="outline" className={tierColors[userInLeaderboard.tier] || ""}>
-                            {userInLeaderboard.tier}
-                          </Badge>
-                        )}
-                      </div>
-                      <p className="text-sm text-muted-foreground">
-                        {userInLeaderboard?.points?.toLocaleString() || currentUser.points?.toLocaleString() || 0} points
-                      </p>
-                    </div>
+              <CardContent className="flex flex-col gap-4 p-4 sm:flex-row sm:items-center sm:justify-between">
+                <div className="flex items-start gap-3">
+                  <div className={cn("rounded-xl p-3", primaryBgClass)}>
+                    <Crown className={cn("h-6 w-6", primaryTextClass)} />
                   </div>
-                  <Link href={`/${sport}/stats`} className="self-start sm:self-auto">
-                    <Badge className="cursor-pointer hover:bg-primary/20" variant="secondary">
-                      View My Stats
-                    </Badge>
+                  <div>
+                    <p className="text-sm text-muted-foreground">Your leaderboard status</p>
+                    {rankCardLocked ? (
+                      <>
+                        <p className="text-lg font-semibold text-foreground">You are not ranked yet</p>
+                        <p className="text-sm text-muted-foreground">
+                          Matches played: {currentUserSummary.matchesPlayed}. Play your first match to enter leaderboard.
+                        </p>
+                      </>
+                    ) : (
+                      <>
+                        <div className="flex flex-wrap items-center gap-2">
+                          <span className="text-2xl font-bold text-foreground">#{currentUserSummary.rank}</span>
+                          <Badge variant="outline" className={primaryBorderClass}>
+                            {currentUserSummary.tier}
+                          </Badge>
+                        </div>
+                        <p className="text-sm text-muted-foreground">
+                          {currentUserSummary.points.toLocaleString()} points • Rating {currentUserSummary.rating}
+                        </p>
+                      </>
+                    )}
+                  </div>
+                </div>
+                <div className="flex flex-wrap gap-2">
+                  <Link href={`/${sport}/tournaments`}>
+                    <Button className={cn("text-white", isCornhole ? "bg-green-600 hover:bg-green-700" : "bg-teal-600 hover:bg-teal-700")}>
+                      Play your first match
+                    </Button>
+                  </Link>
+                  <Link href={`/${sport}/stats`}>
+                    <Button variant="outline">View My Stats</Button>
                   </Link>
                 </div>
               </CardContent>
             </Card>
-          )}
+          ) : null}
 
-          {/* Stats Cards */}
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
+          <div className="mb-6 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
             {loading ? (
               <>
+                <StatCardSkeleton />
                 <StatCardSkeleton />
                 <StatCardSkeleton />
                 <StatCardSkeleton />
               </>
             ) : (
               <>
-                <Card className="bg-card border-border/50 shadow-sm">
-                  <CardContent className="p-4">
-                    <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 rounded-xl bg-amber-500/10 border border-amber-500/20 flex items-center justify-center">
-                        <Crown className="w-5 h-5 text-amber-400" />
-                      </div>
-                      <div>
-                        <p className="text-sm text-muted-foreground">Top Player</p>
-                        <p className="font-bold text-foreground truncate">
-                          {stats.topPlayer || "No players yet"}
-                        </p>
-                        {stats.topPlayerCity && (
-                          <p className="text-xs text-muted-foreground">{stats.topPlayerCity}</p>
-                        )}
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-                <Card className="bg-card border-border/50 shadow-sm">
-                  <CardContent className="p-4">
-                    <div className="flex items-center gap-3">
-                      <div className={cn("w-10 h-10 rounded-xl border flex items-center justify-center", primaryBgClass)}>
-                        <Trophy className={cn("w-5 h-5", primaryTextClass)} />
-                      </div>
-                      <div>
-                        <p className="text-sm text-muted-foreground">Total Players</p>
-                        <p className="font-bold text-foreground">
-                          {stats.totalPlayers.toLocaleString()}
-                        </p>
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-                <Card className="bg-card border-border/50 shadow-sm">
-                  <CardContent className="p-4">
-                    <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 rounded-xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center">
-                        <TrendingUp className="w-5 h-5 text-emerald-400" />
-                      </div>
-                      <div>
-                        <p className="text-sm text-muted-foreground">Active This Month</p>
-                        <p className="font-bold text-foreground">
-                          {stats.activeThisMonth.toLocaleString()}
-                        </p>
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
+                <Card className="bg-card border-border/50 shadow-sm"><CardContent className="p-4"><p className="text-sm text-muted-foreground">Total Registered Players</p><p className="mt-1 text-2xl font-bold text-foreground">{stats.totalRegisteredPlayers.toLocaleString()}</p></CardContent></Card>
+                <Card className="bg-card border-border/50 shadow-sm"><CardContent className="p-4"><p className="text-sm text-muted-foreground">Total Ranked Players</p><p className="mt-1 text-2xl font-bold text-foreground">{stats.totalRankedPlayers.toLocaleString()}</p></CardContent></Card>
+                <Card className="bg-card border-border/50 shadow-sm"><CardContent className="p-4"><p className="text-sm text-muted-foreground">Active This Month</p><p className="mt-1 text-2xl font-bold text-foreground">{stats.activeThisMonth.toLocaleString()}</p></CardContent></Card>
+                <Card className="bg-card border-border/50 shadow-sm"><CardContent className="p-4"><p className="text-sm text-muted-foreground">Unranked Players</p><p className="mt-1 text-2xl font-bold text-foreground">{stats.totalUnrankedPlayers.toLocaleString()}</p></CardContent></Card>
               </>
             )}
           </div>
 
-          {/* Leaderboard Tabs */}
-          <Tabs defaultValue="national" value={activeTab} onValueChange={handleTabChange} className="w-full">
-            <div className="bg-card border border-border/50 rounded-lg p-4 mb-6">
-              {/* Search and Filter Row */}
-              <div className="flex flex-col sm:flex-row gap-3 mb-4">
-                {/* Search Input */}
-                <div className="relative flex-1">
-                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                  <Input
-                    placeholder="Search players..."
-                    className="pl-10"
-                    value={search}
-                    onChange={(e) => setSearch(e.target.value)}
-                  />
-                </div>
-                
-                {/* Filter Toggle Button */}
-                <Button
-                  variant="outline"
-                  className={cn("flex items-center gap-2", hasActiveFilters && isCornhole ? "border-green-500/50 bg-green-500/10" : hasActiveFilters && "border-teal-500/50 bg-teal-500/10")}
-                  onClick={() => setShowFilters(!showFilters)}
-                >
-                  <Filter className="w-4 h-4" />
-                  Filters
-                  {hasActiveFilters && (
-                    <Badge variant="secondary" className="ml-1 px-1.5 py-0 text-xs">
-                      {[genderFilter !== "all", ageCategoryFilter !== "all", locationFilter !== "all"].filter(Boolean).length}
-                    </Badge>
-                  )}
-                </Button>
-              </div>
-
-              {/* Expandable Filters Panel */}
-              {showFilters && (
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 mb-4 p-4 bg-muted/30 rounded-lg">
-                  {/* Gender Filter */}
-                  <div className="space-y-1.5">
-                    <label className="text-sm font-medium text-muted-foreground flex items-center gap-1.5">
-                      <PersonStanding className="w-4 h-4" />
-                      Gender
-                    </label>
-                    <Select value={genderFilter} onValueChange={setGenderFilter}>
-                      <SelectTrigger>
-                        <SelectValue placeholder="All Genders" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="all">All Genders</SelectItem>
-                        {filters.genders.map((g) => (
-                          <SelectItem key={g} value={g}>
-                            {genderLabels[g] || g}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-
-                  {/* Age Category Filter */}
-                  <div className="space-y-1.5">
-                    <label className="text-sm font-medium text-muted-foreground flex items-center gap-1.5">
-                      <Calendar className="w-4 h-4" />
-                      Age Category
-                    </label>
-                    <Select value={ageCategoryFilter} onValueChange={setAgeCategoryFilter}>
-                      <SelectTrigger>
-                        <SelectValue placeholder="All Ages" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="all">All Ages</SelectItem>
-                        {filters.ageCategories.map((a) => (
-                          <SelectItem key={a} value={a}>
-                            {ageCategoryLabels[a] || a}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-
-                  {/* Location Filter - Only show for district/state tabs */}
-                  {activeTab !== "national" && getAvailableLocations().length > 0 && (
-                    <div className="space-y-1.5">
-                      <label className="text-sm font-medium text-muted-foreground flex items-center gap-1.5">
-                        <MapPin className="w-4 h-4" />
-                        {activeTab === "district" ? "District" : "State"}
-                      </label>
-                      <Select value={locationFilter} onValueChange={setLocationFilter}>
-                        <SelectTrigger>
-                          <SelectValue placeholder={`All ${activeTab === "district" ? "Districts" : "States"}`} />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="all">All {activeTab === "district" ? "Districts" : "States"}</SelectItem>
-                          {getAvailableLocations().map((loc) => (
-                            <SelectItem key={loc} value={loc}>
-                              {loc}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
-                  )}
-
-                  {/* Clear Filters Button */}
-                  {hasActiveFilters && (
-                    <div className="flex items-end">
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={clearFilters}
-                        className="text-muted-foreground hover:text-foreground"
-                      >
-                        <X className="w-4 h-4 mr-1" />
-                        Clear Filters
-                      </Button>
-                    </div>
-                  )}
-                </div>
-              )}
-
-              {/* Active Filters Display */}
-              {hasActiveFilters && !showFilters && (
-                <div className="flex flex-wrap gap-2 mb-4">
-                  {genderFilter !== "all" && (
-                    <Badge variant="secondary" className="flex items-center gap-1">
-                      {genderLabels[genderFilter] || genderFilter}
-                      <X 
-                        className="w-3 h-3 cursor-pointer hover:text-destructive" 
-                        onClick={() => setGenderFilter("all")}
-                      />
-                    </Badge>
-                  )}
-                  {ageCategoryFilter !== "all" && (
-                    <Badge variant="secondary" className="flex items-center gap-1">
-                      {ageCategoryLabels[ageCategoryFilter] || ageCategoryFilter}
-                      <X 
-                        className="w-3 h-3 cursor-pointer hover:text-destructive" 
-                        onClick={() => setAgeCategoryFilter("all")}
-                      />
-                    </Badge>
-                  )}
-                  {locationFilter !== "all" && (
-                    <Badge variant="secondary" className="flex items-center gap-1">
-                      {locationFilter}
-                      <X 
-                        className="w-3 h-3 cursor-pointer hover:text-destructive" 
-                        onClick={() => setLocationFilter("all")}
-                      />
-                    </Badge>
-                  )}
-                </div>
-              )}
-
-              {/* Tab List - Scrollable on mobile */}
-              <div className="overflow-x-auto pb-2 -mb-2">
-                <TabsList className={cn(
-                  "inline-flex h-auto min-w-full p-1 gap-1",
-                  "bg-muted/50"
-                )}>
-                  {leaderboardTabs.map((tab) => {
-                    const Icon = tab.icon;
-                    return (
-                      <TabsTrigger
-                        key={tab.value}
-                        value={tab.value}
-                        className={cn(
-                          "flex items-center gap-1.5 px-3 py-2 text-sm font-medium rounded-md",
-                          "data-[state=active]:bg-background data-[state=active]:shadow-sm",
-                          isCornhole 
-                            ? "data-[state=active]:text-green-600 data-[state=active]:bg-green-500/10" 
-                            : "data-[state=active]:text-teal-600 data-[state=active]:bg-teal-500/10",
-                          "whitespace-nowrap"
-                        )}
-                      >
-                        <Icon className="w-4 h-4" />
-                        <span className="hidden sm:inline">{tab.label}</span>
-                        <span className="sm:hidden">{tab.label.split(' ')[0]}</span>
-                      </TabsTrigger>
-                    );
-                  })}
+          <Tabs value={view} onValueChange={(value) => setView(value as LeaderboardView)} className="w-full">
+            <div className="mb-6 rounded-xl border border-border/50 bg-card p-4">
+              <div className="overflow-x-auto pb-2">
+                <TabsList className="inline-flex min-w-full gap-1 bg-muted/50 sm:min-w-0">
+                  {viewTabs.map((tab) => (
+                    <TabsTrigger
+                      key={tab.value}
+                      value={tab.value}
+                      className={cn(
+                        "px-4 py-2 whitespace-nowrap",
+                        isCornhole ? "data-[state=active]:bg-green-500/10 data-[state=active]:text-green-700" : "data-[state=active]:bg-teal-500/10 data-[state=active]:text-teal-700",
+                      )}
+                    >
+                      {tab.label}
+                    </TabsTrigger>
+                  ))}
                 </TabsList>
               </div>
+
+              <div className="mt-4 flex flex-col gap-3 lg:flex-row lg:items-center">
+                <div className="relative flex-1">
+                  <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                  <Input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Search by name, city, or state" className="pl-10" />
+                </div>
+
+                <div className="flex flex-wrap gap-2">
+                  <Button variant="outline" onClick={() => setShowPrimaryFilters((value) => !value)}>
+                    <Filter className="mr-2 h-4 w-4" />
+                    Filters
+                    {showPrimaryFilters ? <ChevronUp className="ml-2 h-4 w-4" /> : <ChevronDown className="ml-2 h-4 w-4" />}
+                  </Button>
+                  {view === "ranked" ? (
+                    <Button variant="outline" onClick={() => setShowSecondaryFilters((value) => !value)}>
+                      Performance
+                      {showSecondaryFilters ? <ChevronUp className="ml-2 h-4 w-4" /> : <ChevronDown className="ml-2 h-4 w-4" />}
+                    </Button>
+                  ) : null}
+                  <Select value={sort} onValueChange={setSort}>
+                    <SelectTrigger className="w-[180px]"><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      {view === "ranked" ? (
+                        <>
+                          <SelectItem value="rank">Rank</SelectItem>
+                          <SelectItem value="points">Points</SelectItem>
+                          <SelectItem value="winRate">Win %</SelectItem>
+                        </>
+                      ) : (
+                        <>
+                          <SelectItem value="joinedOn_desc">Join Date: Newest</SelectItem>
+                          <SelectItem value="joinedOn_asc">Join Date: Oldest</SelectItem>
+                          <SelectItem value="name_asc">Name: A-Z</SelectItem>
+                          <SelectItem value="name_desc">Name: Z-A</SelectItem>
+                        </>
+                      )}
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+
+              {showPrimaryFilters ? (
+                <div className="mt-4 grid gap-3 rounded-lg bg-muted/30 p-4 sm:grid-cols-2 xl:grid-cols-4">
+                  <div className="space-y-1.5">
+                    <label className="text-sm font-medium text-muted-foreground">Geography Scope</label>
+                    <Select value={scope} onValueChange={(value) => setScope(value as GeographyScope)}>
+                      <SelectTrigger><SelectValue /></SelectTrigger>
+                      <SelectContent>
+                        {scopeOptions.map((option) => (
+                          <SelectItem key={option.value} value={option.value}>{option.label}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-1.5">
+                    <label className="text-sm font-medium text-muted-foreground">Region</label>
+                    <Select value={region} onValueChange={setRegion} disabled={currentRegionOptions.length === 0}>
+                      <SelectTrigger><SelectValue placeholder={currentRegionOptions.length > 0 ? "Choose region" : "No region filter"} /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">All regions</SelectItem>
+                        {currentRegionOptions.map((option) => (
+                          <SelectItem key={option} value={option}>{option}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-1.5">
+                    <label className="text-sm font-medium text-muted-foreground">Gender</label>
+                    <Select value={gender} onValueChange={setGender}>
+                      <SelectTrigger><SelectValue /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">All</SelectItem>
+                        <SelectItem value="MALE">Male</SelectItem>
+                        <SelectItem value="FEMALE">Female</SelectItem>
+                        <SelectItem value="OTHER">Other</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-1.5">
+                    <label className="text-sm font-medium text-muted-foreground">Age Group</label>
+                    <Select value={ageGroup} onValueChange={setAgeGroup}>
+                      <SelectTrigger><SelectValue /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">All</SelectItem>
+                        <SelectItem value="JUNIOR">Junior (≤18)</SelectItem>
+                        <SelectItem value="ADULT">Adult (19–35)</SelectItem>
+                        <SelectItem value="MASTERS">Masters (36+)</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+              ) : null}
+
+              {view === "ranked" && showSecondaryFilters ? (
+                <div className="mt-4 grid gap-3 rounded-lg bg-muted/30 p-4 sm:grid-cols-2 xl:grid-cols-3">
+                  <div className="space-y-1.5"><label className="text-sm font-medium text-muted-foreground">Minimum Matches</label><Input value={minMatches} onChange={(event) => setMinMatches(event.target.value)} inputMode="numeric" /></div>
+                  <div className="space-y-1.5"><label className="text-sm font-medium text-muted-foreground">Minimum Win %</label><Input value={minWinRate} onChange={(event) => setMinWinRate(event.target.value)} inputMode="numeric" /></div>
+                  <div className="space-y-1.5"><label className="text-sm font-medium text-muted-foreground">Minimum Points</label><Input value={minPoints} onChange={(event) => setMinPoints(event.target.value)} inputMode="numeric" /></div>
+                  <div className="space-y-1.5"><label className="text-sm font-medium text-muted-foreground">Maximum Points</label><Input value={maxPoints} onChange={(event) => setMaxPoints(event.target.value)} inputMode="numeric" /></div>
+                  <div className="space-y-1.5"><label className="text-sm font-medium text-muted-foreground">Minimum Rating</label><Input value={minRating} onChange={(event) => setMinRating(event.target.value)} inputMode="numeric" /></div>
+                  <div className="space-y-1.5"><label className="text-sm font-medium text-muted-foreground">Maximum Rating</label><Input value={maxRating} onChange={(event) => setMaxRating(event.target.value)} inputMode="numeric" /></div>
+                </div>
+              ) : null}
+
+              {(hasPrimaryFilters || hasSecondaryFilters) ? (
+                <div className="mt-4 flex flex-wrap items-center gap-2">
+                  {hasPrimaryFilters ? <Badge variant="secondary">Primary filters active</Badge> : null}
+                  {view === "ranked" && hasSecondaryFilters ? <Badge variant="secondary">Performance filters active</Badge> : null}
+                  <Button variant="ghost" size="sm" onClick={clearAllFilters}>Clear all</Button>
+                </div>
+              ) : null}
             </div>
 
-            {/* Tab Content */}
-            {leaderboardTabs.map((tab) => (
+            {viewTabs.map((tab) => (
               <TabsContent key={tab.value} value={tab.value} className="mt-0">
-                {/* Error State */}
-                {error && (
-                  <Card className="bg-destructive/10 border-destructive/30 mb-6">
-                    <CardContent className="p-4 text-center text-destructive">
-                      {error}
-                    </CardContent>
+                {error ? (
+                  <Card className="border-destructive/30 bg-destructive/10">
+                    <CardContent className="p-4 text-destructive">{error}</CardContent>
                   </Card>
-                )}
+                ) : null}
 
-                {/* Empty State */}
-                {!loading && leaderboard.length === 0 && !error && (
-                  <Card className="bg-card border-border/50">
-                    <CardContent className="p-12 text-center">
-                      <Trophy className="w-16 h-16 mx-auto text-muted-foreground mb-4" />
-                      <h3 className="text-xl font-semibold mb-2">No Players Found</h3>
-                      <p className="text-muted-foreground">
-                        {search || hasActiveFilters
-                          ? "Try adjusting your search or filter criteria"
-                          : "Be the first to register and top the leaderboard!"}
-                      </p>
-                    </CardContent>
-                  </Card>
-                )}
-
-                {/* Top 3 Podium */}
                 {loading ? (
-                  <PodiumSkeleton />
-                ) : (
-                  !loading && leaderboard.length >= 3 && (
-                    <div className="grid grid-cols-1 gap-4 mb-6 sm:grid-cols-3">
-                      {[1, 0, 2].map((index) => {
-                        const player = leaderboard[index];
-                        if (!player) return null;
-                        const position = index === 1 ? 0 : index === 0 ? 1 : 2;
-                        const isCurrentUser = currentUser?.id === player.id;
-                        
-                        return (
-                          <Card
-                            key={player.id}
-                            className={cn(
-                              "bg-card border-border/50 shadow-sm transition-all",
-                              position === 0 && "order-2 scale-105 border-amber-500/30",
-                              position === 1 && "order-1",
-                              position === 2 && "order-3",
-                              isCurrentUser && cn("ring-2", isCornhole ? "ring-green-500" : "ring-teal-500")
-                            )}
+                  <Card className="border-border/50 bg-card shadow-sm">
+                    <CardContent className="p-0">
+                      <TableSkeleton showRank={tab.value === "ranked"} />
+                    </CardContent>
+                  </Card>
+                ) : players.length === 0 ? (
+                  <Card className="border-border/50 bg-card shadow-sm">
+                    <CardContent className="flex flex-col items-center gap-4 p-10 text-center">
+                      <Users className="h-12 w-12 text-muted-foreground" />
+                      <div className="space-y-1">
+                        <h3 className="text-lg font-semibold text-foreground">{emptyState.title}</h3>
+                        <p className="max-w-xl text-sm text-muted-foreground">{emptyState.description}</p>
+                      </div>
+                      <div className="flex flex-wrap justify-center gap-2">
+                        {"primaryHref" in emptyState && emptyState.primaryHref ? (
+                          <Link href={emptyState.primaryHref}>
+                            <Button className={cn("text-white", isCornhole ? "bg-green-600 hover:bg-green-700" : "bg-teal-600 hover:bg-teal-700")}>
+                              {emptyState.primaryLabel}
+                            </Button>
+                          </Link>
+                        ) : null}
+                        {"primaryAction" in emptyState && emptyState.primaryAction ? (
+                          <Button
+                            onClick={() => {
+                              void emptyState.primaryAction();
+                            }}
+                            className={cn("text-white", isCornhole ? "bg-green-600 hover:bg-green-700" : "bg-teal-600 hover:bg-teal-700")}
                           >
-                            <CardContent className={cn("p-4 text-center", position === 0 && "pt-6")}>
-                              <div className="text-3xl mb-2">{tierIcons[player.tier] || "🎮"}</div>
-                              <Link href={`/${sport}/players/${player.id}`}>
-                                <Avatar className={cn(
-                                  "mx-auto mb-2 cursor-pointer hover:ring-2 hover:ring-primary",
-                                  position === 0 ? "w-16 h-16" : "w-12 h-12"
-                                )}>
-                                  <AvatarFallback className={cn(primaryBgClass, primaryTextClass, "text-lg")}>
-                                    {getInitials(player.name)}
-                                  </AvatarFallback>
-                                </Avatar>
-                              </Link>
-                              <Link href={`/${sport}/players/${player.id}`} className="hover:text-primary">
-                                <p className="font-semibold text-foreground truncate flex items-center justify-center gap-1">
-                                  {player.name}
-                                  {isCurrentUser && <Badge variant="secondary" className="text-xs">You</Badge>}
-                                </p>
-                              </Link>
-                              <p className="text-xs text-muted-foreground">{player.city || player.district || "-"}</p>
-                              <Badge variant="outline" className={cn("mt-2", tierColors[player.tier] || "")}>
-                                {player.tier}
-                              </Badge>
-                              <div className="mt-2">
-                                <p className="text-2xl font-bold text-foreground">{player.points.toLocaleString()}</p>
-                                <p className="text-xs text-muted-foreground">points</p>
-                              </div>
-                              <div className={cn(
-                                "text-2xl font-bold",
-                                position === 0 ? "text-amber-400" :
-                                position === 1 ? "text-gray-400" :
-                                "text-orange-400"
-                              )}>
-                                #{player.rank}
-                              </div>
-                            </CardContent>
-                          </Card>
-                        );
-                      })}
-                    </div>
-                  )
-                )}
-
-                {/* Full Leaderboard */}
-                {!loading && leaderboard.length > 0 && (
-                  <Card className="bg-card border-border/50 shadow-sm">
-                    <CardHeader className="pb-2">
-                      <CardTitle className="text-lg flex items-center gap-2">
-                        {getTabTitle()}
-                        {activeTab !== "rankings" && (
-                          <Badge variant="outline" className={cn(
-                            isCornhole ? "border-green-500/30 text-green-600" : "border-teal-500/30 text-teal-600"
-                          )}>
-                            {leaderboardTabs.find(t => t.value === activeTab)?.label}
-                          </Badge>
-                        )}
-                        {hasActiveFilters && (
-                          <Badge variant="secondary" className="text-xs">
-                            Filtered
-                          </Badge>
-                        )}
+                            {emptyState.primaryLabel}
+                          </Button>
+                        ) : null}
+                        {"secondaryHref" in emptyState && emptyState.secondaryHref ? (
+                          <Link href={emptyState.secondaryHref}>
+                            <Button variant="outline">{emptyState.secondaryLabel}</Button>
+                          </Link>
+                        ) : null}
+                      </div>
+                    </CardContent>
+                  </Card>
+                ) : (
+                  <Card className="border-border/50 bg-card shadow-sm">
+                    <CardHeader className="pb-3">
+                      <CardTitle className="text-lg">
+                        {tab.value === "ranked"
+                          ? "Ranked players"
+                          : tab.value === "all"
+                            ? "Registered player directory"
+                            : "Unranked players"}
                       </CardTitle>
+                      <CardDescription>
+                        {tab.value === "ranked"
+                          ? "Only players with at least one official match appear here."
+                          : tab.value === "all"
+                            ? "All registered players in this sport, whether ranked or not."
+                            : "Players with zero official matches are listed here until they enter the competitive ladder."}
+                      </CardDescription>
                     </CardHeader>
                     <CardContent className="p-0">
-                      <div className="overflow-x-auto max-h-[600px] overflow-y-auto">
-                        <table className="min-w-[640px] w-full">
-                          <thead className="sticky top-0 bg-card z-10">
+                      <div className="overflow-x-auto">
+                        <table className="min-w-[860px] w-full">
+                          <thead className="bg-muted/40">
                             <tr className="border-b border-border/40">
-                              <th className="px-4 py-3 text-left text-sm font-medium text-muted-foreground">Rank</th>
-                              <th className="px-4 py-3 text-left text-sm font-medium text-muted-foreground">Player</th>
-                              <th className="px-4 py-3 text-left text-sm font-medium text-muted-foreground hidden sm:table-cell">Tier</th>
-                              <th className="px-4 py-3 text-right text-sm font-medium text-muted-foreground">Points</th>
-                              <th className="px-4 py-3 text-right text-sm font-medium text-muted-foreground hidden md:table-cell">Matches</th>
-                              <th className="px-4 py-3 text-right text-sm font-medium text-muted-foreground hidden md:table-cell">Win Rate</th>
-                              <th className="px-4 py-3 text-center text-sm font-medium text-muted-foreground hidden lg:table-cell">Follow</th>
+                              {tab.value === "ranked" ? (
+                                <th className="px-4 py-3 text-left text-sm font-medium text-muted-foreground">Rank</th>
+                              ) : null}
+                              <th className="px-4 py-3 text-left text-sm font-medium text-muted-foreground">Name</th>
+                              {tab.value === "ranked" ? (
+                                <>
+                                  <th className="px-4 py-3 text-left text-sm font-medium text-muted-foreground">Location</th>
+                                  <th className="px-4 py-3 text-right text-sm font-medium text-muted-foreground">Matches</th>
+                                  <th className="px-4 py-3 text-right text-sm font-medium text-muted-foreground">Wins</th>
+                                  <th className="px-4 py-3 text-right text-sm font-medium text-muted-foreground">Win %</th>
+                                  <th className="px-4 py-3 text-right text-sm font-medium text-muted-foreground">Points / Rating</th>
+                                </>
+                              ) : (
+                                <>
+                                  <th className="px-4 py-3 text-left text-sm font-medium text-muted-foreground">Gender</th>
+                                  <th className="px-4 py-3 text-left text-sm font-medium text-muted-foreground">Age Group</th>
+                                  <th className="px-4 py-3 text-left text-sm font-medium text-muted-foreground">Location</th>
+                                  <th className="px-4 py-3 text-left text-sm font-medium text-muted-foreground">Joined On</th>
+                                  {tab.value === "all" ? (
+                                    <th className="px-4 py-3 text-right text-sm font-medium text-muted-foreground">Matches Played</th>
+                                  ) : null}
+                                  <th className="px-4 py-3 text-left text-sm font-medium text-muted-foreground">Status</th>
+                                </>
+                              )}
+                              {isAuthenticated ? (
+                                <th className="px-4 py-3 text-center text-sm font-medium text-muted-foreground">Action</th>
+                              ) : null}
                             </tr>
                           </thead>
-                          <tbody className="divide-y divide-border/40">
-                            {loading ? (
-                              Array.from({ length: 10 }).map((_, i) => <TableRowSkeleton key={i} />)
-                            ) : (
-                              leaderboard.map((player) => {
-                                const isCurrentUser = currentUser?.id === player.id;
-                                return (
-                                  <tr 
-                                    key={player.id} 
-                                    className={cn(
-                                      "hover:bg-muted/50 transition-colors",
-                                      isCurrentUser && cn("bg-primary/5", isCornhole ? "bg-green-500/5" : "bg-teal-500/5")
-                                    )}
-                                  >
-                                    <td className="px-4 py-3">
-                                      <span className={cn(
-                                        "font-bold",
-                                        player.rank <= 3 ? primaryTextClass : "text-foreground"
-                                      )}>
-                                        #{player.rank}
-                                      </span>
+                          <tbody className="divide-y divide-border/30">
+                            {players.map((player) => {
+                              const isCurrentUser = currentUserId === player.id;
+                              return (
+                                <tr key={player.id} className={cn("hover:bg-muted/30", isCurrentUser && "bg-primary/5")}>
+                                  {tab.value === "ranked" ? (
+                                    <td className="px-4 py-3 align-top">
+                                      <span className={cn("font-semibold", primaryTextClass)}>#{player.rank}</span>
                                     </td>
-                                    <td className="px-4 py-3">
-                                      <Link href={`/${sport}/players/${player.id}`} className="flex items-center gap-3 hover:opacity-80">
-                                        <Avatar className="w-8 h-8">
-                                          <AvatarFallback className={cn(primaryBgClass, primaryTextClass, "text-xs")}>
-                                            {getInitials(player.name)}
-                                          </AvatarFallback>
-                                        </Avatar>
-                                        <div>
-                                          <p className="font-medium text-foreground flex items-center gap-2">
-                                            {player.name}
-                                            {isCurrentUser && (
-                                              <Badge variant="secondary" className="text-xs">You</Badge>
-                                            )}
-                                          </p>
-                                          <p className="text-xs text-muted-foreground">
-                                            {player.city || player.district || player.state || "-"}
-                                            {player.gender && (
-                                              <span className="ml-2 opacity-60">
-                                                • {genderLabels[player.gender] || player.gender}
-                                              </span>
-                                            )}
-                                          </p>
-                                        </div>
-                                      </Link>
-                                    </td>
-                                    <td className="px-4 py-3 hidden sm:table-cell">
-                                      <Badge variant="outline" className={tierColors[player.tier] || ""}>
-                                        {player.tier}
+                                  ) : null}
+                                  <td className="px-4 py-3 align-top">
+                                    <Link href={`/${sport}/players/${player.id}`} className="font-medium text-foreground hover:text-primary">
+                                      {player.name}
+                                    </Link>
+                                    {isCurrentUser ? (
+                                      <Badge variant="secondary" className="ml-2 text-xs">
+                                        You
                                       </Badge>
+                                    ) : null}
+                                  </td>
+                                  {tab.value === "ranked" ? (
+                                    <>
+                                      <td className="px-4 py-3 text-sm text-muted-foreground">{player.location || "-"}</td>
+                                      <td className="px-4 py-3 text-right text-sm text-foreground">{player.matchesPlayed}</td>
+                                      <td className="px-4 py-3 text-right text-sm text-foreground">{player.wins}</td>
+                                      <td className="px-4 py-3 text-right text-sm text-foreground">{player.winRate}%</td>
+                                      <td className="px-4 py-3 text-right">
+                                        <div className="text-sm font-semibold text-foreground">{player.points.toLocaleString()}</div>
+                                        <div className="text-xs text-muted-foreground">Rating {player.rating}</div>
+                                      </td>
+                                    </>
+                                  ) : (
+                                    <>
+                                      <td className="px-4 py-3 text-sm text-muted-foreground">{player.genderLabel || "-"}</td>
+                                      <td className="px-4 py-3 text-sm text-muted-foreground">
+                                        {player.ageGroup ? ageGroupLabels[player.ageGroup] : "-"}
+                                      </td>
+                                      <td className="px-4 py-3 text-sm text-muted-foreground">{player.location || "-"}</td>
+                                      <td className="px-4 py-3 text-sm text-muted-foreground">{formatJoinedOn(player.joinedOnLabel)}</td>
+                                      {tab.value === "all" ? (
+                                        <td className="px-4 py-3 text-right text-sm text-foreground">{player.matchesPlayed}</td>
+                                      ) : null}
+                                      <td className="px-4 py-3">
+                                        <Badge variant="outline" className={statusClasses[player.status]}>
+                                          {player.status}
+                                        </Badge>
+                                      </td>
+                                    </>
+                                  )}
+                                  {isAuthenticated ? (
+                                    <td className="px-4 py-3 text-center">
+                                      {!isCurrentUser ? (
+                                        <FollowButton targetType="user" targetId={player.id} sport={sportType} showText={false} size="sm" />
+                                      ) : (
+                                        <span className="text-xs text-muted-foreground">Current player</span>
+                                      )}
                                     </td>
-                                    <td className="px-4 py-3 text-right font-bold text-foreground">
-                                      {player.points.toLocaleString()}
-                                    </td>
-                                    <td className="px-4 py-3 text-right text-muted-foreground hidden md:table-cell">
-                                      {player.matches}
-                                    </td>
-                                    <td className="px-4 py-3 text-right text-muted-foreground hidden md:table-cell">
-                                      {player.winRate}%
-                                    </td>
-                                    <td className="px-4 py-3 text-center hidden lg:table-cell">
-                                      <FollowButton
-                                        targetType="user"
-                                        targetId={player.id}
-                                        sport={sport.toUpperCase()}
-                                        size="sm"
-                                        showText={false}
-                                        variant="ghost"
-                                      />
-                                    </td>
-                                  </tr>
-                                );
-                              })
-                            )}
+                                  ) : null}
+                                </tr>
+                              );
+                            })}
                           </tbody>
                         </table>
                       </div>
@@ -873,6 +747,25 @@ export default function LeaderboardPage() {
                 )}
               </TabsContent>
             ))}
+
+            {view === "ranked" && !loading && stats.totalRankedPlayers > 0 ? (
+              <div className="mt-6">
+                <Card className="border-border/50 bg-card shadow-sm">
+                  <CardContent className="flex flex-col gap-3 p-4 sm:flex-row sm:items-center sm:justify-between">
+                    <div>
+                      <p className="text-sm font-medium text-foreground">Competition signal</p>
+                      <p className="text-sm text-muted-foreground">
+                        Top players move up as official matches are recorded. Keep playing to improve your standing.
+                      </p>
+                    </div>
+                    <Link href={`/${sport}/tournaments`}>
+                      <Button variant="outline">Join a tournament</Button>
+                    </Link>
+                  </CardContent>
+                </Card>
+              </div>
+            ) : null}
+
           </Tabs>
         </div>
       </main>

@@ -36,6 +36,7 @@
     "db:migrate:prod:dry": "tsx scripts/migrate-production.ts --dry-run",
     "db:studio": "prisma studio",
     "db:seed": "tsx prisma/seed.ts",
+    "admin:create-superadmin": "tsx scripts/create-superadmin.ts",
     "prod:migrate": "prisma db push --skip-generate && prisma generate",
     "prod:check": "prisma validate",
     "docker:dev": "docker-compose -f docker-compose.dev.yml up -d",

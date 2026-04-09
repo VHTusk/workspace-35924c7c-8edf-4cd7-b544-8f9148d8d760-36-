@@ -283,14 +283,14 @@ export default function OnboardingWizard() {
                 {currentStep === 1 && (
                   <div className="space-y-4">
                     <p className="text-sm text-muted-foreground text-center mb-4">
-                      Set your location to discover tournaments and players near you
+                      Choose the state and district you want to play from. This can be different from where you currently live.
                     </p>
                     <div className="space-y-4">
                       <div className="space-y-2">
-                        <label className="text-sm font-medium">State</label>
+                        <label className="text-sm font-medium">State you want to play from</label>
                         <Select value={selectedState} onValueChange={setSelectedState}>
                           <SelectTrigger>
-                            <SelectValue placeholder="Select your state" />
+                            <SelectValue placeholder="Choose the state you want to play from" />
                           </SelectTrigger>
                           <SelectContent>
                             {indianStates.map((state) => (
@@ -302,7 +302,7 @@ export default function OnboardingWizard() {
                         </Select>
                       </div>
                       <div className="space-y-2">
-                        <label className="text-sm font-medium">District</label>
+                        <label className="text-sm font-medium">District you want to play from</label>
                         <Select
                           value={selectedDistrict}
                           onValueChange={setSelectedDistrict}
@@ -310,7 +310,7 @@ export default function OnboardingWizard() {
                         >
                           <SelectTrigger>
                             <SelectValue
-                              placeholder={selectedState ? "Select your district" : "Select state first"}
+                              placeholder={selectedState ? "Choose the district you want to play from" : "Choose your playing state first"}
                             />
                           </SelectTrigger>
                           <SelectContent>

@@ -46,10 +46,23 @@ export async function GET(
       ? Math.round(((user.rating?.wins || 0) / ((user.rating?.wins || 0) + (user.rating?.losses || 0))) * 100)
       : 0;
     const resolvedAge = user.age ?? getAgeFromDob(user.dob);
-    const playerMeta = [
-      resolvedAge ? `${resolvedAge} yrs` : null,
-      user.gender ? `${user.gender.charAt(0)}${user.gender.slice(1).toLowerCase()}` : null,
-    ].filter(Boolean).join(' • ');
+    const compactGender = user.gender === 'MALE'
+      ? 'M'
+      : user.gender === 'FEMALE'
+        ? 'F'
+        : user.gender === 'MIXED'
+          ? 'X'
+          : user.gender === 'OTHER'
+            ? 'O'
+            : null;
+    const playerMeta =
+      compactGender && resolvedAge
+        ? `(${compactGender}/${resolvedAge})`
+        : compactGender
+          ? `(${compactGender})`
+          : resolvedAge
+            ? `(${resolvedAge})`
+            : '';
 
     // Generate SVG card
     const cardWidth = 400;

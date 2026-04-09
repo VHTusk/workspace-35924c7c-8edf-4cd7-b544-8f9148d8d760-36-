@@ -11,6 +11,19 @@ export interface ProfileCompleteness {
   }[];
 }
 
+export interface TournamentProfileStatus {
+  canRegister: boolean;
+  percentage: number;
+  missingFields: string[];
+  requiresProfileCompletion: boolean;
+  requiresPhoneVerification: boolean;
+  requiresIdentityLock: boolean;
+  phone?: string | null;
+  phoneVerified: boolean;
+  identityLocked: boolean;
+  message: string;
+}
+
 export function calculateProfileCompleteness(user: {
   firstName: string;
   lastName: string;
@@ -97,4 +110,67 @@ export function canRegisterForTournament(
   // Individual check is not applicable
 
   return { canRegister: true };
+}
+
+export function getTournamentProfileStatus(user: {
+  firstName: string;
+  lastName: string;
+  email?: string | null;
+  phone?: string | null;
+  city?: string | null;
+  district?: string | null;
+  state?: string | null;
+  dob?: Date | null;
+  gender?: string | null;
+  verified?: boolean | null;
+  identityLocked?: boolean | null;
+}): TournamentProfileStatus {
+  const completeness = calculateProfileCompleteness(user);
+  const requiresProfileCompletion = !completeness.isComplete;
+  const requiresPhoneVerification = !user.verified;
+  const requiresIdentityLock = !user.identityLocked;
+
+  let message = "Your profile is ready for tournament registration.";
+
+  if (requiresProfileCompletion) {
+    message = completeness.percentage > 0
+      ? `Complete your profile before joining tournaments. Missing: ${completeness.missingFields.join(', ')}.`
+      : "Complete your profile before joining tournaments.";
+  } else if (requiresPhoneVerification) {
+    message = "Verify your mobile number by OTP before joining a tournament.";
+  } else if (requiresIdentityLock) {
+    message = "Confirm your profile details before joining a tournament. They will be locked after confirmation.";
+  }
+
+  return {
+    canRegister: !requiresProfileCompletion && !requiresPhoneVerification && !requiresIdentityLock,
+    percentage: completeness.percentage,
+    missingFields: completeness.missingFields,
+    requiresProfileCompletion,
+    requiresPhoneVerification,
+    requiresIdentityLock,
+    phone: user.phone ?? null,
+    phoneVerified: Boolean(user.verified),
+    identityLocked: Boolean(user.identityLocked),
+    message,
+  };
+}
+
+export function buildTournamentProfileRequiredResponse(
+  status: TournamentProfileStatus,
+  sport: string,
+) {
+  return {
+    code: "TOURNAMENT_PROFILE_REQUIRED",
+    error: status.message,
+    message: status.message,
+    profileCompletion: status.percentage,
+    missingFields: status.missingFields,
+    requiresPhoneVerification: status.requiresPhoneVerification,
+    requiresIdentityLock: status.requiresIdentityLock,
+    phone: status.phone ?? null,
+    phoneVerified: status.phoneVerified,
+    identityLocked: status.identityLocked,
+    profileUrl: `/${sport.toLowerCase()}/profile`,
+  };
 }

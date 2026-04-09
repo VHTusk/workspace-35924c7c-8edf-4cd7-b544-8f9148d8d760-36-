@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { validateSessionForSport } from "@/lib/session";
 import { db } from "@/lib/db";
 import { SportType, UserSportEnrollmentSource } from "@prisma/client";
+import { shouldEnforceIdentityLock } from "@/lib/identity-lock";
 import { ensureUserSportEnrollment } from "@/lib/user-sport";
 
 const requiredProfileFields = [
@@ -9,7 +10,7 @@ const requiredProfileFields = [
   { key: "lastName", label: "Last Name" },
   { key: "email", label: "Email" },
   { key: "phone", label: "Phone" },
-  { key: "age", label: "Age" },
+  { key: "dob", label: "Date of Birth" },
   { key: "gender", label: "Gender" },
   { key: "state", label: "State" },
   { key: "district", label: "District" },
@@ -111,6 +112,10 @@ export async function GET(request: NextRequest) {
       UserSportEnrollmentSource.ACCOUNT_REGISTRATION,
     );
 
+    const identityLocked = user.identityLocked
+      ? await shouldEnforceIdentityLock(db, user.id)
+      : false;
+
     const resolvedAge = user.age ?? getAgeFromDob(user.dob);
 
     // Calculate profile completion
@@ -119,7 +124,7 @@ export async function GET(request: NextRequest) {
       lastName: user.lastName,
       email: user.email,
       phone: user.phone,
-      age: resolvedAge,
+      dob: user.dob ? user.dob.toISOString() : null,
       gender: user.gender,
       state: user.state,
       district: user.district,
@@ -164,7 +169,7 @@ export async function GET(request: NextRequest) {
       age: resolvedAge,
       dob: user.dob,
       gender: user.gender,
-      identityLocked: user.identityLocked,
+      identityLocked,
       emailVerified: user.emailVerified,
       phoneVerified: user.verified,
       photoUrl: user.photoUrl,

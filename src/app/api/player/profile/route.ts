@@ -1,6 +1,31 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { getAuthenticatedUser } from "@/lib/auth";
+import { shouldEnforceIdentityLock } from "@/lib/identity-lock";
+
+function getAgeFromDobInput(dobValue: string | Date | null | undefined): number | null {
+  if (!dobValue) {
+    return null;
+  }
+
+  const dob = dobValue instanceof Date ? dobValue : new Date(dobValue);
+  if (Number.isNaN(dob.getTime())) {
+    return null;
+  }
+
+  const today = new Date();
+  let age = today.getFullYear() - dob.getFullYear();
+  const monthDifference = today.getMonth() - dob.getMonth();
+
+  if (
+    monthDifference < 0 ||
+    (monthDifference === 0 && today.getDate() < dob.getDate())
+  ) {
+    age -= 1;
+  }
+
+  return age >= 0 ? age : null;
+}
 
 export async function PUT(request: NextRequest) {
   try {
@@ -67,7 +92,12 @@ export async function PUT(request: NextRequest) {
       errors.bio = "Bio must be 500 characters or less";
     }
 
-    if (age !== undefined && age !== null && age !== "") {
+    if (dob !== undefined && dob !== null && dob !== "") {
+      const parsedAge = getAgeFromDobInput(dob);
+      if (parsedAge === null || parsedAge < 5 || parsedAge > 120) {
+        errors.dob = "Date of birth must result in an age between 5 and 120";
+      }
+    } else if (age !== undefined && age !== null && age !== "") {
       const parsedAge = Number(age);
       if (!Number.isInteger(parsedAge) || parsedAge < 5 || parsedAge > 120) {
         errors.age = "Age must be a whole number between 5 and 120";
@@ -96,7 +126,11 @@ export async function PUT(request: NextRequest) {
       idDocumentType,
     ];
 
-    if (currentUser?.identityLocked && lockedPersonalFields.some((value) => value !== undefined)) {
+    const enforceIdentityLock = currentUser?.identityLocked
+      ? await shouldEnforceIdentityLock(db, userId)
+      : false;
+
+    if (enforceIdentityLock && lockedPersonalFields.some((value) => value !== undefined)) {
       return NextResponse.json(
         {
           error: "Personal details are locked. Please contact ValorHive management for any changes.",
@@ -125,6 +159,10 @@ export async function PUT(request: NextRequest) {
       profileUpdatedAt: new Date(), // Always update this timestamp
     };
 
+    if (currentUser?.identityLocked && !enforceIdentityLock) {
+      updateData.identityLocked = false;
+    }
+
     if (firstName !== undefined) updateData.firstName = firstName;
     if (lastName !== undefined) updateData.lastName = lastName;
     if (email !== undefined) {
@@ -143,11 +181,18 @@ export async function PUT(request: NextRequest) {
         updateData.verifiedAt = null;
       }
     }
-    if (age !== undefined) {
+    if (dob !== undefined) {
+      if (dob === null || dob === "") {
+        updateData.dob = null;
+        updateData.age = null;
+      } else {
+        updateData.dob = new Date(dob);
+        updateData.age = getAgeFromDobInput(dob);
+      }
+    } else if (age !== undefined) {
       updateData.age =
         age === null || age === "" ? null : Number(age);
     }
-    if (dob !== undefined && dob !== "") updateData.dob = new Date(dob);
     if (gender !== undefined) updateData.gender = gender;
     if (photoUrl !== undefined) updateData.photoUrl = photoUrl;
     if (bio !== undefined) updateData.bio = bio;
@@ -179,6 +224,7 @@ export async function PUT(request: NextRequest) {
         email: updatedUser.email,
         phone: updatedUser.phone,
         age: updatedUser.age,
+        dob: updatedUser.dob,
         identityLocked: updatedUser.identityLocked,
         emailVerified: updatedUser.emailVerified,
         phoneVerified: updatedUser.verified,

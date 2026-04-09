@@ -149,9 +149,9 @@ async function searchOrgsHandler(request: NextRequest): Promise<NextResponse> {
         const searchTerms = query.split(/\s+/).filter(Boolean);
         conditions.push({
           OR: searchTerms.flatMap(term => [
-            { name: { contains: term } },
-            { city: { contains: term } },
-            { state: { contains: term } },
+          { name: { contains: term, mode: "insensitive" } },
+          { city: { contains: term, mode: "insensitive" } },
+          { state: { contains: term, mode: "insensitive" } },
           ]),
         });
       }
@@ -163,10 +163,10 @@ async function searchOrgsHandler(request: NextRequest): Promise<NextResponse> {
 
       // Location filters
       if (city) {
-        conditions.push({ city: { contains: city } });
+      conditions.push({ city: { contains: city, mode: "insensitive" } });
       }
       if (state) {
-        conditions.push({ state: { contains: state } });
+      conditions.push({ state: { contains: state, mode: "insensitive" } });
       }
 
       // Execute query
@@ -254,9 +254,9 @@ async function searchOrgsHandler(request: NextRequest): Promise<NextResponse> {
     const searchTerms = query.split(/\s+/).filter(Boolean);
     countConditions.push({
       OR: searchTerms.flatMap(term => [
-        { name: { contains: term } },
-        { city: { contains: term } },
-        { state: { contains: term } },
+          { name: { contains: term, mode: "insensitive" } },
+          { city: { contains: term, mode: "insensitive" } },
+          { state: { contains: term, mode: "insensitive" } },
       ]),
     });
   }
@@ -266,10 +266,10 @@ async function searchOrgsHandler(request: NextRequest): Promise<NextResponse> {
   }
 
   if (city) {
-    countConditions.push({ city: { contains: city } });
+      countConditions.push({ city: { contains: city, mode: "insensitive" } });
   }
   if (state) {
-    countConditions.push({ state: { contains: state } });
+      countConditions.push({ state: { contains: state, mode: "insensitive" } });
   }
 
   const totalCount = await db.organization.count({

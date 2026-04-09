@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 import { RegistrationStatus, TournamentType, TournamentStatus, SportType, AccountTier, AbusePattern, AbuseSeverity, TournamentScope, UserSportEnrollmentSource } from '@prisma/client';
-import { canRegisterForTournament } from '@/lib/profile-completeness';
 import { createRazorpayOrder } from '@/lib/payments/razorpay';
 import { v4 as uuidv4 } from 'uuid';
 import { triggerTournamentRegistrationNotification } from '@/lib/notification-triggers';
@@ -19,6 +18,10 @@ import {
   buildTournamentMembershipRequiredResponse,
   getTournamentMembershipStatus,
 } from '@/lib/tournament-membership';
+import {
+  buildTournamentProfileRequiredResponse,
+  getTournamentProfileStatus,
+} from '@/lib/profile-completeness';
 import {
   detectSuspiciousTournamentRegistration,
   detectDeviceFingerprint,
@@ -218,13 +221,14 @@ export async function POST(
       }
     }
 
-    // For INDIVIDUAL tournaments, check profile completeness
+    const tournamentProfileStatus = getTournamentProfileStatus(user);
+
+    // For INDIVIDUAL tournaments, check profile readiness
     if (tournament.type === TournamentType.INDIVIDUAL) {
-      const eligibility = canRegisterForTournament(user, 'INDIVIDUAL');
-      if (!eligibility.canRegister) {
+      if (!tournamentProfileStatus.canRegister) {
         return NextResponse.json(
-          { error: eligibility.reason },
-          { status: 400 }
+          buildTournamentProfileRequiredResponse(tournamentProfileStatus, tournament.sport),
+          { status: 403 }
         );
       }
     }
@@ -246,12 +250,10 @@ export async function POST(
         );
       }
 
-      // Check basic profile completeness for INTRA_ORG
-      const eligibility = canRegisterForTournament(user, 'INTRA_ORG');
-      if (!eligibility.canRegister) {
+      if (!tournamentProfileStatus.canRegister) {
         return NextResponse.json(
-          { error: eligibility.reason },
-          { status: 400 }
+          buildTournamentProfileRequiredResponse(tournamentProfileStatus, tournament.sport),
+          { status: 403 }
         );
       }
     }

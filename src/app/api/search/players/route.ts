@@ -173,25 +173,24 @@ async function searchPlayersHandler(request: NextRequest): Promise<NextResponse>
       ];
 
       // Full-text search on name, city, state
-      // Note: SQLite is case-insensitive by default for contains
       if (query) {
         const searchTerms = query.split(/\s+/).filter(Boolean);
         conditions.push({
           OR: searchTerms.flatMap(term => [
-            { firstName: { contains: term } },
-            { lastName: { contains: term } },
-            { city: { contains: term } },
-            { state: { contains: term } },
+            { firstName: { contains: term, mode: 'insensitive' } },
+            { lastName: { contains: term, mode: 'insensitive' } },
+            { city: { contains: term, mode: 'insensitive' } },
+            { state: { contains: term, mode: 'insensitive' } },
           ]),
         });
       }
 
       // Location filters
       if (city) {
-        conditions.push({ city: { contains: city } });
+        conditions.push({ city: { contains: city, mode: 'insensitive' } });
       }
       if (state) {
-        conditions.push({ state: { contains: state } });
+        conditions.push({ state: { contains: state, mode: 'insensitive' } });
       }
 
       // Points range filters
@@ -278,19 +277,19 @@ async function searchPlayersHandler(request: NextRequest): Promise<NextResponse>
     const searchTerms = query.split(/\s+/).filter(Boolean);
     countConditions.push({
       OR: searchTerms.flatMap(term => [
-        { firstName: { contains: term } },
-        { lastName: { contains: term } },
-        { city: { contains: term } },
-        { state: { contains: term } },
+        { firstName: { contains: term, mode: 'insensitive' } },
+        { lastName: { contains: term, mode: 'insensitive' } },
+        { city: { contains: term, mode: 'insensitive' } },
+        { state: { contains: term, mode: 'insensitive' } },
       ]),
     });
   }
 
   if (city) {
-    countConditions.push({ city: { contains: city } });
+    countConditions.push({ city: { contains: city, mode: 'insensitive' } });
   }
   if (state) {
-    countConditions.push({ state: { contains: state } });
+    countConditions.push({ state: { contains: state, mode: 'insensitive' } });
   }
 
   if (minPoints) {

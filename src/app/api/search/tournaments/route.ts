@@ -177,10 +177,10 @@ async function searchTournamentsHandler(request: NextRequest): Promise<NextRespo
         const searchTerms = query.split(/\s+/).filter(Boolean);
         conditions.push({
           OR: searchTerms.flatMap(term => [
-            { name: { contains: term } },
-            { location: { contains: term } },
-            { city: { contains: term } },
-            { state: { contains: term } },
+          { name: { contains: term, mode: "insensitive" } },
+          { location: { contains: term, mode: "insensitive" } },
+          { city: { contains: term, mode: "insensitive" } },
+          { state: { contains: term, mode: "insensitive" } },
           ]),
         });
       }
@@ -298,10 +298,10 @@ async function searchTournamentsHandler(request: NextRequest): Promise<NextRespo
     const searchTerms = query.split(/\s+/).filter(Boolean);
     countConditions.push({
       OR: searchTerms.flatMap(term => [
-        { name: { contains: term } },
-        { location: { contains: term } },
-        { city: { contains: term } },
-        { state: { contains: term } },
+          { name: { contains: term, mode: "insensitive" } },
+          { location: { contains: term, mode: "insensitive" } },
+          { city: { contains: term, mode: "insensitive" } },
+          { state: { contains: term, mode: "insensitive" } },
       ]),
     });
   }

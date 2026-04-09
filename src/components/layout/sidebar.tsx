@@ -50,6 +50,8 @@ interface UserData {
   firstName: string;
   lastName: string;
   name: string;
+  age?: number | null;
+  gender?: string | null;
   email?: string;
   phone?: string;
   emailVerified?: boolean;
@@ -98,6 +100,23 @@ function SidebarContent({
   const isSubscribed = user?.isSubscribed || false;
   const subscriptionPlan = user?.subscriptionPlan || null;
   const loginIdentifier = user?.email || user?.phone || null;
+  const compactGender = user?.gender === "MALE"
+    ? "M"
+    : user?.gender === "FEMALE"
+      ? "F"
+      : user?.gender === "MIXED"
+        ? "X"
+        : user?.gender === "OTHER"
+          ? "O"
+          : null;
+  const nameMeta =
+    compactGender && user?.age
+      ? `(${compactGender}/${user.age})`
+      : compactGender
+        ? `(${compactGender})`
+        : user?.age
+          ? `(${user.age})`
+          : null;
   const identifierVerified = user?.email
     ? user.emailVerified
     : user?.phone
@@ -130,7 +149,9 @@ function SidebarContent({
                 </AvatarFallback>
               </Avatar>
               <div className="flex-1 min-w-0">
-                <p className="font-semibold truncate">{displayName}</p>
+                <p className="font-semibold truncate">
+                  {displayName} {nameMeta ? <span className="text-white/75">{nameMeta}</span> : null}
+                </p>
                 {loginIdentifier && (
                   <div className="mt-0.5 flex items-center gap-1 text-xs text-white/80">
                     <p className="truncate">{loginIdentifier}</p>

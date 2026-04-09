@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   Dialog,
   DialogContent,
@@ -13,6 +13,13 @@ import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import {
   AlertCircle,
@@ -20,42 +27,74 @@ import {
   Send,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { fetchWithCsrf } from "@/lib/client-csrf";
+
+type IdentityField =
+  | "firstName"
+  | "lastName"
+  | "email"
+  | "phone"
+  | "dob"
+  | "gender";
+
+interface IdentityFieldOption {
+  field: IdentityField;
+  value: string;
+  inputType?: "text" | "email" | "tel" | "date";
+}
 
 interface IdentityChangeRequestProps {
   isOpen: boolean;
   onClose: () => void;
-  currentField: "firstName" | "lastName" | "dob" | "gender" | "city" | "state";
-  currentValue: string;
+  fieldOptions: IdentityFieldOption[];
+  initialField?: IdentityField;
   sport: string;
   onSuccess: () => void;
 }
 
-const fieldLabels: Record<string, string> = {
+const fieldLabels: Record<IdentityField, string> = {
   firstName: "First Name",
   lastName: "Last Name",
+  email: "Email",
+  phone: "Phone Number",
   dob: "Date of Birth",
   gender: "Gender",
-  city: "City",
-  state: "State",
 };
 
 export function IdentityChangeRequest({
   isOpen,
   onClose,
-  currentField,
-  currentValue,
+  fieldOptions,
+  initialField,
   sport,
   onSuccess,
 }: IdentityChangeRequestProps) {
+  const defaultField = useMemo(
+    () => initialField ?? fieldOptions[0]?.field ?? "firstName",
+    [fieldOptions, initialField],
+  );
+  const [selectedField, setSelectedField] = useState<IdentityField>(defaultField);
   const [newValue, setNewValue] = useState("");
   const [reason, setReason] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
+  useEffect(() => {
+    if (isOpen) {
+      setSelectedField(defaultField);
+      setNewValue("");
+      setReason("");
+      setError("");
+    }
+  }, [defaultField, isOpen]);
+
   const isCornhole = sport === "cornhole";
   const primaryBtnClass = isCornhole
     ? "bg-green-600 hover:bg-green-700 text-white"
     : "bg-teal-600 hover:bg-teal-700 text-white";
+
+  const currentOption = fieldOptions.find((option) => option.field === selectedField);
+  const currentValue = currentOption?.value ?? "";
 
   const handleSubmit = async () => {
     if (!newValue.trim()) {
@@ -71,14 +110,15 @@ export function IdentityChangeRequest({
     setError("");
 
     try {
-      const response = await fetch("/api/identity-requests", {
+      const response = await fetchWithCsrf("/api/identity-requests", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          field: currentField,
+          field: selectedField,
           oldValue: currentValue,
           newValue: newValue.trim(),
           reason: reason.trim(),
+          sport,
         }),
       });
 
@@ -99,13 +139,14 @@ export function IdentityChangeRequest({
   };
 
   const handleClose = () => {
+    setSelectedField(defaultField);
     setNewValue("");
     setReason("");
     setError("");
     onClose();
   };
 
-  const inputType = currentField === "dob" ? "date" : "text";
+  const inputType = currentOption?.inputType ?? (selectedField === "dob" ? "date" : "text");
 
   return (
     <Dialog open={isOpen} onOpenChange={handleClose}>
@@ -113,7 +154,7 @@ export function IdentityChangeRequest({
         <DialogHeader>
           <DialogTitle>Request Identity Change</DialogTitle>
           <DialogDescription>
-            Request to change your {fieldLabels[currentField]?.toLowerCase() || currentField}
+            Send a locked-profile edit request to ValorHive management for review
           </DialogDescription>
         </DialogHeader>
 
@@ -125,21 +166,37 @@ export function IdentityChangeRequest({
             </Alert>
           )}
 
+          <div className="space-y-2">
+            <Label>Field</Label>
+            <Select value={selectedField} onValueChange={(value) => setSelectedField(value as IdentityField)}>
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {fieldOptions.map((option) => (
+                  <SelectItem key={option.field} value={option.field}>
+                    {fieldLabels[option.field]}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
           {/* Current Value */}
           <div className="bg-gray-50 rounded-lg p-3">
-            <p className="text-sm text-gray-500">Current {fieldLabels[currentField]}</p>
+            <p className="text-sm text-gray-500">Current {fieldLabels[selectedField]}</p>
             <p className="font-medium text-gray-900">{currentValue || "Not set"}</p>
           </div>
 
           {/* New Value */}
           <div className="space-y-2">
-            <Label htmlFor="newValue">New {fieldLabels[currentField]}</Label>
+            <Label htmlFor="newValue">New {fieldLabels[selectedField]}</Label>
             <Input
               id="newValue"
               type={inputType}
               value={newValue}
               onChange={(e) => setNewValue(e.target.value)}
-              placeholder={`Enter new ${fieldLabels[currentField]?.toLowerCase()}`}
+              placeholder={`Enter new ${fieldLabels[selectedField]?.toLowerCase()}`}
             />
           </div>
 

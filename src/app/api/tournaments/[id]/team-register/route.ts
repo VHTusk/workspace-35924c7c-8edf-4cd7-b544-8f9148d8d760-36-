@@ -8,6 +8,10 @@ import {
   buildTournamentMembershipRequiredResponse,
   getTournamentMembershipStatus,
 } from '@/lib/tournament-membership';
+import {
+  buildTournamentProfileRequiredResponse,
+  getTournamentProfileStatus,
+} from '@/lib/profile-completeness';
 
 interface RouteParams {
   params: Promise<{ id: string }>;
@@ -88,7 +92,14 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
     // Get current user info
     const currentUser = await db.user.findUnique({
       where: { id: userId },
-      select: { id: true, firstName: true, lastName: true, email: true, phone: true, sport: true },
+      select: {
+        id: true,
+        firstName: true,
+        lastName: true,
+        email: true,
+        phone: true,
+        sport: true,
+      },
     });
 
     if (!currentUser) {
@@ -146,6 +157,15 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
                 firstName: true,
                 lastName: true,
                 email: true,
+                phone: true,
+                age: true,
+                city: true,
+                district: true,
+                state: true,
+                dob: true,
+                gender: true,
+                verified: true,
+                identityLocked: true,
                 hiddenElo: true,
               },
             },
@@ -247,6 +267,50 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
               ? `${blockedNames[0]} needs an annual membership for this sport before the team can register.`
               : `${blockedNames.join(", ")} need annual memberships for this sport before the team can register.`,
           playersRequiringMembership: blockedMembers.map(({ member }) => member.userId),
+        },
+        { status: 403 },
+      );
+    }
+
+    const profileChecks = team.members.map((member) => ({
+      member,
+      status: getTournamentProfileStatus(member.user),
+    }));
+
+    const profileBlockedMembers = profileChecks.filter(({ status }) => !status.canRegister);
+    if (profileBlockedMembers.length > 0) {
+      const captainProfileBlock = profileBlockedMembers.find(({ member }) => member.userId === userId);
+
+      if (captainProfileBlock) {
+        return NextResponse.json(
+          {
+            ...buildTournamentProfileRequiredResponse(captainProfileBlock.status, tournament.sport),
+            currentUserRequiresFinalization: true,
+            playersRequiringProfile: profileBlockedMembers.map(({ member }) => member.userId),
+          },
+          { status: 403 },
+        );
+      }
+
+      const blockedNames = profileBlockedMembers.map(({ member }) => {
+        const firstName = member.user.firstName || '';
+        const lastName = member.user.lastName || '';
+        return `${firstName} ${lastName}`.trim() || 'A team member';
+      });
+
+      return NextResponse.json(
+        {
+          code: 'TOURNAMENT_PROFILE_REQUIRED',
+          error:
+            blockedNames.length === 1
+              ? `${blockedNames[0]} must complete and confirm their player profile before the team can register.`
+              : `${blockedNames.join(', ')} must complete and confirm their player profiles before the team can register.`,
+          message:
+            blockedNames.length === 1
+              ? `${blockedNames[0]} must complete and confirm their player profile before the team can register.`
+              : `${blockedNames.join(', ')} must complete and confirm their player profiles before the team can register.`,
+          currentUserRequiresFinalization: false,
+          playersRequiringProfile: profileBlockedMembers.map(({ member }) => member.userId),
         },
         { status: 403 },
       );

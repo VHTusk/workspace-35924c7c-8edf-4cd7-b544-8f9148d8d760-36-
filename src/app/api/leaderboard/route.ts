@@ -1,237 +1,482 @@
-/**
- * Leaderboard API with Caching and Dynamic Filters
- * GET /api/leaderboard - Get leaderboard with caching support
- * 
- * Filters:
- * - gender: MALE, FEMALE, MIXED, or all
- * - ageCategory: JUNIOR (under 18), ADULT (18-35), SENIOR (35-50), VETERAN (50+), or all
- * - scope: district, state, national
- * - location: filter value for scope
- * 
- * Cache Configuration:
- * - TTL: 60 seconds
- * - Stale-while-revalidate: 30 seconds
- * - Invalidate on: Match score submission
- * 
- * Cache Headers:
- * - X-Cache: HIT/MISS/STALE
- * - X-Cache-TTL: remaining seconds
- * - Cache-Control: public, max-age=60
- */
-
-import { NextRequest, NextResponse } from 'next/server';
-import { db } from '@/lib/db';
-import { SportType, GenderCategory } from '@prisma/client';
-import { getEloTier } from '@/lib/auth';
-import { safeParseInt } from '@/lib/validation';
-import { log } from '@/lib/logger';
-import { buildLeaderboardEligibleUserWhere } from '@/lib/user-sport';
+import { NextRequest, NextResponse } from "next/server";
+import { GenderCategory, Prisma, SportType } from "@prisma/client";
+import { db } from "@/lib/db";
+import { getEloTier } from "@/lib/auth";
+import { safeParseInt } from "@/lib/validation";
+import { log } from "@/lib/logger";
 import {
-  cacheResponse,
-  generateCacheKeyFromParts,
   addCacheHeaders,
   API_CACHE_PREFIXES,
+  cacheResponse,
   ENDPOINT_CACHE_CONFIGS,
-} from '@/lib/api-cache';
+  generateCacheKeyFromParts,
+} from "@/lib/api-cache";
 
-// Age categories with date ranges
-type AgeCategory = 'JUNIOR' | 'ADULT' | 'SENIOR' | 'VETERAN';
+type LeaderboardView = "ranked" | "all" | "unranked";
+type GeographyScope = "all" | "district" | "state" | "national";
+type AgeGroup = "JUNIOR" | "ADULT" | "MASTERS";
+type RankedSort = "rank" | "points" | "winRate";
+type DirectorySort = "joinedOn_desc" | "joinedOn_asc" | "name_asc" | "name_desc";
 
-function getAgeCategoryFromDate(dob: Date): AgeCategory | null {
+function getAgeGroupFromDob(dob: Date | null): AgeGroup | null {
+  if (!dob) {
+    return null;
+  }
+
   const today = new Date();
-  const age = Math.floor((today.getTime() - dob.getTime()) / (365.25 * 24 * 60 * 60 * 1000));
-  
-  if (age < 18) return 'JUNIOR';
-  if (age < 35) return 'ADULT';
-  if (age < 50) return 'SENIOR';
-  return 'VETERAN';
+  let age = today.getFullYear() - dob.getFullYear();
+  const monthDifference = today.getMonth() - dob.getMonth();
+
+  if (
+    monthDifference < 0 ||
+    (monthDifference === 0 && today.getDate() < dob.getDate())
+  ) {
+    age -= 1;
+  }
+
+  if (age <= 18) {
+    return "JUNIOR";
+  }
+  if (age <= 35) {
+    return "ADULT";
+  }
+  return "MASTERS";
 }
 
-function getDateRangeForAgeCategory(category: AgeCategory): { minDate: Date; maxDate: Date } {
+function getDateRangeForAgeGroup(ageGroup: AgeGroup): { gte: Date; lte: Date } {
   const today = new Date();
   const currentYear = today.getFullYear();
-  
-  switch (category) {
-    case 'JUNIOR':
-      // Under 18: born after (currentYear - 18)
+
+  switch (ageGroup) {
+    case "JUNIOR":
       return {
-        minDate: new Date(currentYear - 17, 0, 1), // Born in or after this year
-        maxDate: today, // Can be as young as today
+        gte: new Date(currentYear - 18, today.getMonth(), today.getDate() + 1),
+        lte: today,
       };
-    case 'ADULT':
-      // 18-35: born between (currentYear - 35) and (currentYear - 18)
+    case "ADULT":
       return {
-        minDate: new Date(currentYear - 35, 0, 1),
-        maxDate: new Date(currentYear - 18, 11, 31),
+        gte: new Date(currentYear - 35, today.getMonth(), today.getDate()),
+        lte: new Date(currentYear - 19, today.getMonth(), today.getDate()),
       };
-    case 'SENIOR':
-      // 35-50: born between (currentYear - 50) and (currentYear - 35)
+    case "MASTERS":
       return {
-        minDate: new Date(currentYear - 50, 0, 1),
-        maxDate: new Date(currentYear - 35, 11, 31),
-      };
-    case 'VETERAN':
-      // 50+: born before (currentYear - 50)
-      return {
-        minDate: new Date(1900, 0, 1), // Reasonable minimum
-        maxDate: new Date(currentYear - 50, 11, 31),
+        gte: new Date(1900, 0, 1),
+        lte: new Date(currentYear - 36, today.getMonth(), today.getDate()),
       };
   }
+}
+
+function getDisplayGender(gender: GenderCategory | null): string | null {
+  if (gender === "MALE") {
+    return "Male";
+  }
+  if (gender === "FEMALE") {
+    return "Female";
+  }
+  if (gender === "MIXED" || gender === "OTHER") {
+    return "Other";
+  }
+  return null;
+}
+
+function parseView(rawValue: string | null): LeaderboardView {
+  if (rawValue === "all" || rawValue === "unranked") {
+    return rawValue;
+  }
+  return "ranked";
+}
+
+function parseScope(rawValue: string | null): GeographyScope {
+  if (rawValue === "all" || rawValue === "district" || rawValue === "state" || rawValue === "national") {
+    return rawValue;
+  }
+  return "all";
+}
+
+function parseAgeGroup(rawValue: string | null): AgeGroup | null {
+  if (rawValue === "JUNIOR" || rawValue === "ADULT" || rawValue === "MASTERS") {
+    return rawValue;
+  }
+  return null;
+}
+
+function parseGender(rawValue: string | null): GenderCategory | "OTHER" | null {
+  if (rawValue === "MALE" || rawValue === "FEMALE" || rawValue === "MIXED" || rawValue === "OTHER") {
+    return rawValue;
+  }
+  return null;
+}
+
+function buildRegisteredPlayersWhere(
+  sport: SportType,
+  options: {
+    scope: GeographyScope;
+    region: string | null;
+    search: string | null;
+    gender: GenderCategory | "OTHER" | null;
+    ageGroup: AgeGroup | null;
+  },
+): Prisma.UserWhereInput {
+  const andClauses: Prisma.UserWhereInput[] = [
+    {
+      sport,
+      isActive: true,
+      isAnonymized: false,
+    },
+  ];
+
+  if (options.scope === "district" && options.region) {
+    andClauses.push({ district: options.region });
+  } else if (options.scope === "state" && options.region) {
+    andClauses.push({ state: options.region });
+  }
+
+  if (options.gender === "OTHER") {
+    andClauses.push({
+      gender: {
+        in: ["MIXED"],
+      },
+    });
+  } else if (options.gender) {
+    andClauses.push({ gender: options.gender });
+  }
+
+  if (options.ageGroup) {
+    andClauses.push({
+      dob: getDateRangeForAgeGroup(options.ageGroup),
+    });
+  }
+
+  if (options.search) {
+    andClauses.push({
+      OR: [
+        { firstName: { contains: options.search, mode: "insensitive" } },
+        { lastName: { contains: options.search, mode: "insensitive" } },
+        { city: { contains: options.search, mode: "insensitive" } },
+        { state: { contains: options.search, mode: "insensitive" } },
+        { district: { contains: options.search, mode: "insensitive" } },
+      ],
+    });
+  }
+
+  return { AND: andClauses };
+}
+
+function buildRankedWhere(baseWhere: Prisma.UserWhereInput, sport: SportType): Prisma.UserWhereInput {
+  return {
+    AND: [
+      baseWhere,
+      {
+        rating: {
+          is: {
+            sport,
+            matchesPlayed: { gt: 0 },
+          },
+        },
+      },
+    ],
+  };
+}
+
+function buildUnrankedWhere(baseWhere: Prisma.UserWhereInput, sport: SportType): Prisma.UserWhereInput {
+  return {
+    AND: [
+      baseWhere,
+      {
+        OR: [
+          { rating: { is: null } },
+          {
+            rating: {
+              is: {
+                sport,
+                matchesPlayed: 0,
+              },
+            },
+          },
+        ],
+      },
+    ],
+  };
+}
+
+function getLocationLabel(user: {
+  city: string | null;
+  district: string | null;
+  state: string | null;
+}) {
+  return [user.city || user.district, user.state].filter(Boolean).join(", ");
+}
+
+function getStatus(matchesPlayed: number): "Ranked" | "Unranked" | "Inactive" {
+  if (matchesPlayed > 0) {
+    return "Ranked";
+  }
+  return "Unranked";
 }
 
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
-    const sport = searchParams.get('sport') as SportType;
-    const scope = searchParams.get('scope'); // district, state, national
-    const location = searchParams.get('location');
-    const search = searchParams.get('search');
-    const limit = safeParseInt(searchParams.get('limit'), 100, 1, 100);
-    
-    // Dynamic filters
-    const gender = searchParams.get('gender') as GenderCategory | null;
-    const ageCategory = searchParams.get('ageCategory') as AgeCategory | null;
+    const sport = searchParams.get("sport") as SportType;
+    const view = parseView(searchParams.get("view"));
+    const scope = parseScope(searchParams.get("scope"));
+    const region = searchParams.get("region") || searchParams.get("location");
+    const search = searchParams.get("search");
+    const sort = (searchParams.get("sort") || (view === "ranked" ? "rank" : "joinedOn_desc")) as RankedSort | DirectorySort;
+    const gender = parseGender(searchParams.get("gender"));
+    const ageGroup = parseAgeGroup(searchParams.get("ageGroup") || searchParams.get("ageCategory"));
+    const currentUserId = searchParams.get("currentUserId");
+    const limit = safeParseInt(searchParams.get("limit"), 250, 1, 500);
 
-    if (!sport || !['CORNHOLE', 'DARTS'].includes(sport)) {
-      return NextResponse.json({ error: 'Invalid sport' }, { status: 400 });
+    const minMatches = safeParseInt(searchParams.get("minMatches"), 0, 0, 9999);
+    const minWinRate = safeParseInt(searchParams.get("minWinRate"), 0, 0, 100);
+    const minPoints = safeParseInt(searchParams.get("minPoints"), 0, 0, 100000000);
+    const maxPoints = safeParseInt(searchParams.get("maxPoints"), 100000000, 0, 100000000);
+    const minRating = safeParseInt(searchParams.get("minRating"), 0, 0, 100000);
+    const maxRating = safeParseInt(searchParams.get("maxRating"), 100000, 0, 100000);
+
+    if (!sport || !["CORNHOLE", "DARTS"].includes(sport)) {
+      return NextResponse.json({ error: "Invalid sport" }, { status: 400 });
     }
 
-    // Generate cache key with all filters
     const cacheKey = generateCacheKeyFromParts(
       API_CACHE_PREFIXES.LEADERBOARD,
       sport,
-      scope || 'national',
-      location || 'all',
-      gender || 'all',
-      ageCategory || 'all',
-      search || '',
-      `limit:${limit}`
+      view,
+      scope,
+      region || "all",
+      search || "",
+      gender || "all",
+      ageGroup || "all",
+      sort,
+      `mm:${minMatches}`,
+      `mwr:${minWinRate}`,
+      `minp:${minPoints}`,
+      `maxp:${maxPoints}`,
+      `minr:${minRating}`,
+      `maxr:${maxRating}`,
+      `limit:${limit}`,
+      currentUserId || "no-user",
     );
 
-    // Get cache config
     const cacheConfig = ENDPOINT_CACHE_CONFIGS.leaderboard;
 
-    // Execute with caching
-    const result = await cacheResponse(
-      request,
-      cacheKey,
-      cacheConfig,
-      async () => {
-        const where = buildLeaderboardEligibleUserWhere(sport);
+    const result = await cacheResponse(request, cacheKey, cacheConfig, async () => {
+      const baseWhere = buildRegisteredPlayersWhere(sport, {
+        scope,
+        region,
+        search,
+        gender,
+        ageGroup,
+      });
 
-        // Filter by gender
-        if (gender && ['MALE', 'FEMALE', 'MIXED'].includes(gender)) {
-          where.gender = gender as GenderCategory;
-        }
+      const rankedWhere = buildRankedWhere(baseWhere, sport);
+      const unrankedWhere = buildUnrankedWhere(baseWhere, sport);
 
-        // Filter by age category
-        if (ageCategory && ['JUNIOR', 'ADULT', 'SENIOR', 'VETERAN'].includes(ageCategory)) {
-          const dateRange = getDateRangeForAgeCategory(ageCategory);
-          where.dob = {
-            gte: dateRange.minDate,
-            lte: dateRange.maxDate,
-          };
-        }
-
-        // Filter by location based on scope
-        if (scope && location && ['district', 'state', 'city'].includes(scope.toLowerCase())) {
-          if (scope.toLowerCase() === 'district') {
-            where.district = location;
-          } else if (scope.toLowerCase() === 'state') {
-            where.state = location;
-          } else if (scope.toLowerCase() === 'city') {
-            where.city = location;
-          }
-        }
-
-        if (search) {
-          where.OR = [
-            { firstName: { contains: search } },
-            { lastName: { contains: search } },
-            { city: { contains: search } },
-          ];
-        }
-
-        const users = await db.user.findMany({
-          where,
-          orderBy: { visiblePoints: 'desc' },
-          take: limit,
-          include: {
-            rating: true,
-          },
-        });
-
-        const leaderboard = users.map((user, index) => ({
-          rank: index + 1,
-          id: user.id,
-          name: `${user.firstName} ${user.lastName}`,
-          city: user.city,
-          state: user.state,
-          district: user.district,
-          gender: user.gender,
-          dob: user.dob,
-          ageCategory: user.dob ? getAgeCategoryFromDate(user.dob) : null,
-          points: user.visiblePoints,
-          tier: getEloTier(user.hiddenElo, user.rating?.matchesPlayed || 0),
-          matches: user.rating?.matchesPlayed || 0,
-          wins: user.rating?.wins || 0,
-          winRate: user.rating?.matchesPlayed 
-            ? Math.round((user.rating.wins / user.rating.matchesPlayed) * 100) 
-            : 0,
-          elo: Math.round(user.hiddenElo),
-          change: 0, // Would need historical data for this
-        }));
-
-        // Get stats
-        const totalPlayers = await db.user.count({
-          where: buildLeaderboardEligibleUserWhere(sport),
-        });
-
-        const activeThisMonth = await db.user.count({
-          where: {
-            ...buildLeaderboardEligibleUserWhere(sport),
-            updatedAt: { gte: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000) },
-          },
-        });
-
-        // Get unique locations for filters
-        const [districts, states] = await Promise.all([
-          db.user.findMany({
-            where: { ...buildLeaderboardEligibleUserWhere(sport), district: { not: null } },
-            select: { district: true },
-            distinct: ['district'],
+      const [totalRegisteredPlayers, totalRankedPlayers, totalUnrankedPlayers, activeThisMonth, districts, states] =
+        await Promise.all([
+          db.user.count({ where: baseWhere }),
+          db.user.count({ where: rankedWhere }),
+          db.user.count({ where: unrankedWhere }),
+          db.user.count({
+            where: {
+              AND: [
+                baseWhere,
+                {
+                  rating: {
+                    is: {
+                      sport,
+                      matchesPlayed: { gt: 0 },
+                      updatedAt: { gte: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000) },
+                    },
+                  },
+                },
+              ],
+            },
           }),
           db.user.findMany({
-            where: { ...buildLeaderboardEligibleUserWhere(sport), state: { not: null } },
+            where: {
+              AND: [
+                { sport, isActive: true, isAnonymized: false },
+                { district: { not: null } },
+              ],
+            },
+            select: { district: true },
+            distinct: ["district"],
+          }),
+          db.user.findMany({
+            where: {
+              AND: [
+                { sport, isActive: true, isAnonymized: false },
+                { state: { not: null } },
+              ],
+            },
             select: { state: true },
-            distinct: ['state'],
+            distinct: ["state"],
           }),
         ]);
 
-        return {
-          leaderboard,
-          stats: {
-            totalPlayers,
-            activeThisMonth,
-            topPlayer: leaderboard[0]?.name || null,
-            topPlayerCity: leaderboard[0]?.city || null,
-          },
-          filters: {
-            districts: districts.map(d => d.district).filter(Boolean) as string[],
-            states: states.map(s => s.state).filter(Boolean) as string[],
-            genders: ['MALE', 'FEMALE', 'MIXED'] as GenderCategory[],
-            ageCategories: ['JUNIOR', 'ADULT', 'SENIOR', 'VETERAN'] as AgeCategory[],
-          },
-        };
-      }
-    );
+      const queryWhere = view === "ranked" ? rankedWhere : view === "unranked" ? unrankedWhere : baseWhere;
 
-    // Build response with cache headers
+      const users = await db.user.findMany({
+        where: queryWhere,
+        include: { rating: true },
+        take: limit,
+        orderBy:
+          view === "ranked"
+            ? [{ visiblePoints: "desc" }, { hiddenElo: "desc" }, { createdAt: "asc" }]
+            : [{ createdAt: "desc" }, { firstName: "asc" }, { lastName: "asc" }],
+      });
+
+      let rows = users.map((user, index) => {
+        const matchesPlayed = user.rating?.matchesPlayed || 0;
+        const wins = user.rating?.wins || 0;
+        const winRate = matchesPlayed > 0 ? Math.round((wins / matchesPlayed) * 100) : 0;
+        const ageGroupValue = getAgeGroupFromDob(user.dob);
+
+        return {
+          rank: view === "ranked" ? index + 1 : null,
+          id: user.id,
+          name: `${user.firstName} ${user.lastName}`.trim(),
+          firstName: user.firstName,
+          lastName: user.lastName,
+          city: user.city,
+          state: user.state,
+          district: user.district,
+          location: getLocationLabel(user),
+          gender: user.gender,
+          genderLabel: getDisplayGender(user.gender),
+          ageGroup: ageGroupValue,
+          ageCategory: ageGroupValue,
+          points: user.visiblePoints,
+          rating: Math.round(user.hiddenElo),
+          tier: getEloTier(user.hiddenElo, matchesPlayed),
+          matches: matchesPlayed,
+          matchesPlayed,
+          wins,
+          winRate,
+          joinedOn: user.createdAt,
+          joinedOnLabel: user.createdAt.toISOString(),
+          status: getStatus(matchesPlayed),
+        };
+      });
+
+      if (view === "ranked") {
+        rows = rows.filter((row) => {
+          if (row.matchesPlayed < minMatches) {
+            return false;
+          }
+          if (row.winRate < minWinRate) {
+            return false;
+          }
+          if (row.points < minPoints || row.points > maxPoints) {
+            return false;
+          }
+          if (row.rating < minRating || row.rating > maxRating) {
+            return false;
+          }
+          return true;
+        });
+
+        if (sort === "winRate") {
+          rows.sort((a, b) => b.winRate - a.winRate || b.points - a.points);
+        } else {
+          rows.sort((a, b) => b.points - a.points || b.rating - a.rating);
+        }
+
+        rows = rows.map((row, index) => ({
+          ...row,
+          rank: index + 1,
+        }));
+      } else if (sort === "name_asc") {
+        rows.sort((a, b) => a.name.localeCompare(b.name));
+      } else if (sort === "name_desc") {
+        rows.sort((a, b) => b.name.localeCompare(a.name));
+      } else if (sort === "joinedOn_asc") {
+        rows.sort((a, b) => new Date(a.joinedOnLabel).getTime() - new Date(b.joinedOnLabel).getTime());
+      } else {
+        rows.sort((a, b) => new Date(b.joinedOnLabel).getTime() - new Date(a.joinedOnLabel).getTime());
+      }
+
+      let currentUser = null;
+      if (currentUserId) {
+        const user = await db.user.findFirst({
+          where: {
+            id: currentUserId,
+            sport,
+            isActive: true,
+            isAnonymized: false,
+          },
+          include: { rating: true },
+        });
+
+        if (user) {
+          const matchesPlayed = user.rating?.matchesPlayed || 0;
+          const points = user.visiblePoints || 0;
+          const tier = getEloTier(user.hiddenElo, matchesPlayed);
+          let rank: number | null = null;
+
+          if (matchesPlayed > 0 && totalRankedPlayers > 0) {
+            const playersAhead = await db.user.count({
+              where: buildRankedWhere(
+                {
+                  sport,
+                  isActive: true,
+                  isAnonymized: false,
+                  visiblePoints: { gt: points },
+                },
+                sport,
+              ),
+            });
+            rank = playersAhead + 1;
+          }
+
+          currentUser = {
+            id: user.id,
+            name: `${user.firstName} ${user.lastName}`.trim(),
+            matchesPlayed,
+            points,
+            rating: Math.round(user.hiddenElo),
+            rank,
+            tier,
+            rankChange: null,
+          };
+        }
+      }
+
+      return {
+        leaderboard: rows,
+        players: rows,
+        view,
+        total: rows.length,
+        totalRegisteredPlayers,
+        totalRankedPlayers,
+        totalUnrankedPlayers,
+        activeThisMonth,
+        currentUser,
+        stats: {
+          totalPlayers: totalRegisteredPlayers,
+          totalRegisteredPlayers,
+          totalRankedPlayers,
+          totalUnrankedPlayers,
+          activeThisMonth,
+          topPlayer: totalRankedPlayers > 0 ? rows[0]?.name || null : null,
+          topPlayerCity: totalRankedPlayers > 0 ? rows[0]?.city || null : null,
+        },
+        filters: {
+          districts: districts.map((item) => item.district).filter(Boolean) as string[],
+          states: states.map((item) => item.state).filter(Boolean) as string[],
+          genders: ["MALE", "FEMALE", "OTHER"],
+          ageGroups: ["JUNIOR", "ADULT", "MASTERS"],
+          ageCategories: ["JUNIOR", "ADULT", "MASTERS"],
+        },
+      };
+    });
+
     const response = NextResponse.json(result.data);
     return addCacheHeaders(response, result.fromCache, result.ttlRemaining, cacheConfig.ttl, result.isStale);
-    
   } catch (error) {
-    log.errorWithStack('Error fetching leaderboard', error instanceof Error ? error : new Error(String(error)));
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+    log.errorWithStack("Error fetching leaderboard", error instanceof Error ? error : new Error(String(error)));
+    return NextResponse.json({ error: "Internal server error" }, { status: 500 });
   }
 }

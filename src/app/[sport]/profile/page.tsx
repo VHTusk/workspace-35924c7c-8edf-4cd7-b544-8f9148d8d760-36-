@@ -59,6 +59,7 @@ import { cn } from "@/lib/utils";
 import { VerificationBanners, useVerificationStatus } from "@/components/profile/verification-banners";
 import { indianStates, getDistrictsForState } from "@/lib/indian-locations";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { IdentityChangeRequest } from "@/components/identity-change-request";
 import { toast } from "sonner";
 import { ensureCsrfToken as ensureClientCsrfToken, fetchWithCsrf } from "@/lib/client-csrf";
 
@@ -118,12 +119,51 @@ interface SectionSaving {
   password: boolean;
 }
 
+function getAgeFromDobValue(dob: string | null | undefined): number | null {
+  if (!dob) {
+    return null;
+  }
+
+  const parsedDob = new Date(dob);
+  if (Number.isNaN(parsedDob.getTime())) {
+    return null;
+  }
+
+  const today = new Date();
+  let age = today.getFullYear() - parsedDob.getFullYear();
+  const monthDifference = today.getMonth() - parsedDob.getMonth();
+
+  if (
+    monthDifference < 0 ||
+    (monthDifference === 0 && today.getDate() < parsedDob.getDate())
+  ) {
+    age -= 1;
+  }
+
+  return age >= 0 ? age : null;
+}
+
+function getGenderShortLabel(gender: string | null | undefined): string | null {
+  switch (gender) {
+    case "MALE":
+      return "M";
+    case "FEMALE":
+      return "F";
+    case "MIXED":
+      return "X";
+    case "OTHER":
+      return "O";
+    default:
+      return null;
+  }
+}
+
 const requiredFields = [
   { key: "firstName", label: "First Name", section: "personal" },
   { key: "lastName", label: "Last Name", section: "personal" },
   { key: "email", label: "Email", section: "personal" },
   { key: "phone", label: "Phone", section: "personal" },
-  { key: "age", label: "Age", section: "personal" },
+  { key: "dob", label: "Date of Birth", section: "personal" },
   { key: "gender", label: "Gender", section: "personal" },
   { key: "state", label: "State", section: "address" },
   { key: "district", label: "District", section: "address" },
@@ -154,7 +194,7 @@ export default function ProfilePage() {
   const [uploadingPhoto, setUploadingPhoto] = useState(false);
   const [formErrors, setFormErrors] = useState<FormErrors>({});
   const [showDeletePhotoDialog, setShowDeletePhotoDialog] = useState(false);
-  const [showPersonalLockDialog, setShowPersonalLockDialog] = useState(false);
+  const [showIdentityChangeDialog, setShowIdentityChangeDialog] = useState(false);
   
   // Per-section editing states
   const [editingSection, setEditingSection] = useState<string | null>(null);
@@ -224,7 +264,7 @@ export default function ProfilePage() {
     lastName: "",
     email: "",
     phone: "",
-    age: "",
+    dob: "",
     gender: "",
     bio: "",
     idDocumentUrl: "",
@@ -315,7 +355,7 @@ export default function ProfilePage() {
           lastName: profileData.lastName,
           email: profileData.email,
           phone: profileData.phone,
-          age: profileData.age ? String(profileData.age) : "",
+          dob: profileData.dob || "",
           gender: profileData.gender,
           bio: profileData.bio || "",
           idDocumentUrl: profileData.idDocumentUrl || "",
@@ -561,8 +601,8 @@ export default function ProfilePage() {
     if (personalForm.lastName !== profile.lastName) updates.lastName = personalForm.lastName;
     if (personalForm.email !== profile.email) updates.email = personalForm.email;
     if (personalForm.phone !== profile.phone) updates.phone = personalForm.phone;
-    if ((personalForm.age || "") !== (profile.age ? String(profile.age) : "")) {
-      updates.age = personalForm.age ? Number(personalForm.age) : null;
+    if ((personalForm.dob || "") !== (profile.dob || "")) {
+      updates.dob = personalForm.dob || null;
     }
     if (personalForm.gender !== profile.gender) updates.gender = personalForm.gender;
     if ((personalForm.bio || "") !== (profile.bio || "")) updates.bio = personalForm.bio;
@@ -589,10 +629,10 @@ export default function ProfilePage() {
       const cleanPhone = String(updates.phone).replace(/[\s-]/g, '');
       if (!/^(\+91)?[6-9]\d{9}$/.test(cleanPhone)) errors.phone = "Invalid phone number";
     }
-    if ("age" in updates && updates.age !== null) {
-      const parsedAge = Number(updates.age);
-      if (!Number.isInteger(parsedAge) || parsedAge < 5 || parsedAge > 120) {
-        errors.age = "Age must be a whole number between 5 and 120";
+    if ("dob" in updates && updates.dob) {
+      const derivedAge = getAgeFromDobValue(String(updates.dob));
+      if (derivedAge === null || derivedAge < 5 || derivedAge > 120) {
+        errors.dob = "Date of birth must result in an age between 5 and 120";
       }
     }
     if ("bio" in updates && updates.bio && String(updates.bio).length > 500) errors.bio = "Bio must be 500 characters or less";
@@ -613,10 +653,7 @@ export default function ProfilePage() {
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({
-          ...updates,
-          lockPersonalDetails: true,
-        }),
+        body: JSON.stringify(updates),
       });
 
       const data = await response.json();
@@ -630,15 +667,15 @@ export default function ProfilePage() {
       setProfile(prev => ({
         ...prev,
         ...updates,
-        age: updates.age !== undefined ? (updates.age as number | null) : prev.age,
-        identityLocked: true,
+        dob: updates.dob !== undefined ? String(updates.dob || "") : prev.dob,
+        age: updates.dob !== undefined ? getAgeFromDobValue(String(updates.dob || "")) : prev.age,
         emailVerified: updates.email !== undefined ? false : prev.emailVerified,
         phoneVerified: updates.phone !== undefined ? false : prev.phoneVerified,
         profileUpdatedAt: new Date().toISOString(),
       }));
       
       setEditingSection(null);
-      toast.success("Personal details saved and locked.");
+      toast.success("Personal details saved.");
       return true;
     } catch (err) {
       toast.error("An error occurred");
@@ -655,7 +692,6 @@ export default function ProfilePage() {
       return;
     }
 
-    setShowPersonalLockDialog(false);
     await persistPersonalSection();
   };
 
@@ -986,7 +1022,7 @@ export default function ProfilePage() {
           lastName: profile.lastName,
           email: profile.email,
           phone: profile.phone,
-          age: profile.age ? String(profile.age) : "",
+          dob: profile.dob || "",
           gender: profile.gender,
           bio: profile.bio || "",
           idDocumentUrl: profile.idDocumentUrl || "",
@@ -1030,6 +1066,24 @@ export default function ProfilePage() {
   const primaryBgClass = isCornhole ? "bg-green-50" : "bg-teal-50";
   const primaryBtnClass = isCornhole ? "bg-green-600 hover:bg-green-700" : "bg-teal-600 hover:bg-teal-700";
   const primaryBorderClass = isCornhole ? "border-green-200" : "border-teal-200";
+  const compactGender = getGenderShortLabel(profile.gender);
+  const compactAge = profile.age ?? getAgeFromDobValue(profile.dob);
+  const profileNameMeta =
+    compactGender && compactAge
+      ? `(${compactGender}/${compactAge})`
+      : compactGender
+        ? `(${compactGender})`
+        : compactAge
+          ? `(${compactAge})`
+          : "";
+  const lockedIdentityFieldOptions = [
+    { field: "firstName" as const, value: profile.firstName || "", inputType: "text" as const },
+    { field: "lastName" as const, value: profile.lastName || "", inputType: "text" as const },
+    { field: "email" as const, value: profile.email || "", inputType: "email" as const },
+    { field: "phone" as const, value: profile.phone || "", inputType: "tel" as const },
+    { field: "dob" as const, value: profile.dob || "", inputType: "date" as const },
+    { field: "gender" as const, value: profile.gender || "", inputType: "text" as const },
+  ];
 
   if (loading) {
     return (
@@ -1099,7 +1153,10 @@ export default function ProfilePage() {
               </div>
               <div>
                 <h1 className="text-2xl font-bold text-foreground">
-                  {profile.firstName} {profile.lastName}
+                  {profile.firstName} {profile.lastName}{" "}
+                  {profileNameMeta ? (
+                    <span className="text-lg font-semibold text-muted-foreground">{profileNameMeta}</span>
+                  ) : null}
                 </h1>
                 {profile.playerId && (
                   <p className="mt-1 text-xs font-medium uppercase tracking-[0.14em] text-muted-foreground">
@@ -1206,9 +1263,14 @@ export default function ProfilePage() {
                 </div>
                 {editingSection !== 'personal' ? (
                   profile.identityLocked ? (
-                    <Badge variant="outline" className="border-amber-200 bg-amber-50 text-amber-700 dark:border-amber-800 dark:bg-amber-950/30 dark:text-amber-300">
-                      Locked by system
-                    </Badge>
+                    <div className="flex items-center gap-2">
+                      <Badge variant="outline" className="border-amber-200 bg-amber-50 text-amber-700 dark:border-amber-800 dark:bg-amber-950/30 dark:text-amber-300">
+                        Locked by system
+                      </Badge>
+                      <Button variant="outline" size="sm" onClick={() => setShowIdentityChangeDialog(true)}>
+                        Request Edit
+                      </Button>
+                    </div>
                   ) : (
                     <Button variant="outline" size="sm" onClick={() => setEditingSection('personal')}>
                       <Edit2 className="w-4 h-4 mr-2" />
@@ -1223,7 +1285,7 @@ export default function ProfilePage() {
                     </Button>
                     <Button 
                       size="sm" 
-                      onClick={() => setShowPersonalLockDialog(true)}
+                      onClick={savePersonalSection}
                       disabled={sectionSaving.personal}
                       className={cn("text-white", primaryBtnClass)}
                     >
@@ -1241,7 +1303,7 @@ export default function ProfilePage() {
                 <Alert className="border-amber-200 bg-amber-50 text-amber-900 dark:border-amber-800 dark:bg-amber-950/30 dark:text-amber-100">
                   <Shield className="h-4 w-4" />
                   <AlertDescription>
-                    Please use your real legal information. These details may be required later to verify eligibility and claim tournament prize money. Once confirmed, personal details can only be changed through ValorHive management.
+                    Please use your real legal information. These details may be required to verify eligibility and claim tournament prize money. Your personal details will be locked the first time you join a tournament, and later edits will require ValorHive management support.
                   </AlertDescription>
                 </Alert>
 
@@ -1363,32 +1425,29 @@ export default function ProfilePage() {
                     )}
                   </div>
 
-                  {/* Age */}
+                  {/* Date of Birth */}
                   <div className="space-y-2">
                     <Label className="text-foreground">
-                      Age <span className="text-red-500">*</span>
+                      Date of Birth <span className="text-red-500">*</span>
                     </Label>
                     {editingSection === 'personal' ? (
                       <div className="relative">
                         <Calendar className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
                         <Input
-                          type="number"
-                          min={5}
-                          max={120}
-                          value={personalForm.age}
+                          type="date"
+                          value={personalForm.dob}
                           onChange={(e) => {
-                            setPersonalForm(prev => ({ ...prev, age: e.target.value }));
-                            if (formErrors.age) setFormErrors(prev => ({ ...prev, age: '' }));
+                            setPersonalForm(prev => ({ ...prev, dob: e.target.value }));
+                            if (formErrors.dob) setFormErrors(prev => ({ ...prev, dob: '' }));
                           }}
-                          placeholder="Enter your age"
-                          className={cn("pl-10 border-input", formErrors.age && "border-red-500")}
+                          className={cn("pl-10 border-input", formErrors.dob && "border-red-500")}
                         />
-                        {formErrors.age && <p className="mt-2 text-xs text-red-500">{formErrors.age}</p>}
+                        {formErrors.dob && <p className="mt-2 text-xs text-red-500">{formErrors.dob}</p>}
                       </div>
                     ) : (
                       <div className="p-2 text-foreground bg-muted rounded-md flex items-center gap-2">
                         <Calendar className="w-4 h-4 text-muted-foreground" />
-                        {profile.age ? `${profile.age} years` : "-"}
+                        {profile.dob ? new Date(profile.dob).toLocaleDateString("en-IN") : "-"}
                       </div>
                     )}
                   </div>
@@ -1534,7 +1593,9 @@ export default function ProfilePage() {
                     <MapPin className="w-5 h-5" />
                     Address Information
                   </CardTitle>
-                  <CardDescription>Your location details</CardDescription>
+                  <CardDescription>
+                    Choose the state, district, and PIN code you want to play from. This can be different from where you currently live.
+                  </CardDescription>
                 </div>
                 {editingSection !== 'address' ? (
                   <Button variant="outline" size="sm" onClick={() => setEditingSection('address')}>
@@ -1584,7 +1645,7 @@ export default function ProfilePage() {
                   {/* State */}
                   <div className="space-y-2">
                     <Label className="text-foreground">
-                      State <span className="text-red-500">*</span>
+                      State you want to play from <span className="text-red-500">*</span>
                     </Label>
                     {editingSection === 'address' ? (
                       <Select
@@ -1592,7 +1653,7 @@ export default function ProfilePage() {
                         onValueChange={handleStateChange}
                       >
                         <SelectTrigger className="border-input">
-                          <SelectValue placeholder="Select state" />
+                          <SelectValue placeholder="Choose the state you want to play from" />
                         </SelectTrigger>
                         <SelectContent className="max-h-64">
                           {indianStates.map((state) => (
@@ -1611,7 +1672,7 @@ export default function ProfilePage() {
                   {/* District */}
                   <div className="space-y-2">
                     <Label className="text-foreground">
-                      District <span className="text-red-500">*</span>
+                      District you want to play from <span className="text-red-500">*</span>
                     </Label>
                     {editingSection === 'address' ? (
                       <Select
@@ -1620,7 +1681,7 @@ export default function ProfilePage() {
                         disabled={!addressForm.state || districts.length === 0}
                       >
                         <SelectTrigger className="border-input">
-                          <SelectValue placeholder={districts.length > 0 ? "Select district" : "Select state first"} />
+                          <SelectValue placeholder={districts.length > 0 ? "Choose the district you want to play from" : "Choose your playing state first"} />
                         </SelectTrigger>
                         <SelectContent className="max-h-64">
                           {districts.map((district) => (
@@ -1638,7 +1699,7 @@ export default function ProfilePage() {
                   {/* PIN Code */}
                   <div className="space-y-2">
                     <Label className="text-foreground">
-                      PIN Code <span className="text-red-500">*</span>
+                      PIN Code you want to play from <span className="text-red-500">*</span>
                     </Label>
                     {editingSection === 'address' ? (
                       <>
@@ -1648,7 +1709,7 @@ export default function ProfilePage() {
                             setAddressForm(prev => ({ ...prev, pinCode: e.target.value }));
                             if (formErrors.pinCode) setFormErrors(prev => ({ ...prev, pinCode: '' }));
                           }}
-                          placeholder="Enter PIN code"
+                          placeholder="Enter the PIN code you want to play from"
                           className={cn("border-input", formErrors.pinCode && "border-red-500")}
                           maxLength={6}
                         />
@@ -2157,24 +2218,17 @@ export default function ProfilePage() {
         </DialogContent>
       </Dialog>
 
-      <Dialog open={showPersonalLockDialog} onOpenChange={setShowPersonalLockDialog}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Confirm personal details</DialogTitle>
-            <DialogDescription>
-              Please make sure your name, email, phone number, age, gender, and document details are correct. After this save, personal details will be locked and any future change will require ValorHive management intervention.
-            </DialogDescription>
-          </DialogHeader>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setShowPersonalLockDialog(false)}>
-              Review again
-            </Button>
-            <Button onClick={savePersonalSection} className={cn("text-white", primaryBtnClass)}>
-              Confirm and lock
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      <IdentityChangeRequest
+        isOpen={showIdentityChangeDialog}
+        onClose={() => setShowIdentityChangeDialog(false)}
+        fieldOptions={lockedIdentityFieldOptions}
+        initialField="firstName"
+        sport={sport}
+        onSuccess={() => {
+          toast.success("Your edit request has been sent to management.");
+        }}
+      />
+
     </div>
   );
 }

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import {
@@ -13,6 +13,14 @@ import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Button } from '@/components/ui/button';
 import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
+import {
   Select,
   SelectContent,
   SelectItem,
@@ -22,6 +30,7 @@ import {
 import { SportType } from '@prisma/client';
 import { cn } from '@/lib/utils';
 import { indianStates, getDistrictsForState } from '@/lib/indian-locations';
+import { fetchWithCsrf } from '@/lib/client-csrf';
 import { toast } from 'sonner';
 
 interface DistrictSummary {
@@ -85,6 +94,18 @@ export default function DistrictsBrowsePage() {
   const [selectedDistrict, setSelectedDistrict] = useState('');
   const [availableDistricts, setAvailableDistricts] = useState<string[]>([]);
   const [saving, setSaving] = useState(false);
+  const [redirectingToDistrict, setRedirectingToDistrict] = useState(false);
+
+  const userDistrictUrl = useMemo(() => {
+    if (!userData?.district || !userData?.state) {
+      return null;
+    }
+
+    const normalizedDistrict = userData.district.toUpperCase().replace(/[^A-Z0-9]/g, '');
+    const normalizedState = userData.state.toUpperCase().replace(/[^A-Z0-9]/g, '');
+    const sportCode = sport.toUpperCase();
+    return `/${sport}/dashboard/district/VH-CITY-${normalizedDistrict}-${normalizedState}-${sportCode}`;
+  }, [sport, userData?.district, userData?.state]);
 
   // Fetch user data first
   useEffect(() => {
@@ -108,6 +129,13 @@ export default function DistrictsBrowsePage() {
 
     fetchUserData();
   }, [sport]);
+
+  useEffect(() => {
+    if (userDistrictUrl) {
+      setRedirectingToDistrict(true);
+      router.replace(userDistrictUrl);
+    }
+  }, [router, userDistrictUrl]);
 
   // Fetch districts
   useEffect(() => {
@@ -158,7 +186,7 @@ export default function DistrictsBrowsePage() {
 
     setSaving(true);
     try {
-      const response = await fetch('/api/player/profile', {
+      const response = await fetchWithCsrf('/api/player/profile', {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -169,6 +197,15 @@ export default function DistrictsBrowsePage() {
 
       if (response.ok) {
         toast.success('Location saved successfully!');
+        setUserData((current) =>
+          current
+            ? {
+                ...current,
+                state: selectedState,
+                district: selectedDistrict,
+              }
+            : current,
+        );
         
         // Generate cityId and redirect to district page
         const normalizedDistrict = selectedDistrict.toUpperCase().replace(/[^A-Z0-9]/g, '');
@@ -247,6 +284,24 @@ export default function DistrictsBrowsePage() {
   const primaryTextClass = isCornhole ? "text-green-500" : "text-teal-500";
   const primaryBtnClass = isCornhole ? "bg-green-600 hover:bg-green-700" : "bg-teal-600 hover:bg-teal-700";
 
+  if (redirectingToDistrict) {
+    return (
+      <div className="p-6 max-w-6xl space-y-6">
+        <Card className="border-border/50 shadow-sm">
+          <CardContent className="flex min-h-[240px] flex-col items-center justify-center gap-4">
+            <Loader2 className={cn("h-8 w-8 animate-spin", primaryTextClass)} />
+            <div className="text-center">
+              <h2 className="text-xl font-semibold text-foreground">Opening your district challenger zone</h2>
+              <p className="mt-1 text-sm text-muted-foreground">
+                Taking you directly to your saved district page.
+              </p>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
   return (
     <div className="p-6 max-w-6xl space-y-6">
       {/* Header */}
@@ -260,90 +315,91 @@ export default function DistrictsBrowsePage() {
         </p>
       </div>
 
-      {/* Location Setup Card - Show if user hasn't set their location */}
-      {showLocationSetup && (
-        <Card className="border-2 border-dashed border-primary/50 bg-primary/5">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
+      <Dialog open={showLocationSetup}>
+        <DialogContent
+          className="sm:max-w-xl"
+          showCloseButton={false}
+          onInteractOutside={(event) => event.preventDefault()}
+          onEscapeKeyDown={(event) => event.preventDefault()}
+        >
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
               <MapPin className={cn("h-5 w-5", primaryTextClass)} />
-              Set Your Location
-            </CardTitle>
-            <CardDescription>
-              Select your state and district to connect with your local sports community
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="grid md:grid-cols-2 gap-4">
-              {/* State Dropdown */}
-              <div className="space-y-2">
-                <label className="text-sm font-medium">State</label>
-                <Select value={selectedState} onValueChange={setSelectedState}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select your state" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {indianStates.map(state => (
-                      <SelectItem key={state.code} value={state.name}>
-                        {state.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
+              Select your challenger location
+            </DialogTitle>
+            <DialogDescription>
+              Choose the state and district you want to play from. We will use this to open your district challenger page.
+            </DialogDescription>
+          </DialogHeader>
 
-              {/* District Dropdown */}
-              <div className="space-y-2">
-                <label className="text-sm font-medium">District</label>
-                <Select 
-                  value={selectedDistrict} 
-                  onValueChange={setSelectedDistrict}
-                  disabled={!selectedState}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder={selectedState ? "Select your district" : "Select state first"} />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {availableDistricts.map(district => (
-                      <SelectItem key={district} value={district}>
-                        {district}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
+          <div className="grid gap-4 md:grid-cols-2">
+            <div className="space-y-2">
+              <label className="text-sm font-medium">State you want to play from</label>
+              <Select value={selectedState} onValueChange={setSelectedState}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Choose the state you want to play from" />
+                </SelectTrigger>
+                <SelectContent>
+                  {indianStates.map((state) => (
+                    <SelectItem key={state.code} value={state.name}>
+                      {state.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
 
-            <div className="flex gap-3">
-              <Button 
-                onClick={handleSaveLocation}
-                disabled={!selectedState || !selectedDistrict || saving}
-                className={cn("text-white", primaryBtnClass)}
+            <div className="space-y-2">
+              <label className="text-sm font-medium">District you want to play from</label>
+              <Select
+                value={selectedDistrict}
+                onValueChange={setSelectedDistrict}
+                disabled={!selectedState}
               >
-                {saving ? (
-                  <>
-                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                    Saving...
-                  </>
-                ) : (
-                  <>
-                    <CheckCircle className="h-4 w-4 mr-2" />
-                    Save & Go to My District
-                  </>
-                )}
-              </Button>
-              <Button 
-                variant="outline" 
-                onClick={() => setShowLocationSetup(false)}
-              >
-                Browse All Districts
-              </Button>
+                <SelectTrigger>
+                  <SelectValue
+                    placeholder={
+                      selectedState
+                        ? "Choose the district you want to play from"
+                        : "Choose your playing state first"
+                    }
+                  />
+                </SelectTrigger>
+                <SelectContent>
+                  {availableDistricts.map((district) => (
+                    <SelectItem key={district} value={district}>
+                      {district}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
-          </CardContent>
-        </Card>
-      )}
+          </div>
 
-      {/* User's District Card - Show if user has a district set */}
-      {userData?.state && userData?.district && (
+          <DialogFooter>
+            <Button
+              onClick={handleSaveLocation}
+              disabled={!selectedState || !selectedDistrict || saving}
+              className={cn("text-white", primaryBtnClass)}
+            >
+              {saving ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Saving...
+                </>
+              ) : (
+                <>
+                  <CheckCircle className="mr-2 h-4 w-4" />
+                  Save & Open My District
+                </>
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* User's District Card - Show only before redirect settles */}
+      {userData?.state && userData?.district && !redirectingToDistrict && (
         <Card className={cn("border-l-4", isCornhole ? "border-l-green-500" : "border-l-teal-500")}>
           <CardContent className="p-4">
             <div className="flex items-center justify-between">

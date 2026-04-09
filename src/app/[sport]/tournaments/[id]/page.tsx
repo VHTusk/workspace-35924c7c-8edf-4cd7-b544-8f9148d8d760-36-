@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
@@ -135,6 +136,19 @@ interface RazorpayCheckoutPayload {
   };
 }
 
+interface TournamentProfileRequirement {
+  code?: string;
+  error?: string;
+  message?: string;
+  missingFields?: string[];
+  profileCompletion?: number;
+  requiresPhoneVerification?: boolean;
+  requiresIdentityLock?: boolean;
+  phone?: string | null;
+  profileUrl?: string;
+  currentUserRequiresFinalization?: boolean;
+}
+
 const scopeColors: Record<string, string> = {
   CITY: "bg-blue-500/10 text-blue-400 border-blue-500/30",
   DISTRICT: "bg-purple-500/10 text-purple-400 border-purple-500/30",
@@ -192,6 +206,13 @@ export default function TournamentDetailPage() {
   const [selectedTeam, setSelectedTeam] = useState<Team | null>(null);
   const [loadingTeams, setLoadingTeams] = useState(false);
   const [teamRegistering, setTeamRegistering] = useState(false);
+  const [showProfileRequirementDialog, setShowProfileRequirementDialog] = useState(false);
+  const [profileRequirement, setProfileRequirement] = useState<TournamentProfileRequirement | null>(null);
+  const [profileOtp, setProfileOtp] = useState("");
+  const [sendingProfileOtp, setSendingProfileOtp] = useState(false);
+  const [finalizingProfile, setFinalizingProfile] = useState(false);
+  const [profileOtpSent, setProfileOtpSent] = useState(false);
+  const [pendingRegistrationAction, setPendingRegistrationAction] = useState<"individual" | "team" | null>(null);
   useEffect(() => {
     fetchTournament();
     checkAuth();
@@ -288,23 +309,20 @@ export default function TournamentDetailPage() {
     }
   };
 
-  const handleRegister = async () => {
-    if (!tournament) return;
+  const openProfileRequirementDialog = useCallback(
+    (data: TournamentProfileRequirement, action: "individual" | "team") => {
+      setError("");
+      setPendingRegistrationAction(action);
+      setProfileRequirement(data);
+      setProfileOtp("");
+      setProfileOtpSent(false);
+      setShowTeamModal(false);
+      setShowProfileRequirementDialog(true);
+    },
+    [],
+  );
 
-    // For DOUBLES tournaments, show team selection modal
-    if (tournament.format === "DOUBLES") {
-      await fetchUserTeams();
-      setShowTeamModal(true);
-      return;
-    }
-
-    // For INTER_ORG, redirect to org entry page
-    if (tournament.type === "INTER_ORG") {
-      router.push(`/${sport}/tournaments/${tournamentId}/enter`);
-      return;
-    }
-
-    // For INDIVIDUAL and INTRA_ORG, individual player registration
+  const registerIndividualPlayer = async () => {
     setIsRegistering(true);
     try {
       const response = await fetchWithCsrf(`/api/tournaments/${tournamentId}/register`, {
@@ -314,11 +332,16 @@ export default function TournamentDetailPage() {
       const data = await response.json();
 
       if (!response.ok) {
-        // Handle subscription required - redirect to subscription page
-        if (data.code === 'SUBSCRIPTION_REQUIRED') {
+        if (data.code === "SUBSCRIPTION_REQUIRED") {
           router.push(data.subscriptionUrl || `/${sport}/subscription`);
           return;
         }
+
+        if (data.code === "TOURNAMENT_PROFILE_REQUIRED") {
+          openProfileRequirementDialog(data, "individual");
+          return;
+        }
+
         setError(data.error || "Registration failed");
         return;
       }
@@ -343,7 +366,7 @@ export default function TournamentDetailPage() {
     }
   };
 
-  const handleTeamRegister = async () => {
+  const registerSelectedTeam = async () => {
     if (!selectedTeam || !tournament) return;
 
     setTeamRegistering(true);
@@ -359,11 +382,16 @@ export default function TournamentDetailPage() {
       const data = await response.json();
 
       if (!response.ok) {
-        // Handle subscription required - redirect to subscription page
         if (data.code === 'SUBSCRIPTION_REQUIRED') {
           router.push(data.subscriptionUrl || `/${sport}/subscription`);
           return;
         }
+
+        if (data.code === "TOURNAMENT_PROFILE_REQUIRED" && data.currentUserRequiresFinalization !== false) {
+          openProfileRequirementDialog(data, "team");
+          return;
+        }
+
         setError(data.error || "Team registration failed");
         return;
       }
@@ -377,7 +405,6 @@ export default function TournamentDetailPage() {
           payer: data.payer,
         });
       } else {
-        // Free tournament, registration complete
         setShowTeamModal(false);
         setIsRegistered(true);
         toast.success("Registration completed successfully.", { id: "tournament-detail-success" });
@@ -388,6 +415,101 @@ export default function TournamentDetailPage() {
     } finally {
       setTeamRegistering(false);
     }
+  };
+
+  const sendProfileOtp = async () => {
+    if (!profileRequirement?.phone) {
+      toast.error("Add your mobile number in profile before joining a tournament.");
+      return;
+    }
+
+    setSendingProfileOtp(true);
+    try {
+      const response = await fetchWithCsrf("/api/auth/send-otp", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ phone: profileRequirement.phone }),
+      });
+      const data = await response.json();
+
+      if (!response.ok) {
+        toast.error(data.message || data.error || "Failed to send OTP.");
+        return;
+      }
+
+      setProfileOtpSent(true);
+      toast.success(data.message || "OTP sent to your mobile number.");
+    } catch (err) {
+      toast.error("Failed to send OTP.");
+    } finally {
+      setSendingProfileOtp(false);
+    }
+  };
+
+  const finalizeCompetitionProfile = async () => {
+    if (!profileRequirement) return;
+
+    if (profileRequirement.requiresPhoneVerification && !profileOtp.trim()) {
+      toast.error("Enter the OTP sent to your mobile number.");
+      return;
+    }
+
+    setFinalizingProfile(true);
+    try {
+      const response = await fetchWithCsrf("/api/player/competition-profile", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          otp: profileRequirement.requiresPhoneVerification ? profileOtp.trim() : undefined,
+        }),
+      });
+      const data = await response.json();
+
+      if (!response.ok) {
+        toast.error(data.message || data.error || "We could not confirm your profile.");
+        return;
+      }
+
+      toast.success(data.message || "Profile confirmed. You can now join tournaments.");
+      setShowProfileRequirementDialog(false);
+      setProfileRequirement(null);
+      setProfileOtp("");
+      setProfileOtpSent(false);
+
+      if (pendingRegistrationAction === "team") {
+        await registerSelectedTeam();
+      } else {
+        await registerIndividualPlayer();
+      }
+    } catch (err) {
+      toast.error("We could not confirm your profile.");
+    } finally {
+      setFinalizingProfile(false);
+    }
+  };
+
+  const handleRegister = async () => {
+    if (!tournament) return;
+
+    // For DOUBLES tournaments, show team selection modal
+    if (tournament.format === "DOUBLES") {
+      await fetchUserTeams();
+      setShowTeamModal(true);
+      return;
+    }
+
+    // For INTER_ORG, redirect to org entry page
+    if (tournament.type === "INTER_ORG") {
+      router.push(`/${sport}/tournaments/${tournamentId}/enter`);
+      return;
+    }
+
+    // For INDIVIDUAL and INTRA_ORG, individual player registration
+    await registerIndividualPlayer();
+  };
+
+  const handleTeamRegister = async () => {
+    await registerSelectedTeam();
   };
 
   // Razorpay checkout handler
@@ -1229,6 +1351,162 @@ export default function TournamentDetailPage() {
                 </>
               )}
             </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog
+        open={showProfileRequirementDialog}
+        onOpenChange={(open) => {
+          setShowProfileRequirementDialog(open);
+          if (!open) {
+            setProfileOtp("");
+            setProfileOtpSent(false);
+            setProfileRequirement(null);
+            setPendingRegistrationAction(null);
+          }
+        }}
+      >
+        <DialogContent className="sm:max-w-lg">
+          <DialogHeader>
+            <DialogTitle>Complete your player profile first</DialogTitle>
+            <DialogDescription>
+              Tournament joining requires a complete profile. Your details will lock after confirmation so tournament eligibility and payouts stay accurate.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4 py-2">
+            <Alert className={cn("border-border/60", primaryBgClass)}>
+              <Lock className={cn("h-4 w-4", primaryTextClass)} />
+              <AlertDescription>
+                {profileRequirement?.message || "Complete and confirm your profile before joining this tournament."}
+              </AlertDescription>
+            </Alert>
+
+            <div className="flex flex-wrap items-center gap-2">
+              <Badge variant="outline">
+                Profile {profileRequirement?.profileCompletion ?? 0}% complete
+              </Badge>
+              {profileRequirement?.requiresPhoneVerification ? (
+                <Badge variant="outline" className="border-amber-200 bg-amber-50 text-amber-700 dark:border-amber-800 dark:bg-amber-950/30 dark:text-amber-300">
+                  Mobile verification required
+                </Badge>
+              ) : (
+                <Badge variant="outline" className="border-emerald-200 bg-emerald-50 text-emerald-700 dark:border-emerald-800 dark:bg-emerald-950/30 dark:text-emerald-300">
+                  Mobile verified
+                </Badge>
+              )}
+            </div>
+
+            {profileRequirement?.missingFields && profileRequirement.missingFields.length > 0 ? (
+              <div className="rounded-xl border border-border/60 bg-muted/30 p-4">
+                <p className="text-sm font-medium text-foreground">Finish these details in your profile:</p>
+                <ul className="mt-2 space-y-1 text-sm text-muted-foreground">
+                  {profileRequirement.missingFields.map((field) => (
+                    <li key={field}>• {field}</li>
+                  ))}
+                </ul>
+              </div>
+            ) : (
+              <div className="space-y-4">
+                {profileRequirement?.phone ? (
+                  <div className="rounded-xl border border-border/60 bg-muted/30 p-4">
+                    <p className="text-sm font-medium text-foreground">Mobile number for tournament verification</p>
+                    <p className="mt-1 text-sm text-muted-foreground">{profileRequirement.phone}</p>
+                  </div>
+                ) : null}
+
+                {profileRequirement?.requiresPhoneVerification ? (
+                  <div className="space-y-3 rounded-xl border border-border/60 bg-muted/30 p-4">
+                    <div className="space-y-1">
+                      <p className="text-sm font-medium text-foreground">Verify by OTP</p>
+                      <p className="text-sm text-muted-foreground">
+                        We&apos;ll send a 6-digit OTP to your mobile number. Once verified, your profile will lock for tournament participation.
+                      </p>
+                    </div>
+
+                    {profileOtpSent ? (
+                      <div className="space-y-2">
+                        <Input
+                          value={profileOtp}
+                          onChange={(event) => setProfileOtp(event.target.value.replace(/\D/g, "").slice(0, 6))}
+                          placeholder="Enter 6-digit OTP"
+                          inputMode="numeric"
+                          maxLength={6}
+                        />
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={sendProfileOtp}
+                          disabled={sendingProfileOtp}
+                        >
+                          {sendingProfileOtp ? (
+                            <>
+                              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                              Sending...
+                            </>
+                          ) : (
+                            "Resend OTP"
+                          )}
+                        </Button>
+                      </div>
+                    ) : null}
+                  </div>
+                ) : (
+                  <div className="rounded-xl border border-emerald-200 bg-emerald-50 p-4 text-sm text-emerald-700 dark:border-emerald-800 dark:bg-emerald-950/30 dark:text-emerald-300">
+                    Your profile is complete and your mobile number is already verified. Confirm once to lock these details for tournament participation.
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowProfileRequirementDialog(false)}>
+              Cancel
+            </Button>
+
+            {profileRequirement?.missingFields && profileRequirement.missingFields.length > 0 ? (
+              <Button
+                onClick={() => {
+                  setShowProfileRequirementDialog(false);
+                  router.push(profileRequirement.profileUrl || `/${sport}/profile`);
+                }}
+                className={cn("text-white", primaryBtnClass)}
+              >
+                Complete Profile
+              </Button>
+            ) : profileRequirement?.requiresPhoneVerification && !profileOtpSent ? (
+              <Button
+                onClick={sendProfileOtp}
+                disabled={sendingProfileOtp}
+                className={cn("text-white", primaryBtnClass)}
+              >
+                {sendingProfileOtp ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Sending OTP...
+                  </>
+                ) : (
+                  "Send OTP"
+                )}
+              </Button>
+            ) : (
+              <Button
+                onClick={finalizeCompetitionProfile}
+                disabled={finalizingProfile || (profileRequirement?.requiresPhoneVerification && profileOtp.trim().length !== 6)}
+                className={cn("text-white", primaryBtnClass)}
+              >
+                {finalizingProfile ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Confirming...
+                  </>
+                ) : (
+                  "Confirm and continue"
+                )}
+              </Button>
+            )}
           </DialogFooter>
         </DialogContent>
       </Dialog>
