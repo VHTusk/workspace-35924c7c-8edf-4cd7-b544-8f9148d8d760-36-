@@ -25,6 +25,7 @@ import { SportType, GenderCategory } from '@prisma/client';
 import { getEloTier } from '@/lib/auth';
 import { safeParseInt } from '@/lib/validation';
 import { log } from '@/lib/logger';
+import { buildLeaderboardEligibleUserWhere } from '@/lib/user-sport';
 import {
   cacheResponse,
   generateCacheKeyFromParts,
@@ -116,11 +117,7 @@ export async function GET(request: NextRequest) {
       cacheKey,
       cacheConfig,
       async () => {
-        const where: Record<string, unknown> = {
-          sport,
-          isActive: true,
-          isAnonymized: false,
-        };
+        const where = buildLeaderboardEligibleUserWhere(sport);
 
         // Filter by gender
         if (gender && ['MALE', 'FEMALE', 'MIXED'].includes(gender)) {
@@ -138,7 +135,13 @@ export async function GET(request: NextRequest) {
 
         // Filter by location based on scope
         if (scope && location && ['district', 'state', 'city'].includes(scope.toLowerCase())) {
-          where[scope.toLowerCase()] = location;
+          if (scope.toLowerCase() === 'district') {
+            where.district = location;
+          } else if (scope.toLowerCase() === 'state') {
+            where.state = location;
+          } else if (scope.toLowerCase() === 'city') {
+            where.city = location;
+          }
         }
 
         if (search) {
@@ -181,14 +184,12 @@ export async function GET(request: NextRequest) {
 
         // Get stats
         const totalPlayers = await db.user.count({
-          where: { sport, isActive: true, isAnonymized: false },
+          where: buildLeaderboardEligibleUserWhere(sport),
         });
 
         const activeThisMonth = await db.user.count({
           where: {
-            sport,
-            isActive: true,
-            isAnonymized: false,
+            ...buildLeaderboardEligibleUserWhere(sport),
             updatedAt: { gte: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000) },
           },
         });
@@ -196,12 +197,12 @@ export async function GET(request: NextRequest) {
         // Get unique locations for filters
         const [districts, states] = await Promise.all([
           db.user.findMany({
-            where: { sport, isActive: true, isAnonymized: false, district: { not: null } },
+            where: { ...buildLeaderboardEligibleUserWhere(sport), district: { not: null } },
             select: { district: true },
             distinct: ['district'],
           }),
           db.user.findMany({
-            where: { sport, isActive: true, isAnonymized: false, state: { not: null } },
+            where: { ...buildLeaderboardEligibleUserWhere(sport), state: { not: null } },
             select: { state: true },
             distinct: ['state'],
           }),

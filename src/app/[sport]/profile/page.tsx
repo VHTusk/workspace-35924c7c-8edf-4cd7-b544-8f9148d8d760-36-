@@ -76,8 +76,12 @@ interface ProfileData {
   lastName: string;
   email: string;
   phone: string;
+  age?: number | null;
   dob: string;
   gender: string;
+  identityLocked?: boolean;
+  emailVerified?: boolean;
+  phoneVerified?: boolean;
   photoUrl: string;
   bio: string;
   address: string;
@@ -119,7 +123,7 @@ const requiredFields = [
   { key: "lastName", label: "Last Name", section: "personal" },
   { key: "email", label: "Email", section: "personal" },
   { key: "phone", label: "Phone", section: "personal" },
-  { key: "dob", label: "Date of Birth", section: "personal" },
+  { key: "age", label: "Age", section: "personal" },
   { key: "gender", label: "Gender", section: "personal" },
   { key: "state", label: "State", section: "address" },
   { key: "district", label: "District", section: "address" },
@@ -141,7 +145,8 @@ export default function ProfilePage() {
   const sport = params.sport as string;
   const isCornhole = sport === "cornhole";
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const idDocInputRef = useRef<HTMLInputElement>(null);
+  const personalIdDocInputRef = useRef<HTMLInputElement>(null);
+  const orgIdDocInputRef = useRef<HTMLInputElement>(null);
 
   const [loading, setLoading] = useState(true);
   const [districts, setDistricts] = useState<string[]>([]);
@@ -149,6 +154,7 @@ export default function ProfilePage() {
   const [uploadingPhoto, setUploadingPhoto] = useState(false);
   const [formErrors, setFormErrors] = useState<FormErrors>({});
   const [showDeletePhotoDialog, setShowDeletePhotoDialog] = useState(false);
+  const [showPersonalLockDialog, setShowPersonalLockDialog] = useState(false);
   
   // Per-section editing states
   const [editingSection, setEditingSection] = useState<string | null>(null);
@@ -185,8 +191,12 @@ export default function ProfilePage() {
     lastName: "",
     email: "",
     phone: "",
+    age: null,
     dob: "",
     gender: "",
+    identityLocked: false,
+    emailVerified: false,
+    phoneVerified: false,
     photoUrl: "",
     bio: "",
     address: "",
@@ -214,9 +224,11 @@ export default function ProfilePage() {
     lastName: "",
     email: "",
     phone: "",
-    dob: "",
+    age: "",
     gender: "",
     bio: "",
+    idDocumentUrl: "",
+    idDocumentType: "",
   });
 
   const [addressForm, setAddressForm] = useState({
@@ -266,8 +278,12 @@ export default function ProfilePage() {
           lastName: data.lastName || "",
           email: data.email || "",
           phone: data.phone || "",
+          age: typeof data.age === "number" ? data.age : null,
           dob: data.dob ? new Date(data.dob).toISOString().split("T")[0] : "",
           gender: data.gender || "",
+          identityLocked: data.identityLocked ?? false,
+          emailVerified: data.emailVerified ?? false,
+          phoneVerified: data.phoneVerified ?? false,
           photoUrl: data.photoUrl || "",
           bio: data.bio || "",
           address: data.address || "",
@@ -299,9 +315,11 @@ export default function ProfilePage() {
           lastName: profileData.lastName,
           email: profileData.email,
           phone: profileData.phone,
-          dob: profileData.dob,
+          age: profileData.age ? String(profileData.age) : "",
           gender: profileData.gender,
           bio: profileData.bio || "",
+          idDocumentUrl: profileData.idDocumentUrl || "",
+          idDocumentType: profileData.idDocumentType || "",
         });
         
         setAddressForm({
@@ -471,7 +489,10 @@ export default function ProfilePage() {
     }
   };
 
-  const handleIdDocUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleIdDocUpload = async (
+    e: React.ChangeEvent<HTMLInputElement>,
+    target: "personal" | "organization" = "personal",
+  ) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
@@ -498,7 +519,11 @@ export default function ProfilePage() {
       const data = await response.json();
 
       if (response.ok && data.url) {
-        setOrgForm(prev => ({ ...prev, idDocumentUrl: data.url }));
+        if (target === "organization") {
+          setOrgForm(prev => ({ ...prev, idDocumentUrl: data.url }));
+        } else {
+          setPersonalForm(prev => ({ ...prev, idDocumentUrl: data.url }));
+        }
         toast.success("ID document uploaded!");
       } else {
         toast.error(data.error || "Failed to upload document");
@@ -527,18 +552,26 @@ export default function ProfilePage() {
   };
 
   // Section-specific save functions
-  const savePersonalSection = async () => {
+  const persistPersonalSection = async () => {
     setSectionSaving(prev => ({ ...prev, personal: true }));
     setFormErrors({});
 
-    const updates: Record<string, string> = {};
+    const updates: Record<string, string | number | null> = {};
     if (personalForm.firstName !== profile.firstName) updates.firstName = personalForm.firstName;
     if (personalForm.lastName !== profile.lastName) updates.lastName = personalForm.lastName;
     if (personalForm.email !== profile.email) updates.email = personalForm.email;
     if (personalForm.phone !== profile.phone) updates.phone = personalForm.phone;
-    if (personalForm.dob !== profile.dob) updates.dob = personalForm.dob;
+    if ((personalForm.age || "") !== (profile.age ? String(profile.age) : "")) {
+      updates.age = personalForm.age ? Number(personalForm.age) : null;
+    }
     if (personalForm.gender !== profile.gender) updates.gender = personalForm.gender;
     if ((personalForm.bio || "") !== (profile.bio || "")) updates.bio = personalForm.bio;
+    if ((personalForm.idDocumentUrl || "") !== (profile.idDocumentUrl || "")) {
+      updates.idDocumentUrl = personalForm.idDocumentUrl || null;
+    }
+    if ((personalForm.idDocumentType || "") !== (profile.idDocumentType || "")) {
+      updates.idDocumentType = personalForm.idDocumentType || null;
+    }
 
     if (Object.keys(updates).length === 0) {
       setSectionSaving(prev => ({ ...prev, personal: false }));
@@ -549,29 +582,41 @@ export default function ProfilePage() {
     
     // Validation
     const errors: FormErrors = {};
-    if ("email" in updates && updates.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(updates.email)) {
+    if ("email" in updates && updates.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(updates.email))) {
       errors.email = "Invalid email format";
     }
     if ("phone" in updates && updates.phone) {
-      const cleanPhone = updates.phone.replace(/[\s-]/g, '');
+      const cleanPhone = String(updates.phone).replace(/[\s-]/g, '');
       if (!/^(\+91)?[6-9]\d{9}$/.test(cleanPhone)) errors.phone = "Invalid phone number";
     }
-    if ("bio" in updates && updates.bio && updates.bio.length > 500) errors.bio = "Bio must be 500 characters or less";
+    if ("age" in updates && updates.age !== null) {
+      const parsedAge = Number(updates.age);
+      if (!Number.isInteger(parsedAge) || parsedAge < 5 || parsedAge > 120) {
+        errors.age = "Age must be a whole number between 5 and 120";
+      }
+    }
+    if ("bio" in updates && updates.bio && String(updates.bio).length > 500) errors.bio = "Bio must be 500 characters or less";
+    if (Boolean(updates.idDocumentUrl) && !personalForm.idDocumentType) {
+      errors.idDocumentType = "Select a document type";
+    }
     
     if (Object.keys(errors).length > 0) {
       setFormErrors(errors);
       setSectionSaving(prev => ({ ...prev, personal: false }));
       toast.error("Please fix the errors");
-      return;
+      return false;
     }
-    
+
     try {
       const response = await fetchWithCsrf("/api/player/profile", {
         method: "PUT",
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify(updates),
+        body: JSON.stringify({
+          ...updates,
+          lockPersonalDetails: true,
+        }),
       });
 
       const data = await response.json();
@@ -579,23 +624,39 @@ export default function ProfilePage() {
       if (!response.ok) {
         toast.error(data.error || "Failed to update profile");
         if (data.errors) setFormErrors(data.errors);
-        return;
+        return false;
       }
 
       setProfile(prev => ({
         ...prev,
         ...updates,
+        age: updates.age !== undefined ? (updates.age as number | null) : prev.age,
+        identityLocked: true,
+        emailVerified: updates.email !== undefined ? false : prev.emailVerified,
+        phoneVerified: updates.phone !== undefined ? false : prev.phoneVerified,
         profileUpdatedAt: new Date().toISOString(),
       }));
       
       setEditingSection(null);
-      toast.success("Personal information updated!");
+      toast.success("Personal details saved and locked.");
+      return true;
     } catch (err) {
       toast.error("An error occurred");
       console.error(err);
+      return false;
     } finally {
       setSectionSaving(prev => ({ ...prev, personal: false }));
     }
+  };
+
+  const savePersonalSection = async () => {
+    if (profile.identityLocked) {
+      toast.error("Personal details are locked. Please contact ValorHive management for changes.");
+      return;
+    }
+
+    setShowPersonalLockDialog(false);
+    await persistPersonalSection();
   };
 
   const saveAddressSection = async () => {
@@ -925,9 +986,11 @@ export default function ProfilePage() {
           lastName: profile.lastName,
           email: profile.email,
           phone: profile.phone,
-          dob: profile.dob,
+          age: profile.age ? String(profile.age) : "",
           gender: profile.gender,
           bio: profile.bio || "",
+          idDocumentUrl: profile.idDocumentUrl || "",
+          idDocumentType: profile.idDocumentType || "",
         });
         break;
       case 'address':
@@ -1038,7 +1101,6 @@ export default function ProfilePage() {
                 <h1 className="text-2xl font-bold text-foreground">
                   {profile.firstName} {profile.lastName}
                 </h1>
-                <p className="text-muted-foreground">Manage your profile settings</p>
                 {profile.playerId && (
                   <p className="mt-1 text-xs font-medium uppercase tracking-[0.14em] text-muted-foreground">
                     Player ID: <span className="font-mono tracking-normal">{profile.playerId}</span>
@@ -1086,7 +1148,10 @@ export default function ProfilePage() {
               <div className="flex items-center justify-between mb-2">
                 <div className="flex items-center gap-2">
                   <User className={cn("w-5 h-5", primaryTextClass)} />
-                  <span className="font-medium text-foreground">Profile Completion</span>
+                  <div>
+                    <span className="font-medium text-foreground">Profile Completion</span>
+                    <p className="text-xs text-muted-foreground">Manage your profile settings</p>
+                  </div>
                 </div>
                 <Badge className={cn(primaryBgClass, primaryTextClass)}>
                   {completionPercentage}%
@@ -1135,13 +1200,21 @@ export default function ProfilePage() {
                     <User className="w-5 h-5" />
                     Personal Information
                   </CardTitle>
-                  <CardDescription>Your basic personal details</CardDescription>
+                  <CardDescription>
+                    Your legal identity details for tournament eligibility and payouts
+                  </CardDescription>
                 </div>
                 {editingSection !== 'personal' ? (
-                  <Button variant="outline" size="sm" onClick={() => setEditingSection('personal')}>
-                    <Edit2 className="w-4 h-4 mr-2" />
-                    Edit
-                  </Button>
+                  profile.identityLocked ? (
+                    <Badge variant="outline" className="border-amber-200 bg-amber-50 text-amber-700 dark:border-amber-800 dark:bg-amber-950/30 dark:text-amber-300">
+                      Locked by system
+                    </Badge>
+                  ) : (
+                    <Button variant="outline" size="sm" onClick={() => setEditingSection('personal')}>
+                      <Edit2 className="w-4 h-4 mr-2" />
+                      Edit
+                    </Button>
+                  )
                 ) : (
                   <div className="flex gap-2">
                     <Button variant="outline" size="sm" onClick={() => cancelEdit('personal')}>
@@ -1150,7 +1223,7 @@ export default function ProfilePage() {
                     </Button>
                     <Button 
                       size="sm" 
-                      onClick={savePersonalSection}
+                      onClick={() => setShowPersonalLockDialog(true)}
                       disabled={sectionSaving.personal}
                       className={cn("text-white", primaryBtnClass)}
                     >
@@ -1165,6 +1238,13 @@ export default function ProfilePage() {
                 )}
               </CardHeader>
               <CardContent className="space-y-4">
+                <Alert className="border-amber-200 bg-amber-50 text-amber-900 dark:border-amber-800 dark:bg-amber-950/30 dark:text-amber-100">
+                  <Shield className="h-4 w-4" />
+                  <AlertDescription>
+                    Please use your real legal information. These details may be required later to verify eligibility and claim tournament prize money. Once confirmed, personal details can only be changed through ValorHive management.
+                  </AlertDescription>
+                </Alert>
+
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   {/* First Name */}
                   <div className="space-y-2">
@@ -1237,7 +1317,13 @@ export default function ProfilePage() {
                     ) : (
                       <div className="p-2 text-foreground bg-muted rounded-md flex items-center gap-2">
                         <Mail className="w-4 h-4 text-muted-foreground" />
-                        {profile.email || "-"}
+                        <span className="truncate">{profile.email || "-"}</span>
+                        {profile.emailVerified && (
+                          <span className="ml-auto inline-flex items-center gap-1 rounded-full bg-green-100 px-2 py-0.5 text-[11px] font-medium text-green-700 dark:bg-green-900/30 dark:text-green-400">
+                            <CheckCircle className="w-3 h-3" />
+                            Verified
+                          </span>
+                        )}
                       </div>
                     )}
                   </div>
@@ -1266,30 +1352,43 @@ export default function ProfilePage() {
                     ) : (
                       <div className="p-2 text-foreground bg-muted rounded-md flex items-center gap-2">
                         <Phone className="w-4 h-4 text-muted-foreground" />
-                        {profile.phone || "-"}
+                        <span className="truncate">{profile.phone || "-"}</span>
+                        {profile.phoneVerified && (
+                          <span className="ml-auto inline-flex items-center gap-1 rounded-full bg-green-100 px-2 py-0.5 text-[11px] font-medium text-green-700 dark:bg-green-900/30 dark:text-green-400">
+                            <CheckCircle className="w-3 h-3" />
+                            Verified
+                          </span>
+                        )}
                       </div>
                     )}
                   </div>
 
-                  {/* Date of Birth */}
+                  {/* Age */}
                   <div className="space-y-2">
                     <Label className="text-foreground">
-                      Date of Birth <span className="text-red-500">*</span>
+                      Age <span className="text-red-500">*</span>
                     </Label>
                     {editingSection === 'personal' ? (
                       <div className="relative">
                         <Calendar className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
                         <Input
-                          type="date"
-                          value={personalForm.dob}
-                          onChange={(e) => setPersonalForm(prev => ({ ...prev, dob: e.target.value }))}
-                          className="pl-10 border-input"
+                          type="number"
+                          min={5}
+                          max={120}
+                          value={personalForm.age}
+                          onChange={(e) => {
+                            setPersonalForm(prev => ({ ...prev, age: e.target.value }));
+                            if (formErrors.age) setFormErrors(prev => ({ ...prev, age: '' }));
+                          }}
+                          placeholder="Enter your age"
+                          className={cn("pl-10 border-input", formErrors.age && "border-red-500")}
                         />
+                        {formErrors.age && <p className="mt-2 text-xs text-red-500">{formErrors.age}</p>}
                       </div>
                     ) : (
                       <div className="p-2 text-foreground bg-muted rounded-md flex items-center gap-2">
                         <Calendar className="w-4 h-4 text-muted-foreground" />
-                        {profile.dob ? new Date(profile.dob).toLocaleDateString() : "-"}
+                        {profile.age ? `${profile.age} years` : "-"}
                       </div>
                     )}
                   </div>
@@ -1353,6 +1452,76 @@ export default function ProfilePage() {
                       {profile.bio || "No bio added yet"}
                     </p>
                   )}
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label className="text-foreground">Verification Document Type</Label>
+                    {editingSection === 'personal' ? (
+                      <>
+                        <Select
+                          value={personalForm.idDocumentType}
+                          onValueChange={(value) => {
+                            setPersonalForm(prev => ({ ...prev, idDocumentType: value }));
+                            if (formErrors.idDocumentType) setFormErrors(prev => ({ ...prev, idDocumentType: '' }));
+                          }}
+                        >
+                          <SelectTrigger className={cn("border-input", formErrors.idDocumentType && "border-red-500")}>
+                            <SelectValue placeholder="Select document type" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="aadhaar">Aadhaar Card</SelectItem>
+                            <SelectItem value="passport">Passport</SelectItem>
+                            <SelectItem value="driving_license">Driving License</SelectItem>
+                            <SelectItem value="school_id">School / College ID</SelectItem>
+                            <SelectItem value="other">Other ID</SelectItem>
+                          </SelectContent>
+                        </Select>
+                        {formErrors.idDocumentType && <p className="text-xs text-red-500">{formErrors.idDocumentType}</p>}
+                      </>
+                    ) : (
+                      <p className="p-2 text-foreground bg-muted rounded-md">
+                        {profile.idDocumentType ? profile.idDocumentType.replace(/_/g, " ") : "Not uploaded"}
+                      </p>
+                    )}
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label className="text-foreground">Verification Document</Label>
+                    {editingSection === 'personal' ? (
+                      <div className="space-y-3">
+                        <div
+                          className="cursor-pointer rounded-lg border border-dashed border-border bg-muted/50 p-4 text-center transition-colors hover:bg-muted"
+                          onClick={() => personalIdDocInputRef.current?.click()}
+                        >
+                          <Upload className="w-6 h-6 mx-auto text-muted-foreground mb-2" />
+                          <p className="text-sm text-foreground">
+                            {personalForm.idDocumentUrl ? "Change uploaded document" : "Upload a document for verification"}
+                          </p>
+                          <p className="text-xs text-muted-foreground mt-1">
+                            Supports JPG, PNG, and PDF up to 10MB
+                          </p>
+                        </div>
+                        <input
+                          ref={personalIdDocInputRef}
+                          type="file"
+                          accept="image/*,.pdf"
+                          className="hidden"
+                          onChange={(e) => handleIdDocUpload(e, "personal")}
+                        />
+                        {personalForm.idDocumentUrl && (
+                          <p className="text-sm text-green-600 dark:text-green-400 flex items-center gap-1">
+                            <CheckCircle className="w-4 h-4" />
+                            Document uploaded and ready for review
+                          </p>
+                        )}
+                      </div>
+                    ) : (
+                      <p className="p-2 text-foreground bg-muted rounded-md">
+                        {profile.idDocumentUrl ? "Document uploaded" : "No document uploaded yet"}
+                      </p>
+                    )}
+                  </div>
                 </div>
               </CardContent>
             </Card>
@@ -1728,7 +1897,7 @@ export default function ProfilePage() {
                     <Label className="text-foreground">ID Document</Label>
                     <div 
                       className="border-2 border-dashed border-muted-foreground/25 rounded-lg p-6 text-center hover:border-primary/50 transition-colors cursor-pointer"
-                      onClick={() => idDocInputRef.current?.click()}
+                      onClick={() => orgIdDocInputRef.current?.click()}
                     >
                       <Upload className="w-8 h-8 mx-auto text-muted-foreground mb-2" />
                       <p className="text-sm text-muted-foreground">
@@ -1739,10 +1908,10 @@ export default function ProfilePage() {
                       </p>
                     </div>
                     <input
-                      ref={idDocInputRef}
+                      ref={orgIdDocInputRef}
                       type="file"
                       accept="image/*,.pdf"
-                      onChange={handleIdDocUpload}
+                      onChange={(e) => handleIdDocUpload(e, "organization")}
                       className="hidden"
                     />
                     {orgForm.idDocumentUrl && (
@@ -1983,6 +2152,25 @@ export default function ProfilePage() {
             <Button variant="destructive" onClick={handleDeletePhoto}>
               <Trash2 className="w-4 h-4 mr-2" />
               Remove Photo
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={showPersonalLockDialog} onOpenChange={setShowPersonalLockDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Confirm personal details</DialogTitle>
+            <DialogDescription>
+              Please make sure your name, email, phone number, age, gender, and document details are correct. After this save, personal details will be locked and any future change will require ValorHive management intervention.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowPersonalLockDialog(false)}>
+              Review again
+            </Button>
+            <Button onClick={savePersonalSection} className={cn("text-white", primaryBtnClass)}>
+              Confirm and lock
             </Button>
           </DialogFooter>
         </DialogContent>

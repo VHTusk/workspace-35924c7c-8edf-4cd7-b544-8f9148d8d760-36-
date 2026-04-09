@@ -4,6 +4,7 @@ import { db } from '@/lib/db';
 import { cacheGet, cacheSet } from '@/lib/cache';
 import { getCDNUrl } from '@/lib/cdn-url';
 import { getEloTier } from '@/lib/auth';
+import { buildLeaderboardEligibleUserWhere } from '@/lib/user-sport';
 
 const SUPPORTED_SPORTS = new Set<SportType>(['CORNHOLE', 'DARTS']);
 
@@ -110,12 +111,7 @@ export async function GET(
     let rank = null;
     if (player.showOnLeaderboard) {
       const allPlayers = await db.user.findMany({
-        where: {
-          sport: effectiveSport,
-          isActive: true,
-          isAnonymized: false,
-          showOnLeaderboard: true,
-        },
+        where: buildLeaderboardEligibleUserWhere(effectiveSport, { requirePublic: true }),
         orderBy: { visiblePoints: 'desc' },
         select: { id: true },
       });

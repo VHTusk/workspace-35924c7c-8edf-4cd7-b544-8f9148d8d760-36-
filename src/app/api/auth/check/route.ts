@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { validateSessionForSport } from "@/lib/session";
 import { db } from "@/lib/db";
 import { clearSessionCookie } from "@/lib/session-helpers";
+import { SportType, UserSportEnrollmentSource } from "@prisma/client";
+import { ensureUserSportEnrollment } from "@/lib/user-sport";
 
 /**
  * Authentication Check API
@@ -44,6 +46,7 @@ export async function GET(request: NextRequest) {
     }
 
     const session = result.session!;
+    const currentSport = expectedSport.toUpperCase() as SportType;
 
     // User session
     if (session.userId) {
@@ -68,7 +71,7 @@ export async function GET(request: NextRequest) {
           accountTier: true,
           role: true,
           subscriptions: {
-            where: { status: 'ACTIVE' },
+            where: { status: 'ACTIVE', sport: currentSport },
             take: 1,
           },
         },
@@ -79,6 +82,13 @@ export async function GET(request: NextRequest) {
         clearSessionCookie(response);
         return response;
       }
+
+      await ensureUserSportEnrollment(
+        db,
+        userData.id,
+        currentSport,
+        UserSportEnrollmentSource.ACCOUNT_REGISTRATION,
+      );
 
       // Calculate profile completeness
       const requiredFields = [
@@ -104,7 +114,7 @@ export async function GET(request: NextRequest) {
         userType: "player",
         user: {
           id: userData.id,
-          sport: userData.sport,
+          sport: currentSport,
           firstName: userData.firstName,
           lastName: userData.lastName,
           email: userData.email,

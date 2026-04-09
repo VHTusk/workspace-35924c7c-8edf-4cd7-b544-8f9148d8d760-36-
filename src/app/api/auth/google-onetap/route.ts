@@ -1,6 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
 import { OAuth2Client } from "google-auth-library";
-import { Prisma, Role, SportType, type User } from "@prisma/client";
+import {
+  Prisma,
+  Role,
+  SportType,
+  UserSportEnrollmentSource,
+  type User,
+} from "@prisma/client";
 import { db } from "@/lib/db";
 import { createSession, generateReferralCode } from "@/lib/auth";
 import { setCsrfCookie } from "@/lib/csrf";
@@ -10,6 +16,7 @@ import { authError, authSuccess } from "@/lib/auth-response";
 import { normalizeEmail } from "@/lib/auth-validation";
 import { getGoogleAuthServerConfig } from "@/lib/google-auth-config";
 import { normalizeSport } from "@/lib/sports";
+import { ensureUserSportEnrollment } from "@/lib/user-sport";
 import {
   GOOGLE_ONE_TAP_PENDING_COOKIE,
   clearPendingGoogleOneTapCookie,
@@ -272,6 +279,13 @@ async function findOrCreateGoogleUser(input: {
       },
     });
 
+    await ensureUserSportEnrollment(
+      db,
+      user.id,
+      input.sport,
+      UserSportEnrollmentSource.ACCOUNT_REGISTRATION,
+    );
+
     return { ok: true, user, created: false };
   }
 
@@ -305,6 +319,13 @@ async function findOrCreateGoogleUser(input: {
           sport: input.sport,
         },
       });
+
+      await ensureUserSportEnrollment(
+        tx,
+        createdUser.id,
+        input.sport,
+        UserSportEnrollmentSource.ACCOUNT_REGISTRATION,
+      );
 
       await tx.notificationPreference.create({
         data: {

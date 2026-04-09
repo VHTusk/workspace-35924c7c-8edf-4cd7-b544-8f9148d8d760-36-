@@ -7,6 +7,7 @@ import { NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
 import { db } from '@/lib/db';
 import { Role, SportType } from '@prisma/client';
+import { validateSession } from '@/lib/auth';
 
 // Import SportType for tournament access check
 
@@ -122,34 +123,28 @@ export async function getPlayerUser(): Promise<UserContext | null> {
 
     if (!sessionToken) return null;
 
-    const session = await db.session.findFirst({
-      where: {
-        token: sessionToken,
-        accountType: 'PLAYER',
-        expiresAt: { gte: new Date() },
-      },
-      include: {
-        user: {
-          include: {
-            subscriptions: {
-              where: { status: 'ACTIVE' },
-              take: 1,
-            },
-          },
-        },
-      },
-    });
+    const session = await validateSession(sessionToken);
 
     if (!session?.user) return null;
+
+    const activeSubscription = await db.subscription.findFirst({
+      where: {
+        userId: session.user.id,
+        sport: session.sport,
+        status: 'ACTIVE',
+        endDate: { gte: new Date() },
+      },
+      take: 1,
+    });
 
     return {
       id: session.user.id,
       role: session.user.role,
-      sport: session.user.sport,
+      sport: session.sport,
       email: session.user.email,
       firstName: session.user.firstName,
       lastName: session.user.lastName,
-      isSubscribed: session.user.subscriptions.length > 0,
+      isSubscribed: !!activeSubscription,
     };
   } catch {
     return null;

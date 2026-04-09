@@ -20,6 +20,7 @@ import { getPrimaryClient } from './redis-config';
 import { createLogger } from './logger';
 import { addJob, createScoringJob } from './job-queue';
 import { invalidateLeaderboardCache } from './cache-invalidation';
+import { buildLeaderboardEligibleUserWhere } from './user-sport';
 
 const logger = createLogger('LeaderboardEngine');
 
@@ -348,12 +349,7 @@ async function computeLeaderboardLive(
   limit: number,
   offset: number
 ): Promise<LeaderboardResult> {
-  const where: Record<string, unknown> = {
-    sport,
-    isActive: true,
-    isAnonymized: false,
-    showOnLeaderboard: true,
-  };
+  const where = buildLeaderboardEligibleUserWhere(sport, { requirePublic: true });
   
   // Apply scope filter
   if (type === LeaderboardType.CITY && scopeValue) {
@@ -428,12 +424,7 @@ export async function computeLeaderboard(
     logger.info(`Computing leaderboard: ${sport}:${type}:${scopeValue || 'all'}`);
     
     // Get all eligible players
-    const where: Record<string, unknown> = {
-      sport,
-      isActive: true,
-      isAnonymized: false,
-      showOnLeaderboard: true,
-    };
+    const where = buildLeaderboardEligibleUserWhere(sport, { requirePublic: true });
     
     // Apply scope filter
     if (type === LeaderboardType.CITY && scopeValue) {
@@ -717,12 +708,7 @@ export async function getLeaderboardStats(
   scopeValue?: string
 ): Promise<LeaderboardStats> {
   try {
-    const where: Record<string, unknown> = {
-      sport,
-      isActive: true,
-      isAnonymized: false,
-      showOnLeaderboard: true,
-    };
+    const where = buildLeaderboardEligibleUserWhere(sport, { requirePublic: true });
     
     // Apply scope filter
     if (type === LeaderboardType.CITY && scopeValue) {
@@ -796,8 +782,7 @@ export async function getLeaderboardScopes(
     
     const results = await db.user.findMany({
       where: {
-        sport,
-        isActive: true,
+        ...buildLeaderboardEligibleUserWhere(sport, { requirePublic: true }),
         [field]: { not: null },
       },
       select: { [field]: true },

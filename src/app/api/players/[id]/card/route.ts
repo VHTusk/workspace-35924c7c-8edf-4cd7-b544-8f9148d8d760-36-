@@ -2,6 +2,25 @@ import { NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 import { getTierFromPoints } from '@/lib/tier';
 
+function getAgeFromDob(dob: Date | null): number | null {
+  if (!dob) {
+    return null;
+  }
+
+  const today = new Date();
+  let age = today.getFullYear() - dob.getFullYear();
+  const monthDifference = today.getMonth() - dob.getMonth();
+
+  if (
+    monthDifference < 0 ||
+    (monthDifference === 0 && today.getDate() < dob.getDate())
+  ) {
+    age -= 1;
+  }
+
+  return age >= 0 ? age : null;
+}
+
 export async function GET(
   request: Request,
   { params }: { params: Promise<{ id: string }> }
@@ -26,6 +45,11 @@ export async function GET(
     const winRate = (user.rating?.wins || 0) + (user.rating?.losses || 0) > 0
       ? Math.round(((user.rating?.wins || 0) / ((user.rating?.wins || 0) + (user.rating?.losses || 0))) * 100)
       : 0;
+    const resolvedAge = user.age ?? getAgeFromDob(user.dob);
+    const playerMeta = [
+      resolvedAge ? `${resolvedAge} yrs` : null,
+      user.gender ? `${user.gender.charAt(0)}${user.gender.slice(1).toLowerCase()}` : null,
+    ].filter(Boolean).join(' • ');
 
     // Generate SVG card
     const cardWidth = 400;
@@ -66,7 +90,10 @@ export async function GET(
         ${user.orgRosterEntries[0] ? `
           <text x="200" y="225" font-family="Arial, sans-serif" font-size="12" fill="#a0a0a0" text-anchor="middle">${user.orgRosterEntries[0].org.name}</text>
         ` : ''}
-        
+        ${playerMeta ? `
+          <text x="200" y="${user.orgRosterEntries[0] ? 244 : 225}" font-family="Arial, sans-serif" font-size="11" fill="#9fb0c8" text-anchor="middle">${playerMeta}</text>
+        ` : ''}
+
         <!-- Stats Row -->
         <rect x="30" y="250" width="340" height="80" fill="rgba(255,255,255,0.05)" rx="8"/>
         

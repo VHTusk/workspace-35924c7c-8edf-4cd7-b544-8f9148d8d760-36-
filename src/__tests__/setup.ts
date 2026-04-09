@@ -105,6 +105,23 @@ export function createMockDb() {
       update: vi.fn(),
       upsert: vi.fn(),
     },
+    userSportEnrollment: {
+      create: vi.fn(),
+      findUnique: vi.fn(),
+      findFirst: vi.fn(),
+      findMany: vi.fn(),
+      update: vi.fn(),
+      upsert: vi.fn(),
+      count: vi.fn(),
+    },
+    referral: {
+      create: vi.fn(),
+      findUnique: vi.fn(),
+      findFirst: vi.fn(),
+      findMany: vi.fn(),
+      update: vi.fn(),
+      count: vi.fn(),
+    },
     orgSubscription: {
       create: vi.fn(),
       findUnique: vi.fn(),

@@ -1,10 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 import { verifyPaymentSignature, fetchPaymentDetails } from '@/lib/payments/razorpay';
-import { SubscriptionStatus, SportType } from '@prisma/client';
+import { SubscriptionStatus, SportType, UserSportEnrollmentSource } from '@prisma/client';
 import { getAuthenticatedEntity } from '@/lib/auth';
 import { logPaymentVerifyEvent } from '@/lib/audit-logger';
 import { log } from '@/lib/logger';
+import { ensureUserSportEnrollment } from '@/lib/user-sport';
 
 interface VerifyPaymentBody {
   razorpayOrderId: string;
@@ -137,6 +138,13 @@ export async function POST(request: NextRequest) {
         const endDate = new Date();
         endDate.setFullYear(endDate.getFullYear() + 1); // 1 year subscription
 
+        await ensureUserSportEnrollment(
+          tx,
+          ledgerEntry.userId!,
+          sportType,
+          UserSportEnrollmentSource.MEMBERSHIP_PURCHASE,
+        );
+
         const existingSubscription = await tx.subscription.findFirst({
           where: {
             userId: ledgerEntry.userId!,
@@ -197,6 +205,13 @@ export async function POST(request: NextRequest) {
       }
 
       if (resolvedPaymentType === 'TOURNAMENT_ENTRY' && resolvedTournamentId) {
+        await ensureUserSportEnrollment(
+          tx,
+          ledgerEntry.userId!,
+          sportType,
+          UserSportEnrollmentSource.TOURNAMENT_REGISTRATION,
+        );
+
         // Update existing pending registration to confirmed
         const existingReg = await tx.tournamentRegistration.findUnique({
           where: {

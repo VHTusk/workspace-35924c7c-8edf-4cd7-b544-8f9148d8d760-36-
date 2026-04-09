@@ -21,7 +21,13 @@ export async function GET(request: NextRequest) {
 
     // Filter by location based on scope
     if (scope && scope !== 'national' && location) {
-      where[scope.toLowerCase()] = location;
+      if (scope.toLowerCase() === 'district') {
+        where.district = location;
+      } else if (scope.toLowerCase() === 'state') {
+        where.state = location;
+      } else if (scope.toLowerCase() === 'city') {
+        where.city = location;
+      }
     }
 
     if (search) {

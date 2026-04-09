@@ -41,19 +41,20 @@ interface SubscriptionStatus {
 const SUBSCRIPTION_PLANS = [
   {
     id: "basic",
-    name: "Basic",
+    name: "Rookie",
     price: 0,
     yearlyPrice: 0,
-    description: "View only access",
+    description: "Starter access for new players",
     features: [
       "Browse all tournaments",
       "View brackets & results",
       "Access leaderboards",
       "View player profiles",
+      "Play your first tournament in this sport without annual membership",
     ],
     notIncluded: [
-      "Tournament participation",
-      "State & National tournaments",
+      "Ongoing tournament participation after your first tournament",
+      "Higher-volume competitive access",
       "Priority tournament registration",
       "Advanced statistics",
     ],
@@ -65,7 +66,7 @@ const SUBSCRIPTION_PLANS = [
     yearlyPrice: 1200,
     description: "Full access for competitive players",
     features: [
-      "All Basic features",
+      "All Rookie features",
       "Participate in ALL tournaments",
       "Priority tournament registration",
       "Advanced statistics & analytics",
@@ -245,11 +246,11 @@ export default function SubscriptionPage() {
               </AlertDescription>
             </Alert>
           ) : (
-            <Alert className="mb-6 bg-red-50 border-red-200 dark:bg-red-950/30 dark:border-red-900">
-              <AlertCircle className="w-4 h-4 text-red-600 dark:text-red-400" />
-              <AlertDescription className="text-red-700 dark:text-red-400">
-                <strong>Subscription Required:</strong> You cannot participate in any tournament without an active subscription.
-                <span className="block mt-1 text-sm">Subscribe now to register and compete in tournaments at all levels.</span>
+            <Alert className="mb-6 bg-amber-50 border-amber-200 dark:bg-amber-950/30 dark:border-amber-900">
+              <AlertCircle className="w-4 h-4 text-amber-600 dark:text-amber-400" />
+              <AlertDescription className="text-amber-700 dark:text-amber-400">
+                <strong>Rookie Access:</strong> You can participate in your first tournament in this sport without annual membership.
+                <span className="block mt-1 text-sm">After your first tournament, an active Pro membership is required for continued participation.</span>
               </AlertDescription>
             </Alert>
           )}
@@ -267,14 +268,14 @@ export default function SubscriptionPage() {
                 <div className="p-3 rounded-lg bg-muted/50">
                   <p className="font-medium text-foreground mb-2 flex items-center gap-2">
                     <Eye className="w-4 h-4" />
-                    Free (View Only)
+                    Rookie
                   </p>
                   <ul className="text-sm text-muted-foreground space-y-1">
                     <li>✓ Browse all tournaments</li>
                     <li>✓ View brackets & results</li>
                     <li>✓ Access leaderboards</li>
                     <li>✓ View player profiles</li>
-                    <li className="text-red-600 dark:text-red-400 font-medium">✗ Cannot participate in ANY tournament</li>
+                    <li className="text-amber-600 dark:text-amber-400 font-medium">✓ First tournament entry is allowed as a welcome benefit</li>
                   </ul>
                 </div>
                 <div className={cn("p-3 rounded-lg", primaryBgClass)}>
@@ -283,7 +284,7 @@ export default function SubscriptionPage() {
                     Pro (Full Access)
                   </p>
                   <ul className="text-sm text-muted-foreground space-y-1">
-                    <li>✓ All Free features</li>
+                    <li>✓ All Rookie features</li>
                     <li className="text-emerald-600 dark:text-emerald-400">✓ Participate in ALL tournaments</li>
                     <li className="text-emerald-600 dark:text-emerald-400">✓ City, District, State & National</li>
                     <li>✓ Priority registration</li>
@@ -302,7 +303,7 @@ export default function SubscriptionPage() {
                 <div>
                   <h4 className="font-medium text-foreground mb-1">Yearly Subscription</h4>
                   <p className="text-sm text-muted-foreground">
-                    <strong className="text-foreground">Subscription is required to participate in any tournament.</strong> Valid for 1 year from purchase. Unlock all tournaments and premium features.
+                    <strong className="text-foreground">Your first tournament in this sport does not require annual membership.</strong> After that, Pro membership is required for continued participation. Valid for 1 year from purchase.
                   </p>
                   <p className="text-sm font-semibold text-foreground mt-2">
                     Price: ₹1,200 per year per sport
@@ -365,7 +366,7 @@ export default function SubscriptionPage() {
                     {/* Pricing */}
                     <div className="text-center mb-4">
                       {plan.price === 0 ? (
-                        <div className="text-3xl font-bold text-foreground">Free</div>
+                        <div className="text-3xl font-bold text-foreground">Rookie</div>
                       ) : (
                         <>
                           <div className="text-3xl font-bold text-foreground">
@@ -558,7 +559,7 @@ export default function SubscriptionPage() {
                   </div>
                   <div>
                     <h4 className="font-medium text-foreground">Tournament Participation</h4>
-                    <p className="text-sm text-muted-foreground">Required to compete in any tournament at any level</p>
+                    <p className="text-sm text-muted-foreground">Your first tournament is covered under Rookie access, then Pro keeps you eligible for continued competition.</p>
                   </div>
                 </div>
                 <div className="flex items-start gap-3">

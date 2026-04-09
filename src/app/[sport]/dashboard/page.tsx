@@ -518,7 +518,7 @@ export default function DashboardPage() {
                 Find Tournament
               </Button>
             </Link>
-            <Link href={`/${sport}/my-tournaments`}>
+            <Link href={`/${sport}/tournaments?tab=my-tournaments`}>
               <Button
                 size="lg"
                 variant="outline"
@@ -641,7 +641,7 @@ export default function DashboardPage() {
                 <Activity className={cn("w-5 h-5", classes.primaryText)} />
                 Performance Overview
               </CardTitle>
-              <Link href={`/${sport}/my-stats`}>
+              <Link href={`/${sport}/stats`}>
                 <Button variant="ghost" size="sm" className="text-muted-foreground hover:text-foreground">
                   View Details
                   <ChevronRight className="w-4 h-4 ml-1" />
@@ -784,7 +784,7 @@ export default function DashboardPage() {
                 <Calendar className={cn("w-5 h-5", classes.primaryText)} />
                 Upcoming Matches
               </CardTitle>
-              <Link href={`/${sport}/my-tournaments`}>
+              <Link href={`/${sport}/tournaments?tab=my-tournaments`}>
                 <Button variant="ghost" size="sm" className="text-muted-foreground hover:text-foreground">
                   View All
                 </Button>
@@ -811,7 +811,7 @@ export default function DashboardPage() {
                 <Play className={cn("w-5 h-5", classes.primaryText)} />
                 Recent Results
               </CardTitle>
-              <Link href={`/${sport}/my-stats`}>
+              <Link href={`/${sport}/stats`}>
                 <Button variant="ghost" size="sm" className="text-muted-foreground hover:text-foreground">
                   View All
                 </Button>
@@ -839,7 +839,7 @@ export default function DashboardPage() {
               <Trophy className={cn("w-5 h-5", classes.primaryText)} />
               Active Tournaments
             </CardTitle>
-            <Link href={`/${sport}/my-tournaments`}>
+            <Link href={`/${sport}/tournaments?tab=my-tournaments`}>
               <Button variant="outline" size="sm">
                 Manage Tournaments
               </Button>
@@ -875,7 +875,7 @@ export default function DashboardPage() {
             <QuickAction
               icon={BarChart3}
               label="My Stats"
-              href={`/${sport}/my-stats`}
+              href={`/${sport}/stats`}
               color="text-blue-500"
               bgColor="bg-blue-500/10"
             />

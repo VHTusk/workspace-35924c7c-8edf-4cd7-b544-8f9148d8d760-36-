@@ -18,10 +18,10 @@ import {
   User,
   Settings,
   LogOut,
-  Trophy,
   Bell,
-  LayoutDashboard,
   Loader2,
+  CheckCircle,
+  Crown,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -33,6 +33,8 @@ interface UserInfo {
   name: string;
   email?: string;
   phone?: string;
+  emailVerified?: boolean;
+  phoneVerified?: boolean;
   photoUrl: string | null;
 }
 
@@ -103,6 +105,11 @@ export function UserMenu({ sport, primaryTextClass, isLoggedIn }: UserMenuProps)
   };
 
   const loginIdentifier = user?.email || user?.phone || "";
+  const identifierVerified = user?.email
+    ? user.emailVerified
+    : user?.phone
+      ? user.phoneVerified
+      : false;
 
   if (!isLoggedIn) {
     return null;
@@ -149,30 +156,27 @@ export function UserMenu({ sport, primaryTextClass, isLoggedIn }: UserMenuProps)
                 {user?.name || "Player"}
               </p>
               {loginIdentifier && (
-                <p className="text-xs leading-none text-muted-foreground">
-                  {loginIdentifier}
-                </p>
+                <div className="flex items-center gap-1 text-xs leading-none text-muted-foreground">
+                  <p className="truncate">{loginIdentifier}</p>
+                  {identifierVerified ? (
+                    <CheckCircle className="h-3.5 w-3.5 flex-shrink-0 text-emerald-500" />
+                  ) : null}
+                </div>
               )}
             </div>
           </DropdownMenuLabel>
           <DropdownMenuSeparator />
           <DropdownMenuGroup>
             <DropdownMenuItem asChild>
-              <Link href={`/${sport}/dashboard`} className="cursor-pointer">
-                <LayoutDashboard className="mr-2 h-4 w-4" />
-                <span>Dashboard</span>
-              </Link>
-            </DropdownMenuItem>
-            <DropdownMenuItem asChild>
               <Link href={`/${sport}/profile`} className="cursor-pointer">
                 <User className="mr-2 h-4 w-4" />
-                <span>Profile</span>
+                <span>My Profile</span>
               </Link>
             </DropdownMenuItem>
             <DropdownMenuItem asChild>
-              <Link href={`/${sport}/my-tournaments`} className="cursor-pointer">
-                <Trophy className="mr-2 h-4 w-4" />
-                <span>My Tournaments</span>
+              <Link href={`/${sport}/subscription`} className="cursor-pointer">
+                <Crown className="mr-2 h-4 w-4" />
+                <span>Subscription</span>
               </Link>
             </DropdownMenuItem>
             <DropdownMenuItem asChild>

@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useParams } from "next/navigation";
+import { useParams, useRouter, useSearchParams } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -20,6 +20,8 @@ import {
   Plus,
   Filter,
   X,
+  ChevronRight,
+  AlertCircle,
 } from "lucide-react";
 import { useState, useEffect, useRef } from "react";
 
@@ -42,6 +44,28 @@ interface Tournament {
   gender: string | null;
   ageMin: number | null;
   ageMax: number | null;
+}
+
+interface MyTournament {
+  id: string;
+  name: string;
+  status: string;
+  startDate: string;
+  endDate: string;
+  location: string;
+  city: string;
+  state: string;
+  type: string;
+  scope: string;
+  maxPlayers: number;
+  registeredPlayers: number;
+  entryFee: number;
+  registrationId: string;
+  registrationStatus: string;
+  registrationDate: string;
+  matchesPlayed?: number;
+  matchesWon?: number;
+  finalRank?: number | null;
 }
 
 const scopeColors: Record<string, string> = {
@@ -81,6 +105,8 @@ const indianStates = [
 
 export default function TournamentsPage() {
   const params = useParams();
+  const router = useRouter();
+  const searchParams = useSearchParams();
   const sport = params.sport as string;
   const isCornhole = sport === "cornhole";
   const sportName = isCornhole ? "Cornhole" : "Darts";
@@ -98,8 +124,18 @@ export default function TournamentsPage() {
   const [userType, setUserType] = useState<"player" | "org" | null>(null);
   const [orgType, setOrgType] = useState<string | null>(null);
   const [orgId, setOrgId] = useState<string | null>(null);
+  const [myTournaments, setMyTournaments] = useState<{
+    upcoming: MyTournament[];
+    active: MyTournament[];
+    completed: MyTournament[];
+  }>({ upcoming: [], active: [], completed: [] });
+  const [myTournamentsLoading, setMyTournamentsLoading] = useState(false);
   const [showFilters, setShowFilters] = useState(false);
   const abortControllerRef = useRef<AbortController | null>(null);
+  const allowedTabs = ["all", "my-tournaments", "upcoming", "completed"];
+  const currentTab = allowedTabs.includes(searchParams.get("tab") || "")
+    ? (searchParams.get("tab") as string)
+    : "all";
 
   // Check if user is authenticated
   useEffect(() => {
@@ -193,6 +229,52 @@ export default function TournamentsPage() {
     };
   }, [sport, statusFilter, scopeFilter, stateFilter, districtFilter, cityFilter, genderFilter, ageCategoryFilter, search]);
 
+  useEffect(() => {
+    if (userType !== "player") {
+      setMyTournaments({ upcoming: [], active: [], completed: [] });
+      return;
+    }
+
+    let cancelled = false;
+    setMyTournamentsLoading(true);
+
+    const fetchMyTournaments = async () => {
+      try {
+        const response = await fetch("/api/player/tournaments", {
+          credentials: "include",
+        });
+
+        if (!response.ok) {
+          setMyTournaments({ upcoming: [], active: [], completed: [] });
+          return;
+        }
+
+        const data = await response.json();
+        if (!cancelled) {
+          setMyTournaments({
+            upcoming: data.upcoming || [],
+            active: data.active || [],
+            completed: data.completed || [],
+          });
+        }
+      } catch {
+        if (!cancelled) {
+          setMyTournaments({ upcoming: [], active: [], completed: [] });
+        }
+      } finally {
+        if (!cancelled) {
+          setMyTournamentsLoading(false);
+        }
+      }
+    };
+
+    fetchMyTournaments();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [userType]);
+
   const filteredTournaments = tournaments.filter((t) => {
     const matchesSearch = t.name.toLowerCase().includes(search.toLowerCase()) ||
       t.location.toLowerCase().includes(search.toLowerCase());
@@ -220,13 +302,12 @@ export default function TournamentsPage() {
   const upcomingTournaments = filteredTournaments.filter(t => 
     t.status === "REGISTRATION_OPEN" || t.status === "REGISTRATION_CLOSED"
   );
-  const activeTournaments = filteredTournaments.filter(t => t.status === "IN_PROGRESS");
   const pastTournaments = filteredTournaments.filter(t => t.status === "COMPLETED");
-
-  // For School/College: Show tab labels that make sense for team participation
-  const canParticipateTournaments = upcomingTournaments; // Can register teams
-  const participatingTournaments = activeTournaments; // Teams currently playing
-  const participatedTournaments = pastTournaments; // Teams played in past
+  const myTournamentItems = [
+    ...myTournaments.upcoming,
+    ...myTournaments.active,
+    ...myTournaments.completed,
+  ];
 
   const clearAllFilters = () => {
     setScopeFilter("all");
@@ -242,6 +323,17 @@ export default function TournamentsPage() {
   const hasActiveFilters = scopeFilter !== "all" || statusFilter !== "all" || 
     stateFilter !== "all" || districtFilter || cityFilter || 
     genderFilter !== "all" || ageCategoryFilter !== "all" || search;
+
+  const handleTabChange = (value: string) => {
+    const params = new URLSearchParams(searchParams.toString());
+    if (value === "all") {
+      params.delete("tab");
+    } else {
+      params.set("tab", value);
+    }
+    const query = params.toString();
+    router.replace(query ? `/${sport}/tournaments?${query}` : `/${sport}/tournaments`);
+  };
 
   return (
     <div className="py-8 px-4">
@@ -490,41 +582,24 @@ export default function TournamentsPage() {
         )}
 
         {/* Tournament Tabs */}
-        <Tabs defaultValue="upcoming" className="space-y-6">
+        <Tabs value={currentTab} onValueChange={handleTabChange} className="space-y-6">
           <TabsList>
-            {isSchoolOrCollege ? (
-              // School/College-specific tabs
-              <>
-                <TabsTrigger value="upcoming" className="gap-2">
-                  <Calendar className="w-4 h-4" />
-                  Can Participate ({canParticipateTournaments.length})
-                </TabsTrigger>
-                <TabsTrigger value="live" className="gap-2">
-                  <Trophy className="w-4 h-4" />
-                  Participating ({participatingTournaments.length})
-                </TabsTrigger>
-                <TabsTrigger value="past" className="gap-2">
-                  <Clock className="w-4 h-4" />
-                  Participated ({participatedTournaments.length})
-                </TabsTrigger>
-              </>
-            ) : (
-              // Standard tabs for players and other orgs
-              <>
-                <TabsTrigger value="upcoming" className="gap-2">
-                  <Calendar className="w-4 h-4" />
-                  Upcoming ({upcomingTournaments.length})
-                </TabsTrigger>
-                <TabsTrigger value="live" className="gap-2">
-                  <Trophy className="w-4 h-4" />
-                  Live ({activeTournaments.length})
-                </TabsTrigger>
-                <TabsTrigger value="past" className="gap-2">
-                  <Clock className="w-4 h-4" />
-                  Past ({pastTournaments.length})
-                </TabsTrigger>
-              </>
-            )}
+            <TabsTrigger value="all" className="gap-2">
+              <Trophy className="w-4 h-4" />
+              All Tournaments ({filteredTournaments.length})
+            </TabsTrigger>
+            <TabsTrigger value="my-tournaments" className="gap-2">
+              <Users className="w-4 h-4" />
+              My Tournaments ({myTournamentItems.length})
+            </TabsTrigger>
+            <TabsTrigger value="upcoming" className="gap-2">
+              <Calendar className="w-4 h-4" />
+              Upcoming ({upcomingTournaments.length})
+            </TabsTrigger>
+            <TabsTrigger value="completed" className="gap-2">
+              <Clock className="w-4 h-4" />
+              Completed ({pastTournaments.length})
+            </TabsTrigger>
           </TabsList>
 
           {loading ? (
@@ -541,6 +616,54 @@ export default function TournamentsPage() {
             </div>
           ) : (
             <>
+              <TabsContent value="all">
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                  {filteredTournaments.map((tournament) => (
+                    <TournamentCard key={tournament.id} tournament={tournament} sport={sport} isSchoolOrCollege={isSchoolOrCollege} />
+                  ))}
+                  {filteredTournaments.length === 0 && (
+                    <div className="col-span-full text-center py-12 text-muted-foreground">
+                      No tournaments found matching your criteria
+                    </div>
+                  )}
+                </div>
+              </TabsContent>
+
+              <TabsContent value="my-tournaments">
+                {userType !== "player" ? (
+                  <div className="rounded-lg border border-border/50 bg-card p-8 text-center">
+                    <p className="text-sm text-muted-foreground">
+                      My Tournaments is available for player registrations inside the current sport.
+                    </p>
+                  </div>
+                ) : myTournamentsLoading ? (
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                    {[1, 2, 3].map((i) => (
+                      <Card key={i} className="bg-gradient-card border-border/50">
+                        <CardContent className="p-6 space-y-3">
+                          <Skeleton className="h-4 w-3/4" />
+                          <Skeleton className="h-4 w-1/2" />
+                          <Skeleton className="h-20 w-full" />
+                        </CardContent>
+                      </Card>
+                    ))}
+                  </div>
+                ) : myTournamentItems.length > 0 ? (
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                    {myTournamentItems.map((tournament) => (
+                      <MyTournamentCard key={tournament.registrationId} tournament={tournament} sport={sport} />
+                    ))}
+                  </div>
+                ) : (
+                  <div className="rounded-lg border border-border/50 bg-card p-8 text-center">
+                    <p className="text-sm text-muted-foreground">You have not joined any tournaments yet.</p>
+                    <Link href={`/${sport}/tournaments`} className="mt-4 inline-flex">
+                      <Button size="sm">Browse Tournaments</Button>
+                    </Link>
+                  </div>
+                )}
+              </TabsContent>
+
               <TabsContent value="upcoming">
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                   {upcomingTournaments.map((tournament) => (
@@ -548,39 +671,20 @@ export default function TournamentsPage() {
                   ))}
                   {upcomingTournaments.length === 0 && (
                     <div className="col-span-full text-center py-12 text-muted-foreground">
-                      {isSchoolOrCollege 
-                        ? "No tournaments available for your teams to participate in"
-                        : "No upcoming tournaments found matching your criteria"}
+                      No upcoming tournaments found matching your criteria
                     </div>
                   )}
                 </div>
               </TabsContent>
 
-              <TabsContent value="live">
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                  {activeTournaments.map((tournament) => (
-                    <TournamentCard key={tournament.id} tournament={tournament} sport={sport} isSchoolOrCollege={isSchoolOrCollege} />
-                  ))}
-                  {activeTournaments.length === 0 && (
-                    <div className="col-span-full text-center py-12 text-muted-foreground">
-                      {isSchoolOrCollege 
-                        ? "Your teams are not currently participating in any tournaments"
-                        : "No live tournaments at the moment"}
-                    </div>
-                  )}
-                </div>
-              </TabsContent>
-
-              <TabsContent value="past">
+              <TabsContent value="completed">
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                   {pastTournaments.map((tournament) => (
                     <TournamentCard key={tournament.id} tournament={tournament} sport={sport} isSchoolOrCollege={isSchoolOrCollege} />
                   ))}
                   {pastTournaments.length === 0 && (
                     <div className="col-span-full text-center py-12 text-muted-foreground">
-                      {isSchoolOrCollege 
-                        ? "Your teams haven't participated in any tournaments yet"
-                        : "No past tournaments found"}
+                      No completed tournaments found
                     </div>
                   )}
                 </div>
@@ -694,5 +798,91 @@ function TournamentCard({ tournament, sport, isSchoolOrCollege = false }: { tour
         </CardContent>
       </Card>
     </Link>
+  );
+}
+
+function MyTournamentCard({ tournament, sport }: { tournament: MyTournament; sport: string }) {
+  const getScopeColor = (scope: string) => {
+    switch (scope) {
+      case "NATIONAL":
+        return "bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-400";
+      case "STATE":
+        return "bg-orange-100 text-orange-800 dark:bg-orange-900/30 dark:text-orange-400";
+      case "DISTRICT":
+        return "bg-cyan-100 text-cyan-800 dark:bg-cyan-900/30 dark:text-cyan-400";
+      case "CITY":
+        return "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400";
+      default:
+        return "bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-300";
+    }
+  };
+
+  return (
+    <Card className="bg-gradient-card border-border/50 hover:border-primary/30 transition-all h-full">
+      <CardContent className="p-5 space-y-3">
+        <div className="flex items-start justify-between gap-3">
+          <div className="min-w-0">
+            <h3 className="truncate text-base font-semibold text-foreground">{tournament.name}</h3>
+            <p className="mt-1 text-sm text-muted-foreground">
+              Registered on {new Date(tournament.registrationDate).toLocaleDateString("en-IN", {
+                day: "numeric",
+                month: "short",
+                year: "numeric",
+              })}
+            </p>
+          </div>
+          <Badge variant="outline" className={getScopeColor(tournament.scope)}>
+            {tournament.scope}
+          </Badge>
+        </div>
+
+        <div className="space-y-2 text-sm text-muted-foreground">
+          <div className="flex items-center gap-2">
+            <Calendar className="h-4 w-4" />
+            <span>{new Date(tournament.startDate).toLocaleDateString("en-IN", {
+              day: "numeric",
+              month: "short",
+              year: "numeric",
+            })}</span>
+          </div>
+          <div className="flex items-center gap-2">
+            <MapPin className="h-4 w-4" />
+            <span>{tournament.city}, {tournament.state}</span>
+          </div>
+          <div className="flex items-center gap-2">
+            <Users className="h-4 w-4" />
+            <span>{tournament.registeredPlayers}/{tournament.maxPlayers} players</span>
+          </div>
+        </div>
+
+        {(tournament.matchesPlayed || tournament.finalRank) ? (
+          <div className="rounded-lg border border-border/50 bg-muted/40 p-3 text-sm">
+            {tournament.matchesPlayed ? (
+              <p className="text-foreground">
+                Matches: <span className="font-medium">{tournament.matchesWon || 0}W</span> /{" "}
+                <span className="font-medium">
+                  {(tournament.matchesPlayed || 0) - (tournament.matchesWon || 0)}L
+                </span>
+              </p>
+            ) : null}
+            {tournament.finalRank ? (
+              <p className="mt-1 text-foreground">Final Rank: <span className="font-medium">#{tournament.finalRank}</span></p>
+            ) : null}
+          </div>
+        ) : null}
+
+        <div className="flex items-center justify-between border-t border-border/40 pt-2">
+          <span className="text-sm text-muted-foreground">
+            Entry: <span className="font-medium text-foreground">INR {tournament.entryFee}</span>
+          </span>
+          <Link href={`/${sport}/tournaments/${tournament.id}`}>
+            <Button variant="ghost" size="sm" className="gap-1">
+              View
+              <ChevronRight className="h-4 w-4" />
+            </Button>
+          </Link>
+        </div>
+      </CardContent>
+    </Card>
   );
 }

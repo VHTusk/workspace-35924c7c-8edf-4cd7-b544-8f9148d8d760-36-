@@ -19,6 +19,7 @@ export async function PUT(request: NextRequest) {
       lastName,
       email,
       phone,
+      age,
       dob,
       gender,
       photoUrl,
@@ -31,7 +32,10 @@ export async function PUT(request: NextRequest) {
       emergencyContactName,
       emergencyContactPhone,
       emergencyContactRelation,
+      idDocumentUrl,
+      idDocumentType,
       playerOrgType,
+      lockPersonalDetails,
     } = body;
 
     // Validation errors
@@ -63,6 +67,13 @@ export async function PUT(request: NextRequest) {
       errors.bio = "Bio must be 500 characters or less";
     }
 
+    if (age !== undefined && age !== null && age !== "") {
+      const parsedAge = Number(age);
+      if (!Number.isInteger(parsedAge) || parsedAge < 5 || parsedAge > 120) {
+        errors.age = "Age must be a whole number between 5 and 120";
+      }
+    }
+
     if (Object.keys(errors).length > 0) {
       return NextResponse.json({ error: "Validation failed", errors }, { status: 400 });
     }
@@ -71,6 +82,29 @@ export async function PUT(request: NextRequest) {
     const currentUser = await db.user.findUnique({
       where: { id: userId },
     });
+
+    const lockedPersonalFields = [
+      firstName,
+      lastName,
+      email,
+      phone,
+      age,
+      dob,
+      gender,
+      bio,
+      idDocumentUrl,
+      idDocumentType,
+    ];
+
+    if (currentUser?.identityLocked && lockedPersonalFields.some((value) => value !== undefined)) {
+      return NextResponse.json(
+        {
+          error: "Personal details are locked. Please contact ValorHive management for any changes.",
+          code: "PERSONAL_DETAILS_LOCKED",
+        },
+        { status: 403 },
+      );
+    }
 
     if (email && currentUser?.email !== email) {
       const existingUser = await db.user.findFirst({
@@ -93,8 +127,26 @@ export async function PUT(request: NextRequest) {
 
     if (firstName !== undefined) updateData.firstName = firstName;
     if (lastName !== undefined) updateData.lastName = lastName;
-    if (email !== undefined) updateData.email = email;
-    if (phone !== undefined) updateData.phone = phone;
+    if (email !== undefined) {
+      updateData.email = email;
+      if (currentUser?.email !== email) {
+        updateData.emailVerified = false;
+        updateData.emailVerifiedAt = null;
+        updateData.emailVerificationToken = null;
+        updateData.emailVerificationSentAt = null;
+      }
+    }
+    if (phone !== undefined) {
+      updateData.phone = phone;
+      if (currentUser?.phone !== phone) {
+        updateData.verified = false;
+        updateData.verifiedAt = null;
+      }
+    }
+    if (age !== undefined) {
+      updateData.age =
+        age === null || age === "" ? null : Number(age);
+    }
     if (dob !== undefined && dob !== "") updateData.dob = new Date(dob);
     if (gender !== undefined) updateData.gender = gender;
     if (photoUrl !== undefined) updateData.photoUrl = photoUrl;
@@ -107,7 +159,10 @@ export async function PUT(request: NextRequest) {
     if (emergencyContactName !== undefined) updateData.emergencyContactName = emergencyContactName;
     if (emergencyContactPhone !== undefined) updateData.emergencyContactPhone = emergencyContactPhone;
     if (emergencyContactRelation !== undefined) updateData.emergencyContactRelation = emergencyContactRelation;
+    if (idDocumentUrl !== undefined) updateData.idDocumentUrl = idDocumentUrl || null;
+    if (idDocumentType !== undefined) updateData.idDocumentType = idDocumentType || null;
     if (playerOrgType !== undefined) updateData.playerOrgType = playerOrgType;
+    if (lockPersonalDetails === true) updateData.identityLocked = true;
 
     const updatedUser = await db.user.update({
       where: { id: userId },
@@ -123,8 +178,14 @@ export async function PUT(request: NextRequest) {
         lastName: updatedUser.lastName,
         email: updatedUser.email,
         phone: updatedUser.phone,
+        age: updatedUser.age,
+        identityLocked: updatedUser.identityLocked,
+        emailVerified: updatedUser.emailVerified,
+        phoneVerified: updatedUser.verified,
         photoUrl: updatedUser.photoUrl,
         bio: updatedUser.bio,
+        idDocumentUrl: updatedUser.idDocumentUrl,
+        idDocumentType: updatedUser.idDocumentType,
         address: updatedUser.address,
         city: updatedUser.city,
         state: updatedUser.state,

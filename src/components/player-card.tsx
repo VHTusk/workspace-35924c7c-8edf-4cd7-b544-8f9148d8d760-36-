@@ -14,6 +14,8 @@ interface PlayerCardProps {
     lastName: string;
     email?: string | null;
     phone?: string | null;
+    age?: number | null;
+    gender?: string | null;
     photoUrl?: string | null;
     visiblePoints: number;
     hiddenElo?: number;
@@ -122,6 +124,20 @@ export const PlayerCard = forwardRef<HTMLDivElement, PlayerCardProps>(
                 <p className="text-slate-500 text-xs mt-1">
                   {player.district}, {player.state}
                 </p>
+              )}
+              {(player.age || player.gender) && (
+                <div className="mt-2 flex flex-wrap gap-2">
+                  {player.age ? (
+                    <Badge className="border-0 bg-white/10 text-slate-100">
+                      {player.age} yrs
+                    </Badge>
+                  ) : null}
+                  {player.gender ? (
+                    <Badge className="border-0 bg-white/10 text-slate-100">
+                      {player.gender.charAt(0) + player.gender.slice(1).toLowerCase()}
+                    </Badge>
+                  ) : null}
+                </div>
               )}
             </div>
           </div>

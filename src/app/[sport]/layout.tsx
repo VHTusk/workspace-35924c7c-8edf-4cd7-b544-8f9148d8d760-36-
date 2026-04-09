@@ -15,15 +15,6 @@ export default async function SportLayout({
   const primaryBtnClass = isCornhole ? "bg-green-600 hover:bg-green-700" : "bg-teal-600 hover:bg-teal-700";
   const sportBadgeClass = isCornhole ? "border-green-500 text-green-600" : "border-teal-500 text-teal-600";
 
-  // Pass icon names as strings, not component references
-  const navigation = [
-    { icon: "Home", label: "Home", href: `/${sport}` },
-    { icon: "Trophy", label: "Tournaments", href: `/${sport}/tournaments` },
-    { icon: "TrendingUp", label: "Leaderboard", href: `/${sport}/leaderboard` },
-    { icon: "ShoppingBag", label: "Store", href: `/${sport}/store` },
-    { icon: "BookOpen", label: "Rules", href: `/${sport}/rules` },
-  ];
-
   return (
     <div className={`flex min-h-screen flex-col ${themeClass}`}>
       {/* Header with client-side auth */}
@@ -32,7 +23,6 @@ export default async function SportLayout({
         sportName={sportName}
         primaryBtnClass={primaryBtnClass}
         sportBadgeClass={sportBadgeClass}
-        navigation={navigation}
       />
 
       {/* Main Content */}

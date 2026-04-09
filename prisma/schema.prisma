@@ -83,6 +83,25 @@ enum SubscriptionStatus {
   EXPIRED
 }
 
+enum UserSportEnrollmentStatus {
+  ACTIVE
+  INACTIVE
+}
+
+enum UserSportEnrollmentSource {
+  MANUAL_JOIN
+  TOURNAMENT_REGISTRATION
+  REFERRAL
+  MEMBERSHIP_PURCHASE
+  ADMIN_ADD
+  ACCOUNT_REGISTRATION
+}
+
+enum ReferralType {
+  PLATFORM
+  SPORT_SPECIFIC
+}
+
 enum TournamentType {
   INDIVIDUAL
   INTER_ORG
@@ -614,6 +633,7 @@ model User {
   // Profile fields
   firstName     String
   lastName      String
+  age           Int?
   dob           DateTime?
   gender        GenderCategory?
 
@@ -716,6 +736,7 @@ model User {
   // Relations
   sessions              Session[]
   subscriptions         Subscription[]
+  sportEnrollments      UserSportEnrollment[]
   tournamentRegs        TournamentRegistration[]
   matchesAsA            Match[]           @relation("PlayerA")
   matchesAsB            Match[]           @relation("PlayerB")
@@ -2147,6 +2168,22 @@ model Subscription {
   @@index([status])
 }
 
+model UserSportEnrollment {
+  id        String                    @id @default(cuid())
+  userId    String
+  sport     SportType
+  status    UserSportEnrollmentStatus @default(ACTIVE)
+  source    UserSportEnrollmentSource @default(ACCOUNT_REGISTRATION)
+  joinedAt  DateTime                  @default(now())
+  createdAt DateTime                  @default(now())
+  updatedAt DateTime                  @updatedAt
+
+  user      User                      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, sport])
+  @@index([sport, status])
+}
+
 model OrgSubscription {
   id              String            @id @default(cuid())
   orgId           String            @unique
@@ -2683,10 +2720,12 @@ model Referral {
   id            String    @id @default(cuid())
   referrerId    String    // User who referred
   refereeId     String    // User who was referred
-  sport         SportType
+  sport         SportType?
+  referralType  ReferralType @default(SPORT_SPECIFIC)
   code          String    // Referral code used
   status        String    @default("PENDING") // PENDING, COMPLETED, REWARDED
   rewardPoints  Int       @default(0)
+  conversionEvent String?
   createdAt     DateTime  @default(now())
   completedAt   DateTime?
 
@@ -2696,6 +2735,7 @@ model Referral {
   @@unique([refereeId, sport]) // Each user can only be referred once per sport
   @@index([referrerId])
   @@index([code])
+  @@index([referralType, sport])
 }
 
 // Organization Statistics (aggregated)

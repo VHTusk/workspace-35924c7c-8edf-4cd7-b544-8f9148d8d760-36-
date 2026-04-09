@@ -1,5 +1,6 @@
 import { db } from '@/lib/db';
 import { SportType } from '@prisma/client';
+import { buildLeaderboardEligibleUserWhere } from '@/lib/user-sport';
 
 /**
  * Update player stats after a match
@@ -78,11 +79,7 @@ export async function updatePlayerStats(
  */
 export async function getPlayerRank(userId: string, sport: SportType): Promise<number | null> {
   const allUsers = await db.user.findMany({
-    where: { 
-      sport,
-      isActive: true,
-      showOnLeaderboard: true,
-    },
+    where: buildLeaderboardEligibleUserWhere(sport, { requirePublic: true }),
     orderBy: { visiblePoints: 'desc' },
     select: { id: true },
   });

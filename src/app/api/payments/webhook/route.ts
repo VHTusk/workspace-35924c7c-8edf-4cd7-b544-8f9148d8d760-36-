@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 import { verifyWebhookSignature } from '@/lib/payments/razorpay';
-import { SubscriptionStatus, SportType, WebhookEventStatus, RegistrationStatus } from '@prisma/client';
+import { SubscriptionStatus, SportType, UserSportEnrollmentSource, WebhookEventStatus, RegistrationStatus } from '@prisma/client';
 import {
   checkIdempotency,
   storeWebhookEvent,
@@ -9,6 +9,7 @@ import {
 } from '@/lib/webhook-retry';
 import { storeUPIDetailsFromWebhook, deriveBankFromVPA } from '@/lib/payments/upi-reconciliation';
 import { log, paymentLog } from '@/lib/logger';
+import { ensureUserSportEnrollment } from '@/lib/user-sport';
 
 /**
  * Razorpay Webhook Handler with Idempotency & Retry
@@ -161,6 +162,13 @@ async function handlePaymentCaptured(payload: {
     const endDate = new Date();
     endDate.setFullYear(endDate.getFullYear() + 1);
 
+    await ensureUserSportEnrollment(
+      db,
+      ledgerEntry.userId,
+      sport,
+      UserSportEnrollmentSource.MEMBERSHIP_PURCHASE,
+    );
+
     const existingSubscription = await db.subscription.findFirst({
       where: {
         userId: ledgerEntry.userId,
@@ -227,6 +235,13 @@ async function handlePaymentCaptured(payload: {
 
   // Handle individual tournament entry payment
   if (paymentType === 'TOURNAMENT_ENTRY' && ledgerEntry.userId) {
+    await ensureUserSportEnrollment(
+      db,
+      ledgerEntry.userId,
+      sport,
+      UserSportEnrollmentSource.TOURNAMENT_REGISTRATION,
+    );
+
     // Get the notes from Razorpay order
     const notes = payment.notes || {};
     const tournamentId = notes.tournamentId;

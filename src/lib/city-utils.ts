@@ -5,6 +5,7 @@
 
 import { db } from '@/lib/db';
 import { SportType } from '@prisma/client';
+import { buildLeaderboardEligibleUserWhere } from '@/lib/user-sport';
 
 // Generate unique city ID
 export function generateCityId(cityName: string, state: string, sport: SportType): string {
@@ -175,11 +176,9 @@ export async function getCityLeaderboard(
   // Get all players in this city with their ratings
   const players = await db.user.findMany({
     where: {
-      sport,
+      ...buildLeaderboardEligibleUserWhere(sport, { requirePublic: true }),
       city: city.cityName,
       state: city.state,
-      isActive: true,
-      showOnLeaderboard: true,
     },
     include: {
       rating: true,

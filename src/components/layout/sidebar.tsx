@@ -9,7 +9,6 @@ import {
   Award,
   User,
   Settings,
-  FileText,
   PlusCircle,
   Users,
   Building2,
@@ -24,6 +23,7 @@ import {
   LayoutDashboard,
   Calendar,
   ArrowLeft,
+  CheckCircle,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -50,6 +50,10 @@ interface UserData {
   firstName: string;
   lastName: string;
   name: string;
+  email?: string;
+  phone?: string;
+  emailVerified?: boolean;
+  phoneVerified?: boolean;
   photoUrl: string | null;
   score: number;
   wins: number;
@@ -93,6 +97,12 @@ function SidebarContent({
     : userType === "player" ? "P" : userType === "admin" ? "A" : "O";
   const isSubscribed = user?.isSubscribed || false;
   const subscriptionPlan = user?.subscriptionPlan || null;
+  const loginIdentifier = user?.email || user?.phone || null;
+  const identifierVerified = user?.email
+    ? user.emailVerified
+    : user?.phone
+      ? user.phoneVerified
+      : false;
   const profileCompletion =
     userType === "player" && typeof user?.profileCompletion === "number"
       ? Math.max(0, Math.min(100, user.profileCompletion))
@@ -121,6 +131,14 @@ function SidebarContent({
               </Avatar>
               <div className="flex-1 min-w-0">
                 <p className="font-semibold truncate">{displayName}</p>
+                {loginIdentifier && (
+                  <div className="mt-0.5 flex items-center gap-1 text-xs text-white/80">
+                    <p className="truncate">{loginIdentifier}</p>
+                    {identifierVerified ? (
+                      <CheckCircle className="h-3.5 w-3.5 flex-shrink-0 text-emerald-300" />
+                    ) : null}
+                  </div>
+                )}
                 <div className="flex items-center gap-1 mt-0.5">
                   {isSubscribed ? (
                     <Badge className={cn("text-[10px] px-2 py-0.5", subscriptionBadgeClass)}>
@@ -203,7 +221,7 @@ function SidebarContent({
                 >
                   <item.icon className={cn("w-5 h-5", isActive ? primaryTextClass : "text-muted-foreground")} />
                   {item.label}
-                  {item.label === "My Profile" && profileCompletion !== null && profileCompletion < 100 && (
+                  {item.label === "Profile" && profileCompletion !== null && profileCompletion < 100 && (
                     <span className="ml-auto rounded-full bg-amber-100 px-2 py-0.5 text-[11px] font-semibold text-amber-800">
                       {profileCompletion}%
                     </span>
@@ -211,7 +229,7 @@ function SidebarContent({
                   {item.hasIndicator && (
                     <span
                       className={cn(
-                        item.label === "My Profile" && profileCompletion !== null && profileCompletion < 100
+                        item.label === "Profile" && profileCompletion !== null && profileCompletion < 100
                           ? "ml-2"
                           : "ml-auto",
                         "w-2.5 h-2.5 rounded-full",
@@ -261,17 +279,18 @@ export default function Sidebar({ userType = "player" }: SidebarProps) {
   const primaryTextClass = isCornhole ? "text-green-600" : "text-teal-600";
   const primaryBgClass = isCornhole ? "bg-green-50 dark:bg-green-950/30" : "bg-teal-50 dark:bg-teal-950/30";
 
-  // Player menu items - cleaned and reordered by importance
+  // Player menu items grouped by intent
   const playerMenuItems: MenuItem[] = [
-    { icon: Trophy, label: "My Tournaments", href: `/${sport}/my-tournaments` },
-    { icon: Users, label: "My Teams", href: `/${sport}/teams` },
-    { icon: BarChart3, label: "My Stats", href: `/${sport}/stats` },
-    { icon: Award, label: "Leaderboard", href: `/${sport}/leaderboard` },
-    { icon: Zap, label: "Challenger Mode", href: `/${sport}/dashboard/cities` },
-    { icon: User, label: "My Profile", href: `/${sport}/profile` },
-    { icon: CreditCard, label: "Subscription", href: `/${sport}/subscription`, hasIndicator: true },
-    { icon: Gift, label: "Referrals", href: `/${sport}/referrals` },
-    { icon: Settings, label: "Settings", href: `/${sport}/settings` },
+    { icon: LayoutDashboard, label: "Dashboard", href: `/${sport}/dashboard`, category: "Play" },
+    { icon: Trophy, label: "Tournaments", href: `/${sport}/tournaments`, category: "Play" },
+    { icon: Users, label: "Teams", href: `/${sport}/teams`, category: "Play" },
+    { icon: Zap, label: "Challenger Mode", href: `/${sport}/dashboard/cities`, category: "Play" },
+    { icon: BarChart3, label: "My Stats", href: `/${sport}/stats`, category: "Performance" },
+    { icon: Award, label: "Leaderboard", href: `/${sport}/leaderboard`, category: "Performance" },
+    { icon: Gift, label: "Referrals", href: `/${sport}/referrals`, category: "Growth" },
+    { icon: User, label: "Profile", href: `/${sport}/profile`, category: "Account" },
+    { icon: CreditCard, label: "Subscription", href: `/${sport}/subscription`, category: "Account", hasIndicator: true },
+    { icon: Settings, label: "Settings", href: `/${sport}/settings`, category: "Account" },
   ];
 
   // Org menu items - cleaned and reordered by importance
@@ -315,15 +334,16 @@ export default function Sidebar({ userType = "player" }: SidebarProps) {
           const response = await fetch("/api/org/me", { credentials: "include" });
           if (response.ok) {
             const data = await response.json();
-            setUser({
-              id: data.id,
-              firstName: data.name?.split(' ')[0] || '',
-              lastName: data.name?.split(' ').slice(1).join(' ') || '',
-              name: data.name,
-              photoUrl: null,
-              score: data.totalPoints || 0,
-              wins: 0,
-              followersCount: 0,
+              setUser({
+                id: data.id,
+                firstName: data.name?.split(' ')[0] || '',
+                lastName: data.name?.split(' ').slice(1).join(' ') || '',
+                name: data.name,
+                email: data.email,
+                photoUrl: null,
+                score: data.totalPoints || 0,
+                wins: 0,
+                followersCount: 0,
               followingCount: 0,
               isSubscribed: data.isSubscribed || false,
               subscriptionPlan: data.isSubscribed ? "Pro" : null,

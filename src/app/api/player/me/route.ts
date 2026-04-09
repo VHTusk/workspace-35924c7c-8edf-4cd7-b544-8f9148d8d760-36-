@@ -1,18 +1,39 @@
 import { NextRequest, NextResponse } from "next/server";
 import { validateSessionForSport } from "@/lib/session";
 import { db } from "@/lib/db";
+import { SportType, UserSportEnrollmentSource } from "@prisma/client";
+import { ensureUserSportEnrollment } from "@/lib/user-sport";
 
 const requiredProfileFields = [
   { key: "firstName", label: "First Name" },
   { key: "lastName", label: "Last Name" },
   { key: "email", label: "Email" },
   { key: "phone", label: "Phone" },
-  { key: "dob", label: "Date of Birth" },
+  { key: "age", label: "Age" },
   { key: "gender", label: "Gender" },
   { key: "state", label: "State" },
   { key: "district", label: "District" },
   { key: "pinCode", label: "PIN Code" },
 ];
+
+function getAgeFromDob(dob: Date | null): number | null {
+  if (!dob) {
+    return null;
+  }
+
+  const today = new Date();
+  let age = today.getFullYear() - dob.getFullYear();
+  const monthDifference = today.getMonth() - dob.getMonth();
+
+  if (
+    monthDifference < 0 ||
+    (monthDifference === 0 && today.getDate() < dob.getDate())
+  ) {
+    age -= 1;
+  }
+
+  return age >= 0 ? age : null;
+}
 
 /**
  * Get authenticated player data
@@ -55,6 +76,7 @@ export async function GET(request: NextRequest) {
 
     const session = validation.session!;
     const userId = session.userId!;
+    const currentSport = expectedSport.toUpperCase() as SportType;
 
     // Get full user data with relations
     const user = await db.user.findUnique({
@@ -62,7 +84,7 @@ export async function GET(request: NextRequest) {
       include: {
         rating: true,
         subscriptions: {
-          where: { status: "ACTIVE" },
+          where: { status: "ACTIVE", sport: currentSport },
           orderBy: { createdAt: "desc" },
           take: 1,
         },
@@ -82,13 +104,22 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: "User not found" }, { status: 404 });
     }
 
+    await ensureUserSportEnrollment(
+      db,
+      user.id,
+      currentSport,
+      UserSportEnrollmentSource.ACCOUNT_REGISTRATION,
+    );
+
+    const resolvedAge = user.age ?? getAgeFromDob(user.dob);
+
     // Calculate profile completion
-    const userData: Record<string, string | null | undefined> = {
+    const userData: Record<string, string | number | null | undefined> = {
       firstName: user.firstName,
       lastName: user.lastName,
       email: user.email,
       phone: user.phone,
-      dob: user.dob ? user.dob.toISOString() : null,
+      age: resolvedAge,
       gender: user.gender,
       state: user.state,
       district: user.district,
@@ -115,10 +146,10 @@ export async function GET(request: NextRequest) {
     // Get follower and following counts
     const [followersCount, followingCount] = await Promise.all([
       db.userFollow.count({
-        where: { followingId: user.id, sport: user.sport },
+        where: { followingId: user.id, sport: currentSport },
       }),
       db.userFollow.count({
-        where: { followerId: user.id, sport: user.sport },
+        where: { followerId: user.id, sport: currentSport },
       }),
     ]);
 
@@ -130,8 +161,12 @@ export async function GET(request: NextRequest) {
       name: `${user.firstName} ${user.lastName}`,
       email: user.email,
       phone: user.phone,
+      age: resolvedAge,
       dob: user.dob,
       gender: user.gender,
+      identityLocked: user.identityLocked,
+      emailVerified: user.emailVerified,
+      phoneVerified: user.verified,
       photoUrl: user.photoUrl,
       bio: user.bio,
       address: user.address,
@@ -139,7 +174,7 @@ export async function GET(request: NextRequest) {
       state: user.state,
       district: user.district,
       pinCode: user.pinCode,
-      sport: user.sport,
+      sport: currentSport,
       // Emergency contact
       emergencyContactName: user.emergencyContactName,
       emergencyContactPhone: user.emergencyContactPhone,

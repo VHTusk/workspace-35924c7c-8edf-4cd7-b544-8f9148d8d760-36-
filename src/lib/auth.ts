@@ -1,8 +1,16 @@
 // Authentication utilities for VALORHIVE
 import { db } from '@/lib/db';
 import { v4 as uuidv4 } from 'uuid';
-import { SportType, Role, AccountType, AccountType as AccountTypeEnum } from '@prisma/client';
+import {
+  SportType,
+  Role,
+  AccountType,
+  AccountType as AccountTypeEnum,
+  ReferralType,
+  UserSportEnrollmentSource,
+} from '@prisma/client';
 import { NextRequest } from 'next/server';
+import { ensureUserSportEnrollment } from '@/lib/user-sport';
 
 // Type for ReadonlyRequestCookies (from next/headers)
 type ReadonlyRequestCookies = {
@@ -232,6 +240,13 @@ export async function createUser(data: {
       },
     });
 
+    await ensureUserSportEnrollment(
+      tx,
+      user.id,
+      data.sport,
+      UserSportEnrollmentSource.ACCOUNT_REGISTRATION,
+    );
+
     // Create notification preferences
     await tx.notificationPreference.create({
       data: {
@@ -246,6 +261,7 @@ export async function createUser(data: {
           referrerId,
           refereeId: user.id,
           sport: data.sport,
+          referralType: ReferralType.SPORT_SPECIFIC,
           code: data.referredByCode!,
         },
       });

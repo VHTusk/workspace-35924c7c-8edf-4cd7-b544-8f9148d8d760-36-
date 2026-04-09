@@ -138,13 +138,14 @@ export async function GET(request: NextRequest) {
 
     // Get tournament wins (1st place)
     const tournamentsWon = await db.tournamentResult.count({
-      where: { userId, rank: 1 },
+      where: { userId, sport, rank: 1 },
     })
 
     // Get podium finishes (top 3)
     const podiumFinishes = await db.tournamentResult.count({
       where: {
         userId,
+        sport,
         rank: { lte: 3 },
       },
     })
@@ -204,6 +205,7 @@ export async function GET(request: NextRequest) {
     // Single query to get all matches in the last 6 months
     const historicMatches = await db.match.findMany({
       where: {
+        sport,
         OR: [{ playerAId: userId }, { playerBId: userId }],
         playedAt: { gte: sixMonthsAgo },
       },
@@ -294,6 +296,7 @@ export async function GET(request: NextRequest) {
     // Get total match count
     const totalMatches = await db.match.count({
       where: {
+        sport,
         OR: [{ playerAId: userId }, { playerBId: userId }],
       },
     })

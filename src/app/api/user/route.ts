@@ -17,6 +17,7 @@ export async function GET(request: NextRequest) {
     }
 
     const user = session.user;
+    const currentSport = session.sport;
 
     // Get player rating
     const rating = await db.playerRating.findUnique({
@@ -29,6 +30,7 @@ export async function GET(request: NextRequest) {
         userId: user.id,
         status: 'CONFIRMED',
         tournament: {
+          sport: currentSport,
           startDate: { gte: new Date() },
           status: { in: ['REGISTRATION_OPEN', 'REGISTRATION_CLOSED', 'BRACKET_GENERATED', 'IN_PROGRESS'] },
         },
@@ -43,6 +45,7 @@ export async function GET(request: NextRequest) {
     // Get recent matches
     const recentMatches = await db.match.findMany({
       where: {
+        sport: currentSport,
         OR: [
           { playerAId: user.id },
           { playerBId: user.id },
@@ -87,6 +90,7 @@ export async function GET(request: NextRequest) {
     const subscription = await db.subscription.findFirst({
       where: {
         userId: user.id,
+        sport: currentSport,
         status: 'ACTIVE',
       },
       orderBy: { endDate: 'desc' },
@@ -106,7 +110,7 @@ export async function GET(request: NextRequest) {
         lastName: user.lastName,
         city: user.city,
         state: user.state,
-        sport: user.sport,
+        sport: currentSport,
         tier,
         elo: Math.round(user.hiddenElo),
         points: user.visiblePoints,

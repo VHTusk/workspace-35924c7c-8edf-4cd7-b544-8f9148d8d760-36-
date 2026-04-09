@@ -14,6 +14,8 @@ import { toast } from 'sonner';
 
 interface ReferralData {
   referralCode: string;
+  sport: string;
+  referralType: string;
   totalReferrals: number;
   completedReferrals: number;
   pendingReferrals: number;
@@ -24,8 +26,11 @@ interface ReferralData {
       firstName: string;
       lastName: string;
     };
+    sport: string | null;
+    referralType: string;
     status: string;
     rewardPoints: number;
+    conversionEvent?: string | null;
     createdAt: string;
     completedAt: string | null;
   }>;
@@ -50,7 +55,7 @@ export default function ReferralsPage() {
 
   const fetchReferrals = async () => {
     try {
-      const res = await fetch('/api/referrals');
+      const res = await fetch(`/api/referrals?sport=${sport.toUpperCase()}&referralType=SPORT_SPECIFIC`);
       const responseData = await res.json();
       if (res.ok) {
         setData(responseData);

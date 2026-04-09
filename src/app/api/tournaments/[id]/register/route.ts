@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
-import { RegistrationStatus, TournamentType, TournamentStatus, SportType, AccountTier, AbusePattern, AbuseSeverity, TournamentScope } from '@prisma/client';
+import { RegistrationStatus, TournamentType, TournamentStatus, SportType, AccountTier, AbusePattern, AbuseSeverity, TournamentScope, UserSportEnrollmentSource } from '@prisma/client';
 import { canRegisterForTournament } from '@/lib/profile-completeness';
 import { createRazorpayOrder } from '@/lib/payments/razorpay';
 import { v4 as uuidv4 } from 'uuid';
@@ -29,6 +29,7 @@ import {
   getUserAgent,
   shouldBlockAction,
 } from '@/lib/abuse-detection';
+import { ensureUserSportEnrollment } from '@/lib/user-sport';
 
 // Player registers for a tournament (with IDEMPOTENCY PROTECTION)
 // Returns payment order if entry fee > 0
@@ -41,7 +42,7 @@ export async function POST(
     if (!auth) {
       return NextResponse.json({ error: 'Not authenticated' }, { status: 401 });
     }
-    const { user } = auth;
+    const { user, session } = auth;
 
     const { id: tournamentId } = await params;
 
@@ -120,7 +121,7 @@ export async function POST(
     }
 
     // Check sport matches
-    if (tournament.sport !== user.sport) {
+    if (tournament.sport !== session.sport) {
       return NextResponse.json(
         { error: 'This tournament is for a different sport' },
         { status: 400 }
@@ -268,6 +269,13 @@ export async function POST(
     const amountInPaise = entryFee * 100; // Convert to paise
 
     if (existingRegistration?.status === RegistrationStatus.PENDING && entryFee > 0) {
+      await ensureUserSportEnrollment(
+        db,
+        user.id,
+        tournament.sport,
+        UserSportEnrollmentSource.TOURNAMENT_REGISTRATION,
+      );
+
       const receipt = `REG_${tournamentId.slice(0, 8)}_${Date.now()}_${uuidv4().slice(0, 8)}`;
 
       const order = await createRazorpayOrder({
@@ -335,6 +343,13 @@ export async function POST(
 
       // If no entry fee, create registration directly
       if (entryFee === 0) {
+        await ensureUserSportEnrollment(
+          tx,
+          user.id,
+          tournament.sport,
+          UserSportEnrollmentSource.TOURNAMENT_REGISTRATION,
+        );
+
         const registration = await tx.tournamentRegistration.create({
           data: {
             tournamentId,
@@ -361,6 +376,13 @@ export async function POST(
 
       // If entry fee > 0, create pending registration
       // Payment order will be created after transaction
+      await ensureUserSportEnrollment(
+        tx,
+        user.id,
+        tournament.sport,
+        UserSportEnrollmentSource.TOURNAMENT_REGISTRATION,
+      );
+
       const registration = await tx.tournamentRegistration.create({
         data: {
           tournamentId,

@@ -24,6 +24,8 @@ interface PlayerData {
   lastName: string;
   email?: string | null;
   phone?: string | null;
+  age?: number | null;
+  gender?: string | null;
   photoUrl?: string | null;
   visiblePoints: number;
   hiddenElo: number;
@@ -62,7 +64,7 @@ export default function PlayerCardPage() {
 
   const fetchPlayerData = async () => {
     try {
-      const response = await fetch("/api/player/me");
+      const response = await fetch(`/api/player/me?sport=${sport.toUpperCase()}`);
       if (!response.ok) {
         throw new Error("Failed to fetch player data");
       }

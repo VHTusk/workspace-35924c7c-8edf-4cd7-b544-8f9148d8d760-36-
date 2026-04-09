@@ -3,6 +3,7 @@ import { SportType } from '@prisma/client';
 import { db } from '@/lib/db';
 import { getCDNUrl } from '@/lib/cdn-url';
 import { getEloTier } from '@/lib/auth';
+import { buildLeaderboardEligibleUserWhere } from '@/lib/user-sport';
 
 const SUPPORTED_SPORTS = new Set<SportType>(['CORNHOLE', 'DARTS']);
 
@@ -73,12 +74,7 @@ export async function GET(
       where: { followerId: id, sport },
     });
     const rankingsPromise = db.user.findMany({
-      where: {
-        sport,
-        isActive: true,
-        isAnonymized: false,
-        showOnLeaderboard: true,
-      },
+      where: buildLeaderboardEligibleUserWhere(sport, { requirePublic: true }),
       orderBy: { visiblePoints: 'desc' },
       select: { id: true },
     });

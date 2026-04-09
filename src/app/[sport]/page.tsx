@@ -8,6 +8,7 @@ import { SportAuthOverlay } from "@/components/auth/sport-auth-overlay";
 import { db } from "@/lib/db";
 import { cn } from "@/lib/utils";
 import { SportType } from "@prisma/client";
+import { buildLeaderboardEligibleUserWhere } from "@/lib/user-sport";
 import {
   ArrowRight,
   Award,
@@ -131,11 +132,7 @@ export default async function SportHomePage({ params, searchParams }: SportPageP
   const topPlayers = await (async () => {
     try {
       return await db.user.findMany({
-        where: {
-          sport: sportType,
-          showOnLeaderboard: true,
-          isActive: true,
-        },
+        where: buildLeaderboardEligibleUserWhere(sportType, { requirePublic: true }),
         orderBy: { visiblePoints: "desc" },
         take: 5,
         select: {

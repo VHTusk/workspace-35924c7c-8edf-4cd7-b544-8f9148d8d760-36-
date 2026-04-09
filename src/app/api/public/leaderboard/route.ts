@@ -17,6 +17,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 import { SportType } from '@prisma/client';
 import { getEloTier } from '@/lib/auth';
+import { buildLeaderboardEligibleUserWhere } from '@/lib/user-sport';
 import {
   cacheResponse,
   generateCacheKeyFromParts,
@@ -63,16 +64,17 @@ export async function GET(request: NextRequest) {
       async () => {
         const skip = (page - 1) * limit;
 
-        const where: Record<string, unknown> = {
-          sport,
-          isActive: true,
-          isAnonymized: false,
-          showOnLeaderboard: true,
-        };
+        const where = buildLeaderboardEligibleUserWhere(sport, { requirePublic: true });
 
         // Filter by location based on scope
         if (scope && scope !== 'national' && location) {
-          where[scope.toLowerCase()] = location;
+          if (scope.toLowerCase() === 'district') {
+            where.district = location;
+          } else if (scope.toLowerCase() === 'state') {
+            where.state = location;
+          } else if (scope.toLowerCase() === 'city') {
+            where.city = location;
+          }
         }
 
         if (search) {
@@ -114,17 +116,14 @@ export async function GET(request: NextRequest) {
         // Get stats for SEO
         const activeThisMonth = await db.user.count({
           where: {
-            sport,
-            isActive: true,
-            isAnonymized: false,
-            showOnLeaderboard: true,
+            ...buildLeaderboardEligibleUserWhere(sport, { requirePublic: true }),
             updatedAt: { gte: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000) },
           },
         });
 
         // Get top player for meta
         const topPlayer = await db.user.findFirst({
-          where: { sport, isActive: true, showOnLeaderboard: true },
+          where: buildLeaderboardEligibleUserWhere(sport, { requirePublic: true }),
           orderBy: { visiblePoints: 'desc' },
           select: { firstName: true, lastName: true, city: true }
         });
