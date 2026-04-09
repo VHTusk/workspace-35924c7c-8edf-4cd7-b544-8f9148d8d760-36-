@@ -1303,7 +1303,7 @@ export default function ProfilePage() {
                 <Alert className="border-amber-200 bg-amber-50 text-amber-900 dark:border-amber-800 dark:bg-amber-950/30 dark:text-amber-100">
                   <Shield className="h-4 w-4" />
                   <AlertDescription>
-                    Please use your real legal information. These details may be required to verify eligibility and claim tournament prize money. Your personal details will be locked the first time you join a tournament, and later edits will require ValorHive management support.
+                Use real details for eligibility and prize claims. This section locks after your first tournament. Later edits need management approval.
                   </AlertDescription>
                 </Alert>
 
@@ -1594,7 +1594,7 @@ export default function ProfilePage() {
                     Address Information
                   </CardTitle>
                   <CardDescription>
-                    Choose the state, district, and PIN code you want to play from. This can be different from where you currently live.
+                Choose the state, district, and PIN you want to play in.
                   </CardDescription>
                 </div>
                 {editingSection !== 'address' ? (

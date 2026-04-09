@@ -283,7 +283,7 @@ export default function OnboardingWizard() {
                 {currentStep === 1 && (
                   <div className="space-y-4">
                     <p className="text-sm text-muted-foreground text-center mb-4">
-                      Choose the state and district you want to play from. This can be different from where you currently live.
+                Choose the state and district you want to play in.
                     </p>
                     <div className="space-y-4">
                       <div className="space-y-2">

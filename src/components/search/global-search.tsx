@@ -4,12 +4,6 @@ import { useState, useEffect, useCallback, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -41,24 +35,25 @@ interface SearchResult {
 
 interface GlobalSearchProps {
   sport: string;
-  isOpen: boolean;
-  onClose: () => void;
+  className?: string;
 }
 
-export function GlobalSearch({ sport, isOpen, onClose }: GlobalSearchProps) {
+export function GlobalSearch({ sport, className }: GlobalSearchProps) {
   const router = useRouter();
+  const rootRef = useRef<HTMLDivElement>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
+  const searchRef = useRef<NodeJS.Timeout | null>(null);
   const [query, setQuery] = useState("");
   const [results, setResults] = useState<SearchResult[]>([]);
   const [loading, setLoading] = useState(false);
   const [recentSearches, setRecentSearches] = useState<string[]>([]);
-  const inputRef = useRef<HTMLInputElement>(null);
+  const [open, setOpen] = useState(false);
 
   const isCornhole = sport === "cornhole";
   const primaryTextClass = isCornhole
     ? "text-green-600 dark:text-green-400"
     : "text-teal-600 dark:text-teal-400";
 
-  // Load recent searches from localStorage
   useEffect(() => {
     const saved = localStorage.getItem(`recent-searches-${sport}`);
     if (saved) {
@@ -70,27 +65,17 @@ export function GlobalSearch({ sport, isOpen, onClose }: GlobalSearchProps) {
     }
   }, [sport]);
 
-  // Focus input when dialog opens
-  const focusTimerRef = useRef<NodeJS.Timeout | null>(null);
-
   useEffect(() => {
-    if (isOpen) {
-      if (focusTimerRef.current) clearTimeout(focusTimerRef.current);
-      focusTimerRef.current = setTimeout(() => inputRef.current?.focus(), 100);
-    } else {
-      setQuery("");
-      setResults([]);
-    }
-
-    return () => {
-      if (focusTimerRef.current) {
-        clearTimeout(focusTimerRef.current);
+    const handleClickOutside = (event: MouseEvent) => {
+      if (rootRef.current && !rootRef.current.contains(event.target as Node)) {
+        setOpen(false);
       }
     };
-  }, [isOpen]);
 
-  // Debounced search
-  const searchRef = useRef<NodeJS.Timeout | null>(null);
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
   const performSearch = useCallback(async (searchQuery: string) => {
     if (!searchQuery.trim() || searchQuery.length < 2) {
       setResults([]);
@@ -125,7 +110,7 @@ export function GlobalSearch({ sport, isOpen, onClose }: GlobalSearchProps) {
               (p.fullName as string) ||
               (p.name as string) ||
               `${p.firstName || ""} ${p.lastName || ""}`.trim(),
-            subtitle: p.city ? `${p.city}${p.state ? `, ${p.state}` : ''}` : undefined,
+            subtitle: p.city ? `${p.city}${p.state ? `, ${p.state}` : ""}` : (p.state as string | undefined),
             image: (p.avatar as string) || (p.photoUrl as string),
             points: (p.visiblePoints as number) ?? (p.score as number),
             rank: p.rank as number,
@@ -141,7 +126,7 @@ export function GlobalSearch({ sport, isOpen, onClose }: GlobalSearchProps) {
             id: t.id as string,
             type: "tournament",
             name: t.name as string,
-            subtitle: t.city ? `${t.city}` : undefined,
+            subtitle: t.state ? `${t.district ? `${t.district}, ` : ""}${t.state}` : undefined,
             status: t.status as string,
             startDate: t.startDate as string,
             endDate: t.endDate as string,
@@ -157,7 +142,7 @@ export function GlobalSearch({ sport, isOpen, onClose }: GlobalSearchProps) {
             id: o.id as string,
             type: "organization",
             name: o.name as string,
-            subtitle: o.type as string,
+            subtitle: (o.state as string) || (o.type as string),
             image: (o.logoUrl as string) || (o.logo as string),
           });
         });
@@ -179,7 +164,7 @@ export function GlobalSearch({ sport, isOpen, onClose }: GlobalSearchProps) {
     if (query.length >= 2) {
       searchRef.current = setTimeout(() => {
         performSearch(query);
-      }, 300);
+      }, 250);
     } else {
       setResults([]);
     }
@@ -192,14 +177,19 @@ export function GlobalSearch({ sport, isOpen, onClose }: GlobalSearchProps) {
   }, [query, performSearch]);
 
   const saveToRecentSearches = (searchQuery: string) => {
-    const updated = [searchQuery, ...recentSearches.filter(s => s !== searchQuery)].slice(0, 5);
+    const updated = [searchQuery, ...recentSearches.filter((s) => s !== searchQuery)].slice(0, 5);
     setRecentSearches(updated);
     localStorage.setItem(`recent-searches-${sport}`, JSON.stringify(updated));
   };
 
   const handleResultClick = (result: SearchResult) => {
-    saveToRecentSearches(query);
-    onClose();
+    if (query.trim()) {
+      saveToRecentSearches(query);
+    }
+
+    setOpen(false);
+    setQuery("");
+    setResults([]);
 
     switch (result.type) {
       case "player":
@@ -216,161 +206,146 @@ export function GlobalSearch({ sport, isOpen, onClose }: GlobalSearchProps) {
 
   const handleRecentSearchClick = (searchQuery: string) => {
     setQuery(searchQuery);
+    setOpen(true);
+    inputRef.current?.focus();
   };
 
   const getIcon = (type: string) => {
     switch (type) {
       case "player":
-        return <Users className="w-4 h-4" />;
+        return <Users className="h-4 w-4" />;
       case "tournament":
-        return <Trophy className="w-4 h-4" />;
+        return <Trophy className="h-4 w-4" />;
       case "organization":
-        return <Building2 className="w-4 h-4" />;
+        return <Building2 className="h-4 w-4" />;
       default:
-        return <Search className="w-4 h-4" />;
+        return <Search className="h-4 w-4" />;
     }
   };
 
+  const showDropdown =
+    open && (query.length >= 2 || recentSearches.length > 0 || loading);
+
   return (
-    <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="w-[calc(100vw-1rem)] max-w-xl p-0 gap-0 overflow-hidden">
-        <DialogHeader className="sr-only">
-          <DialogTitle>Search</DialogTitle>
-        </DialogHeader>
-
-        {/* Search Input */}
-        <div className="flex items-center border-b px-3 sm:px-4">
-          <Search className="w-5 h-5 text-muted-foreground" />
-          <Input
-            ref={inputRef}
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
-            placeholder="Search players, tournaments, organizations..."
-            className="border-0 focus-visible:ring-0 text-base"
-          />
-          {loading && <Loader2 className="w-5 h-5 animate-spin text-muted-foreground" />}
-          {query && !loading && (
+    <div ref={rootRef} className={cn("relative w-full", className)}>
+      <div className="relative">
+        <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+        <Input
+          ref={inputRef}
+          value={query}
+          onChange={(e) => setQuery(e.target.value)}
+          onFocus={() => setOpen(true)}
+          placeholder="Search players, tournaments..."
+          className="h-10 rounded-xl border-border/70 bg-background/85 pl-10 pr-10 shadow-sm"
+        />
+        <div className="absolute right-2 top-1/2 flex -translate-y-1/2 items-center">
+          {loading ? (
+            <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
+          ) : query ? (
             <Button
+              type="button"
               variant="ghost"
-              size="sm"
-              className="h-6 w-6 p-0"
-              onClick={() => setQuery("")}
+              size="icon"
+              className="h-7 w-7 rounded-full"
+              onClick={() => {
+                setQuery("");
+                setResults([]);
+                inputRef.current?.focus();
+              }}
             >
-              <X className="w-4 h-4" />
+              <X className="h-4 w-4" />
             </Button>
-          )}
+          ) : null}
         </div>
+      </div>
 
-        {/* Results */}
-        <ScrollArea className="max-h-[min(65dvh,400px)]">
-          {results.length > 0 ? (
-            <div className="p-2">
-              {results.map((result) => (
-                <button
-                  key={`${result.type}-${result.id}`}
-                  onClick={() => handleResultClick(result)}
-                  className="w-full flex items-center gap-3 p-3 rounded-lg hover:bg-muted transition-colors text-left"
-                >
-                  <div className={cn("p-2 rounded-lg bg-muted", primaryTextClass)}>
-                    {getIcon(result.type)}
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2">
-                      <p className="font-medium truncate">{result.name}</p>
-                      {result.type === "tournament" && result.status && result.startDate && result.endDate && (
-                        <TournamentStatusBadge
-                          startDate={result.startDate}
-                          endDate={result.endDate}
-                          dbStatus={result.status}
-                          size="sm"
-                        />
-                      )}
-                    </div>
-                    {result.subtitle && (
-                      <p className="text-sm text-muted-foreground truncate">
-                        {result.subtitle}
-                      </p>
-                    )}
-                  </div>
-                  {result.type === "player" && (
-                    <div className="text-right">
-                      {result.points !== undefined && (
-                        <p className={cn("text-sm font-medium", primaryTextClass)}>
-                          {result.points} pts
-                        </p>
-                      )}
-                      {result.rank && (
-                        <p className="text-xs text-muted-foreground">#{result.rank}</p>
-                      )}
-                    </div>
-                  )}
-                </button>
-              ))}
-            </div>
-          ) : query.length >= 2 && !loading ? (
-            <div className="py-12 text-center">
-              <Search className="w-12 h-12 mx-auto text-muted-foreground/50 mb-3" />
-              <p className="text-muted-foreground">No results found for &quot;{query}&quot;</p>
-            </div>
-          ) : query.length < 2 && recentSearches.length > 0 ? (
-            <div className="p-4">
-              <p className="text-sm font-medium text-muted-foreground mb-3 flex items-center gap-2">
-                <Clock className="w-4 h-4" />
-                Recent Searches
-              </p>
-              <div className="flex flex-wrap gap-2">
-                {recentSearches.map((search, i) => (
-                  <Badge
-                    key={i}
-                    variant="secondary"
-                    className="cursor-pointer hover:bg-muted"
-                    onClick={() => handleRecentSearchClick(search)}
+      {showDropdown ? (
+        <div className="absolute top-full z-50 mt-2 w-full overflow-hidden rounded-xl border border-border bg-background shadow-xl">
+          <ScrollArea className="max-h-[min(60dvh,24rem)]">
+            {results.length > 0 ? (
+              <div className="p-2">
+                {results.map((result) => (
+                  <button
+                    key={`${result.type}-${result.id}`}
+                    onClick={() => handleResultClick(result)}
+                    className="flex w-full items-center gap-3 rounded-lg p-3 text-left transition-colors hover:bg-muted"
                   >
-                    {search}
-                  </Badge>
+                    <div className={cn("rounded-lg bg-muted p-2", primaryTextClass)}>
+                      {getIcon(result.type)}
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-center gap-2">
+                        <p className="truncate font-medium">{result.name}</p>
+                        {result.type === "tournament" &&
+                        result.status &&
+                        result.startDate &&
+                        result.endDate ? (
+                          <TournamentStatusBadge
+                            startDate={result.startDate}
+                            endDate={result.endDate}
+                            dbStatus={result.status}
+                            size="sm"
+                          />
+                        ) : null}
+                      </div>
+                      {result.subtitle ? (
+                        <p className="truncate text-sm text-muted-foreground">
+                          {result.subtitle}
+                        </p>
+                      ) : null}
+                    </div>
+                    {result.type === "player" ? (
+                      <div className="text-right">
+                        {result.points !== undefined ? (
+                          <p className={cn("text-sm font-medium", primaryTextClass)}>
+                            {result.points} pts
+                          </p>
+                        ) : null}
+                        {result.rank ? (
+                          <p className="text-xs text-muted-foreground">#{result.rank}</p>
+                        ) : null}
+                      </div>
+                    ) : null}
+                  </button>
                 ))}
               </div>
-            </div>
-          ) : query.length < 2 ? (
-            <div className="py-12 text-center">
-              <TrendingUp className="w-12 h-12 mx-auto text-muted-foreground/50 mb-3" />
-              <p className="text-muted-foreground">
-                Type at least 2 characters to search
-              </p>
-            </div>
-          ) : null}
-        </ScrollArea>
-
-        {/* Footer */}
-        {results.length > 0 && (
-          <div className="border-t px-3 py-3 bg-muted/30 sm:px-4">
-            <p className="text-xs text-muted-foreground text-center">
-              Press <kbd className="px-1.5 py-0.5 bg-muted rounded text-[10px]">Enter</kbd> to search,{" "}
-              <kbd className="px-1.5 py-0.5 bg-muted rounded text-[10px]">Esc</kbd> to close
-            </p>
-          </div>
-        )}
-      </DialogContent>
-    </Dialog>
-  );
-}
-
-// Search Button Component for Header
-export function SearchButton({ onClick }: { onClick: () => void }) {
-  return (
-    <Button
-      variant="outline"
-      size="sm"
-      onClick={onClick}
-      className={cn(
-        "h-10 w-10 shrink-0 justify-center rounded-xl border-border/70 bg-background/80 px-0 text-muted-foreground shadow-sm transition-colors hover:bg-muted/50 hover:text-foreground sm:min-w-[210px] sm:justify-between sm:px-3 lg:min-w-[220px]",
-      )}
-      aria-label="Search players and tournaments"
-    >
-      <span className="flex items-center gap-2">
-        <Search className="h-4 w-4" />
-        <span className="hidden text-sm sm:inline">Search players, tournaments...</span>
-      </span>
-    </Button>
+            ) : query.length >= 2 && !loading ? (
+              <div className="py-10 text-center">
+                <Search className="mx-auto mb-3 h-10 w-10 text-muted-foreground/50" />
+                <p className="text-sm text-muted-foreground">
+                  No results for &quot;{query}&quot;
+                </p>
+              </div>
+            ) : query.length < 2 && recentSearches.length > 0 ? (
+              <div className="p-4">
+                <p className="mb-3 flex items-center gap-2 text-sm font-medium text-muted-foreground">
+                  <Clock className="h-4 w-4" />
+                  Recent Searches
+                </p>
+                <div className="flex flex-wrap gap-2">
+                  {recentSearches.map((search, index) => (
+                    <Badge
+                      key={`${search}-${index}`}
+                      variant="secondary"
+                      className="cursor-pointer hover:bg-muted"
+                      onClick={() => handleRecentSearchClick(search)}
+                    >
+                      {search}
+                    </Badge>
+                  ))}
+                </div>
+              </div>
+            ) : query.length < 2 ? (
+              <div className="py-10 text-center">
+                <TrendingUp className="mx-auto mb-3 h-10 w-10 text-muted-foreground/50" />
+                <p className="text-sm text-muted-foreground">
+                  Type at least 2 characters to search
+                </p>
+              </div>
+            ) : null}
+          </ScrollArea>
+        </div>
+      ) : null}
+    </div>
   );
 }

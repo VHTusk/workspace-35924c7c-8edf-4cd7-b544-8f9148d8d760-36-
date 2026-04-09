@@ -19,7 +19,7 @@ import {
   Building2,
 } from "lucide-react";
 import { NotificationDropdown } from "@/components/notifications/notification-dropdown";
-import { GlobalSearch, SearchButton } from "@/components/search/global-search";
+import { GlobalSearch } from "@/components/search/global-search";
 import { cn } from "@/lib/utils";
 import { useEffect, useState, useCallback } from "react";
 import { useTranslation } from "@/hooks/use-translation";
@@ -83,7 +83,6 @@ export default function SportHeader({
   const [loading, setLoading] = useState(true);
   const [user, setUser] = useState<UserData | null>(null);
   const [org, setOrg] = useState<OrgData | null>(null);
-  const [searchOpen, setSearchOpen] = useState(false);
   const copy = language === "hi"
       ? {
         dashboard: "डैशबोर्ड",
@@ -339,6 +338,7 @@ export default function SportHeader({
     authenticated === true &&
     userType === "player" &&
     pathname === `/${sport}`;
+  const showSearch = pathname !== `/${sport}`;
 
   // Render auth buttons
   const renderAuthButtons = () => {
@@ -500,9 +500,11 @@ export default function SportHeader({
             </div>
 
             <div className="flex min-w-0 flex-1 items-center justify-start sm:justify-center">
-              <div className="w-full max-w-sm md:max-w-md">
-                <SearchButton onClick={() => setSearchOpen(true)} />
-              </div>
+              {showSearch ? (
+                <div className="w-full max-w-md lg:max-w-xl">
+                  <GlobalSearch sport={sport} />
+                </div>
+              ) : null}
             </div>
 
             <div className="flex shrink-0 items-center gap-1.5 sm:gap-2">
@@ -520,9 +522,6 @@ export default function SportHeader({
           </div>
         </div>
       </header>
-
-      {/* Global Search Modal */}
-      <GlobalSearch sport={sport} isOpen={searchOpen} onClose={() => setSearchOpen(false)} />
     </>
   );
 }
