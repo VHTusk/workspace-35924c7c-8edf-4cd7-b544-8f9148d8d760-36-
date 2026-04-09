@@ -13,6 +13,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Loader2, Users, UserPlus, MapPin, Trophy } from "lucide-react";
 import Link from "next/link";
 import { cn } from "@/lib/utils";
+import { useFollowCountRefresh } from "@/hooks/use-follow-count";
 
 interface FollowersModalProps {
   open: boolean;
@@ -41,6 +42,7 @@ export default function FollowersModal({
   const [followers, setFollowers] = useState<Follower[]>([]);
   const [following, setFollowing] = useState<Follower[]>([]);
   const [loading, setLoading] = useState(false);
+  const followRefreshKey = useFollowCountRefresh();
 
   const primaryTextClass = isCornhole ? "text-green-600" : "text-teal-600";
   const primaryBgClass = isCornhole ? "bg-green-50" : "bg-teal-50";
@@ -49,7 +51,7 @@ export default function FollowersModal({
     if (open && userId) {
       fetchFollowData();
     }
-  }, [open, userId, sport]);
+  }, [open, userId, sport, followRefreshKey]);
 
   const fetchFollowData = async () => {
     setLoading(true);
@@ -57,7 +59,7 @@ export default function FollowersModal({
       // Fetch followers
       const followersRes = await fetch(
         `/api/follow?type=followers&userId=${userId}&sport=${sport.toUpperCase()}`,
-        { credentials: "include" }
+        { credentials: "include", cache: "no-store" }
       );
       if (followersRes.ok) {
         const data = await followersRes.json();
@@ -67,7 +69,7 @@ export default function FollowersModal({
       // Fetch following
       const followingRes = await fetch(
         `/api/follow?type=following&userId=${userId}&sport=${sport.toUpperCase()}`,
-        { credentials: "include" }
+        { credentials: "include", cache: "no-store" }
       );
       if (followingRes.ok) {
         const data = await followingRes.json();

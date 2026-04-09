@@ -18,6 +18,7 @@ import {
 } from "lucide-react";
 import GoogleOneTap from "@/components/auth/google-one-tap";
 import { AUTH_SPORTS } from "@/components/auth/auth-sport-config";
+import SiteFooter from "@/components/layout/site-footer";
 import { UniversalLoginModal } from "@/components/auth/universal-login-modal";
 import { UniversalRegisterModal } from "@/components/auth/universal-register-modal";
 import { Button } from "@/components/ui/button";
@@ -436,38 +437,7 @@ export default function HomePage() {
                   </Button>
                 </div>
               </div>
-            </section>
-
-            <footer
-              id="support"
-              className="border-t border-[#18AFCE]/18 px-4 py-5 text-sm text-white/45 sm:px-6 lg:px-8"
-            >
-              <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
-                <div className="flex items-center gap-3">
-                  <Image src="/logo.png" alt="VALORHIVE" width={28} height={28} className="h-7 w-auto" />
-                  <span className="font-semibold text-white/80">VALORHIVE</span>
-                </div>
-
-                <div className="flex flex-wrap items-center gap-4">
-                  <Link href="/tournaments" className="transition-colors hover:text-[#8fefff]">
-                    Quick links
-                  </Link>
-                  <Link href="/help" className="transition-colors hover:text-[#8fefff]">
-                    Support
-                  </Link>
-                  <Link href="/legal/privacy" className="transition-colors hover:text-[#8fefff]">
-                    Legal
-                  </Link>
-                  <Link href="/contact" className="transition-colors hover:text-[#8fefff]">
-                    Contact
-                  </Link>
-                </div>
-              </div>
-
-              <div className="mt-4 text-center text-xs text-white/32">
-                © {new Date().getFullYear()} VALORHIVE. All rights reserved.
-              </div>
-            </footer>
+            </section>`r`n            <SiteFooter variant="landing" />
           </div>
         </div>
       </main>
@@ -532,3 +502,4 @@ function SportStat({ value, label }: { value: string; label: string }) {
     </div>
   );
 }
+

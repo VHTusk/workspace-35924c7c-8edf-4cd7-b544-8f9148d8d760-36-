@@ -41,6 +41,7 @@ import FollowersModal from "@/components/follow/followers-modal";
 import { ActivityFeedCard } from "@/components/activity/activity-feed-card";
 import { PieChart, Pie, Cell, ResponsiveContainer, AreaChart, Area, XAxis, YAxis, Tooltip } from "recharts";
 import { useSportStyling } from "@/hooks/use-sport-styling";
+import { useFollowCountRefresh } from "@/hooks/use-follow-count";
 
 interface UserData {
   id: string;
@@ -335,6 +336,7 @@ export default function DashboardPage() {
   const [loading, setLoading] = useState(true);
   const [showFollowersModal, setShowFollowersModal] = useState(false);
   const abortControllerRef = useRef<AbortController | null>(null);
+  const followRefreshKey = useFollowCountRefresh();
 
   // Extract class names for easier use
   const primaryTextClass = classes.primaryText;
@@ -350,7 +352,10 @@ export default function DashboardPage() {
     const signal = abortControllerRef.current.signal;
 
     try {
-      const response = await fetch(`/api/player/me?sport=${sport}`, { signal });
+      const response = await fetch(`/api/player/me?sport=${sport}`, {
+        signal,
+        cache: "no-store",
+      });
       
       if (signal.aborted) return;
       
@@ -396,7 +401,7 @@ export default function DashboardPage() {
         abortControllerRef.current.abort();
       }
     };
-  }, [fetchUserData]);
+  }, [fetchUserData, followRefreshKey]);
 
   // Get colors from theme for charts
   const primaryColor = theme.primaryColor;

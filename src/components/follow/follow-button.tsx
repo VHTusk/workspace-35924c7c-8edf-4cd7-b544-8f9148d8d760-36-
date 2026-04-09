@@ -5,6 +5,8 @@ import { Button } from "@/components/ui/button";
 import { UserPlus, UserCheck, Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { dispatchFollowChange } from "@/hooks/use-follow-count";
+import { fetchWithCsrf } from "@/lib/client-csrf";
+import { toast } from "sonner";
 
 interface FollowButtonProps {
   targetType: 'user' | 'org';
@@ -36,6 +38,7 @@ export default function FollowButton({
       // Check if current user is following this target
       const response = await fetch(`/api/follow/check?targetType=${targetType}&targetId=${targetId}&sport=${sport}`, {
         credentials: 'include',
+        cache: "no-store",
       });
       
       if (response.ok) {
@@ -54,38 +57,45 @@ export default function FollowButton({
     try {
       if (isFollowing) {
         // Unfollow
-        const response = await fetch(
+        const response = await fetchWithCsrf(
           `/api/follow?targetType=${targetType}&targetId=${targetId}&sport=${sport}`,
           {
             method: 'DELETE',
-            credentials: 'include',
           }
         );
+        const data = await response.json().catch(() => ({}));
         if (response.ok) {
           setIsFollowing(false);
+          toast.success(data.message || "Unfollowed successfully");
           // Dispatch event to refresh sidebar counts
           dispatchFollowChange({ type: 'unfollow', targetType: targetType === 'user' ? 'user' : 'org', targetId });
+        } else {
+          toast.error(data.error || "Failed to unfollow");
         }
       } else {
         // Follow
-        const response = await fetch('/api/follow', {
+        const response = await fetchWithCsrf('/api/follow', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          credentials: 'include',
           body: JSON.stringify({
             targetType,
             targetId,
             sport
           })
         });
+        const data = await response.json().catch(() => ({}));
         if (response.ok) {
           setIsFollowing(true);
+          toast.success(data.message || "Following updated");
           // Dispatch event to refresh sidebar counts
           dispatchFollowChange({ type: 'follow', targetType: targetType === 'user' ? 'user' : 'org', targetId });
+        } else {
+          toast.error(data.error || "Failed to follow");
         }
       }
     } catch (error) {
       console.error('Failed to follow/unfollow:', error);
+      toast.error("Failed to update follow status");
     } finally {
       setActionLoading(false);
     }

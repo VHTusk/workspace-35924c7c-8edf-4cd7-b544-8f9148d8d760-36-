@@ -1,9 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
-import { TournamentStatus, RegistrationStatus, TeamStatus, SportType, TournamentScope, SubscriptionStatus } from '@prisma/client';
+import { TournamentStatus, RegistrationStatus, TeamStatus, SportType } from '@prisma/client';
 import { getAuthenticatedUserId } from '@/lib/session';
 import { createRazorpayOrder } from '@/lib/payments/razorpay';
 import { v4 as uuidv4 } from 'uuid';
+import {
+  buildTournamentMembershipRequiredResponse,
+  getTournamentMembershipStatus,
+} from '@/lib/tournament-membership';
 
 interface RouteParams {
   params: Promise<{ id: string }>;
@@ -125,32 +129,6 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
       );
     }
 
-    // SUBSCRIPTION CHECK: STATE and NATIONAL tournaments require active subscription
-    // Users can view tournaments but need subscription to participate
-    if (tournament.scope === TournamentScope.STATE || tournament.scope === TournamentScope.NATIONAL) {
-      const activeSubscription = await db.subscription.findFirst({
-        where: {
-          userId: userId,
-          sport: tournament.sport,
-          status: SubscriptionStatus.ACTIVE,
-          endDate: { gte: new Date() },
-        },
-      });
-
-      if (!activeSubscription) {
-        return NextResponse.json(
-          {
-            error: `Subscription required for ${tournament.scope.toLowerCase()} tournaments`,
-            code: 'SUBSCRIPTION_REQUIRED',
-            message: 'Please purchase an annual subscription to participate in State and National level tournaments. You can still view tournament details and brackets.',
-            scope: tournament.scope,
-            subscriptionUrl: `/${tournament.sport.toLowerCase()}/subscription`,
-          },
-          { status: 403 }
-        );
-      }
-    }
-
     // Check registration deadline
     if (tournament.regDeadline && new Date() > tournament.regDeadline) {
       return NextResponse.json({ error: 'Registration deadline has passed' }, { status: 400 });
@@ -246,6 +224,38 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
       return NextResponse.json({ error: 'Team is already registered for this tournament' }, { status: 400 });
     }
 
+    const membershipChecks = await Promise.all(
+      team.members.map(async (member) => ({
+        member,
+        status: await getTournamentMembershipStatus(member.userId, tournament.sport, tournamentId),
+      })),
+    );
+
+    const blockedMembers = membershipChecks.filter(({ status }) => status.requiresMembership);
+    if (blockedMembers.length > 0) {
+      const blockedNames = blockedMembers.map(({ member }) => {
+        const firstName = member.user.firstName || "";
+        const lastName = member.user.lastName || "";
+        return `${firstName} ${lastName}`.trim() || "A team member";
+      });
+
+      return NextResponse.json(
+        {
+          ...buildTournamentMembershipRequiredResponse(tournament.sport),
+          message:
+            blockedNames.length === 1
+              ? `${blockedNames[0]} needs an annual membership for this sport before the team can register.`
+              : `${blockedNames.join(", ")} need annual memberships for this sport before the team can register.`,
+          playersRequiringMembership: blockedMembers.map(({ member }) => member.userId),
+        },
+        { status: 403 },
+      );
+    }
+
+    const firstTournamentExemptionUsed = membershipChecks.some(
+      ({ status }) => status.canUseFirstTournamentExemption,
+    );
+
     if (existingRegistration?.status === RegistrationStatus.PENDING && entryFee > 0) {
       const receipt = `TEAM_${tournamentId.slice(0, 8)}_${teamId.slice(0, 8)}_${Date.now()}`;
 
@@ -277,6 +287,7 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
       return NextResponse.json({
         success: true,
         requiresPayment: true,
+        membershipExemptedForFirstTournament: firstTournamentExemptionUsed,
         registration: existingRegistration,
         order: {
           id: order.id,
@@ -340,6 +351,7 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
 
       return NextResponse.json({
         success: true,
+        membershipExemptedForFirstTournament: firstTournamentExemptionUsed,
         registration,
         message: 'Team registered successfully!',
       });
@@ -404,6 +416,7 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
     return NextResponse.json({
       success: true,
       requiresPayment: true,
+      membershipExemptedForFirstTournament: firstTournamentExemptionUsed,
       registration,
       order: {
         id: order.id,

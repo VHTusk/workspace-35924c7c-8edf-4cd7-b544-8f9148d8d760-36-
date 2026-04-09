@@ -134,6 +134,10 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
     const { targetType, targetId, sport } = body; // targetType: 'user' or 'org'
 
+    if (!targetType || !targetId) {
+      return NextResponse.json({ error: 'Missing follow target' }, { status: 400 });
+    }
+
     if (!sport || !['CORNHOLE', 'DARTS'].includes(sport)) {
       return NextResponse.json({ error: 'Invalid sport' }, { status: 400 });
     }
@@ -160,6 +164,18 @@ export async function POST(request: NextRequest) {
         return NextResponse.json({ error: 'Already following' }, { status: 400 });
       }
 
+      const targetUser = await db.user.findFirst({
+        where: {
+          id: targetId,
+          sport,
+        },
+        select: { id: true },
+      });
+
+      if (!targetUser) {
+        return NextResponse.json({ error: 'Player not found' }, { status: 404 });
+      }
+
       await db.userFollow.create({
         data: {
           followerId: user.id,
@@ -178,7 +194,7 @@ export async function POST(request: NextRequest) {
         data: {
           userId: targetId,
           sport,
-          type: 'TOURNAMENT_REGISTERED', // Reusing, or add 'NEW_FOLLOWER' to enum
+          type: 'NEW_FOLLOWER',
           title: 'New Follower',
           message: `${follower?.firstName} ${follower?.lastName} started following you`,
           link: `/players/${user.id}`
@@ -204,6 +220,18 @@ export async function POST(request: NextRequest) {
 
       if (existing) {
         return NextResponse.json({ error: 'Already following' }, { status: 400 });
+      }
+
+      const targetOrg = await db.organization.findFirst({
+        where: {
+          id: targetId,
+          sport,
+        },
+        select: { id: true },
+      });
+
+      if (!targetOrg) {
+        return NextResponse.json({ error: 'Organization not found' }, { status: 404 });
       }
 
       await db.userFollowsOrg.create({
@@ -233,6 +261,18 @@ export async function POST(request: NextRequest) {
 
       if (existing) {
         return NextResponse.json({ error: 'Already following' }, { status: 400 });
+      }
+
+      const targetUser = await db.user.findFirst({
+        where: {
+          id: targetId,
+          sport,
+        },
+        select: { id: true },
+      });
+
+      if (!targetUser) {
+        return NextResponse.json({ error: 'Player not found' }, { status: 404 });
       }
 
       await db.orgFollowsUser.create({
@@ -267,6 +307,10 @@ export async function DELETE(request: NextRequest) {
     const targetId = searchParams.get('targetId');
     const sport = searchParams.get('sport') as SportType;
 
+    if (!targetType || !targetId) {
+      return NextResponse.json({ error: 'Missing follow target' }, { status: 400 });
+    }
+
     if (!sport || !['CORNHOLE', 'DARTS'].includes(sport)) {
       return NextResponse.json({ error: 'Invalid sport' }, { status: 400 });
     }
@@ -275,14 +319,12 @@ export async function DELETE(request: NextRequest) {
     if (targetType === 'user' && auth.type === 'user') {
       const { user } = auth;
       
-      await db.userFollow.delete({
+      await db.userFollow.deleteMany({
         where: {
-          followerId_followingId_sport: {
-            followerId: user.id,
-            followingId: targetId!,
-            sport
-          }
-        }
+          followerId: user.id,
+          followingId: targetId,
+          sport,
+        },
       });
       return NextResponse.json({ success: true, message: 'Unfollowed user' });
     }
@@ -291,14 +333,12 @@ export async function DELETE(request: NextRequest) {
     if (targetType === 'org' && auth.type === 'user') {
       const { user } = auth;
       
-      await db.userFollowsOrg.delete({
+      await db.userFollowsOrg.deleteMany({
         where: {
-          userId_orgId_sport: {
-            userId: user.id,
-            orgId: targetId!,
-            sport
-          }
-        }
+          userId: user.id,
+          orgId: targetId,
+          sport,
+        },
       });
       return NextResponse.json({ success: true, message: 'Unfollowed organization' });
     }
@@ -307,14 +347,12 @@ export async function DELETE(request: NextRequest) {
     if (targetType === 'user' && auth.type === 'org') {
       const { org } = auth;
       
-      await db.orgFollowsUser.delete({
+      await db.orgFollowsUser.deleteMany({
         where: {
-          orgId_userId_sport: {
-            orgId: org.id,
-            userId: targetId!,
-            sport
-          }
-        }
+          orgId: org.id,
+          userId: targetId,
+          sport,
+        },
       });
       return NextResponse.json({ success: true, message: 'Unfollowed player' });
     }

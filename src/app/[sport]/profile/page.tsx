@@ -527,19 +527,33 @@ export default function ProfilePage() {
   const savePersonalSection = async () => {
     setSectionSaving(prev => ({ ...prev, personal: true }));
     setFormErrors({});
+
+    const updates: Record<string, string> = {};
+    if (personalForm.firstName !== profile.firstName) updates.firstName = personalForm.firstName;
+    if (personalForm.lastName !== profile.lastName) updates.lastName = personalForm.lastName;
+    if (personalForm.email !== profile.email) updates.email = personalForm.email;
+    if (personalForm.phone !== profile.phone) updates.phone = personalForm.phone;
+    if (personalForm.dob !== profile.dob) updates.dob = personalForm.dob;
+    if (personalForm.gender !== profile.gender) updates.gender = personalForm.gender;
+    if ((personalForm.bio || "") !== (profile.bio || "")) updates.bio = personalForm.bio;
+
+    if (Object.keys(updates).length === 0) {
+      setSectionSaving(prev => ({ ...prev, personal: false }));
+      setEditingSection(null);
+      toast("No changes to save");
+      return;
+    }
     
     // Validation
     const errors: FormErrors = {};
-    if (!personalForm.firstName.trim()) errors.firstName = "First name is required";
-    if (!personalForm.lastName.trim()) errors.lastName = "Last name is required";
-    if (!personalForm.email.trim()) errors.email = "Email is required";
-    else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(personalForm.email)) errors.email = "Invalid email format";
-    if (!personalForm.phone.trim()) errors.phone = "Phone is required";
-    else {
-      const cleanPhone = personalForm.phone.replace(/[\s-]/g, '');
+    if ("email" in updates && updates.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(updates.email)) {
+      errors.email = "Invalid email format";
+    }
+    if ("phone" in updates && updates.phone) {
+      const cleanPhone = updates.phone.replace(/[\s-]/g, '');
       if (!/^(\+91)?[6-9]\d{9}$/.test(cleanPhone)) errors.phone = "Invalid phone number";
     }
-    if (personalForm.bio && personalForm.bio.length > 500) errors.bio = "Bio must be 500 characters or less";
+    if ("bio" in updates && updates.bio && updates.bio.length > 500) errors.bio = "Bio must be 500 characters or less";
     
     if (Object.keys(errors).length > 0) {
       setFormErrors(errors);
@@ -554,15 +568,7 @@ export default function ProfilePage() {
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({
-          firstName: personalForm.firstName,
-          lastName: personalForm.lastName,
-          email: personalForm.email,
-          phone: personalForm.phone,
-          dob: personalForm.dob,
-          gender: personalForm.gender,
-          bio: personalForm.bio,
-        }),
+        body: JSON.stringify(updates),
       });
 
       const data = await response.json();
@@ -575,13 +581,7 @@ export default function ProfilePage() {
 
       setProfile(prev => ({
         ...prev,
-        firstName: personalForm.firstName,
-        lastName: personalForm.lastName,
-        email: personalForm.email,
-        phone: personalForm.phone,
-        dob: personalForm.dob,
-        gender: personalForm.gender,
-        bio: personalForm.bio,
+        ...updates,
         profileUpdatedAt: new Date().toISOString(),
       }));
       
@@ -598,10 +598,24 @@ export default function ProfilePage() {
   const saveAddressSection = async () => {
     setSectionSaving(prev => ({ ...prev, address: true }));
     setFormErrors({});
+
+    const updates: Record<string, string> = {};
+    if ((addressForm.address || "") !== (profile.address || "")) updates.address = addressForm.address;
+    if ((addressForm.city || "") !== (profile.city || "")) updates.city = addressForm.city;
+    if ((addressForm.state || "") !== (profile.state || "")) updates.state = addressForm.state;
+    if ((addressForm.district || "") !== (profile.district || "")) updates.district = addressForm.district;
+    if ((addressForm.pinCode || "") !== (profile.pinCode || "")) updates.pinCode = addressForm.pinCode;
+
+    if (Object.keys(updates).length === 0) {
+      setSectionSaving(prev => ({ ...prev, address: false }));
+      setEditingSection(null);
+      toast("No changes to save");
+      return;
+    }
     
     // Validation
     const errors: FormErrors = {};
-    if (addressForm.pinCode && !/^\d{6}$/.test(addressForm.pinCode)) {
+    if ("pinCode" in updates && updates.pinCode && !/^\d{6}$/.test(updates.pinCode)) {
       errors.pinCode = "PIN code must be 6 digits";
     }
     
@@ -618,13 +632,7 @@ export default function ProfilePage() {
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({
-          address: addressForm.address,
-          city: addressForm.city,
-          state: addressForm.state,
-          district: addressForm.district,
-          pinCode: addressForm.pinCode,
-        }),
+        body: JSON.stringify(updates),
       });
 
       const data = await response.json();
@@ -636,11 +644,7 @@ export default function ProfilePage() {
 
       setProfile(prev => ({
         ...prev,
-        address: addressForm.address,
-        city: addressForm.city,
-        state: addressForm.state,
-        district: addressForm.district,
-        pinCode: addressForm.pinCode,
+        ...updates,
         profileUpdatedAt: new Date().toISOString(),
       }));
       
@@ -657,11 +661,29 @@ export default function ProfilePage() {
   const saveEmergencySection = async () => {
     setSectionSaving(prev => ({ ...prev, emergency: true }));
     setFormErrors({});
+
+    const updates: Record<string, string> = {};
+    if ((emergencyForm.emergencyContactName || "") !== (profile.emergencyContactName || "")) {
+      updates.emergencyContactName = emergencyForm.emergencyContactName;
+    }
+    if ((emergencyForm.emergencyContactPhone || "") !== (profile.emergencyContactPhone || "")) {
+      updates.emergencyContactPhone = emergencyForm.emergencyContactPhone;
+    }
+    if ((emergencyForm.emergencyContactRelation || "") !== (profile.emergencyContactRelation || "")) {
+      updates.emergencyContactRelation = emergencyForm.emergencyContactRelation;
+    }
+
+    if (Object.keys(updates).length === 0) {
+      setSectionSaving(prev => ({ ...prev, emergency: false }));
+      setEditingSection(null);
+      toast("No changes to save");
+      return;
+    }
     
     // Validation
     const errors: FormErrors = {};
-    if (emergencyForm.emergencyContactPhone) {
-      const cleanPhone = emergencyForm.emergencyContactPhone.replace(/[\s-]/g, '');
+    if ("emergencyContactPhone" in updates && updates.emergencyContactPhone) {
+      const cleanPhone = updates.emergencyContactPhone.replace(/[\s-]/g, '');
       if (!/^(\+91)?[6-9]\d{9}$/.test(cleanPhone)) {
         errors.emergencyContactPhone = "Invalid phone number";
       }
@@ -680,11 +702,7 @@ export default function ProfilePage() {
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({
-          emergencyContactName: emergencyForm.emergencyContactName,
-          emergencyContactPhone: emergencyForm.emergencyContactPhone,
-          emergencyContactRelation: emergencyForm.emergencyContactRelation,
-        }),
+        body: JSON.stringify(updates),
       });
 
       const data = await response.json();
@@ -696,9 +714,7 @@ export default function ProfilePage() {
 
       setProfile(prev => ({
         ...prev,
-        emergencyContactName: emergencyForm.emergencyContactName,
-        emergencyContactPhone: emergencyForm.emergencyContactPhone,
-        emergencyContactRelation: emergencyForm.emergencyContactRelation,
+        ...updates,
         profileUpdatedAt: new Date().toISOString(),
       }));
       
@@ -715,26 +731,42 @@ export default function ProfilePage() {
   const saveOrganizationSection = async () => {
     setSectionSaving(prev => ({ ...prev, organization: true }));
 
+    const profileUpdates: Record<string, string> = {};
+    if (orgForm.playerOrgType !== profile.playerOrgType) {
+      profileUpdates.playerOrgType = orgForm.playerOrgType;
+    }
+    const organizationChanged = (orgForm.organizationId || "") !== (profile.organizationId || "");
+    const documentChanged =
+      (orgForm.idDocumentUrl || "") !== (profile.idDocumentUrl || "") ||
+      (orgForm.idDocumentType || "") !== (profile.idDocumentType || "");
+
+    if (Object.keys(profileUpdates).length === 0 && !organizationChanged && !documentChanged) {
+      setSectionSaving(prev => ({ ...prev, organization: false }));
+      setEditingSection(null);
+      toast("No changes to save");
+      return;
+    }
+
     try {
       // First update basic profile
-      const response = await fetchWithCsrf("/api/player/profile", {
-        method: "PUT",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          playerOrgType: orgForm.playerOrgType,
-        }),
-      });
+      if (Object.keys(profileUpdates).length > 0) {
+        const response = await fetchWithCsrf("/api/player/profile", {
+          method: "PUT",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify(profileUpdates),
+        });
 
-      if (!response.ok) {
-        const data = await response.json();
-        toast.error(data.error || "Failed to update organization");
-        return;
+        if (!response.ok) {
+          const data = await response.json();
+          toast.error(data.error || "Failed to update organization");
+          return;
+        }
       }
 
       // If organization changed, submit verification request
-      if (orgForm.organizationId && orgForm.organizationId !== profile.organizationId && orgForm.idDocumentUrl) {
+      if (organizationChanged && orgForm.organizationId && orgForm.idDocumentUrl) {
         const orgResponse = await fetchWithCsrf("/api/player/organization", {
           method: "POST",
           headers: {
@@ -759,9 +791,9 @@ export default function ProfilePage() {
       const selectedOrg = organizations.find(o => o.id === orgForm.organizationId);
       setProfile(prev => ({
         ...prev,
+        ...profileUpdates,
         organizationId: orgForm.organizationId || null,
         organization: selectedOrg || null,
-        playerOrgType: orgForm.playerOrgType,
         idDocumentUrl: orgForm.idDocumentUrl,
         idDocumentType: orgForm.idDocumentType,
         profileUpdatedAt: new Date().toISOString(),

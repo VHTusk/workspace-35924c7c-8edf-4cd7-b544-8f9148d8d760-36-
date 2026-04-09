@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
-import { RegistrationStatus, TournamentType, TournamentStatus, SportType, AccountTier, AbusePattern, AbuseSeverity, TournamentScope, SubscriptionStatus } from '@prisma/client';
+import { RegistrationStatus, TournamentType, TournamentStatus, SportType, AccountTier, AbusePattern, AbuseSeverity, TournamentScope } from '@prisma/client';
 import { canRegisterForTournament } from '@/lib/profile-completeness';
 import { createRazorpayOrder } from '@/lib/payments/razorpay';
 import { v4 as uuidv4 } from 'uuid';
@@ -15,6 +15,10 @@ import {
   generateIdempotencyKey,
   type IdempotencyCheckResult 
 } from '@/lib/idempotency';
+import {
+  buildTournamentMembershipRequiredResponse,
+  getTournamentMembershipStatus,
+} from '@/lib/tournament-membership';
 import {
   detectSuspiciousTournamentRegistration,
   detectDeviceFingerprint,
@@ -136,32 +140,6 @@ export async function POST(
       );
     }
 
-    // SUBSCRIPTION CHECK: STATE and NATIONAL tournaments require active subscription
-    // Users can view tournaments but need subscription to participate
-    if (tournament.scope === TournamentScope.STATE || tournament.scope === TournamentScope.NATIONAL) {
-      const activeSubscription = await db.subscription.findFirst({
-        where: {
-          userId: user.id,
-          sport: tournament.sport,
-          status: SubscriptionStatus.ACTIVE,
-          endDate: { gte: new Date() },
-        },
-      });
-
-      if (!activeSubscription) {
-        return NextResponse.json(
-          {
-            error: `Subscription required for ${tournament.scope.toLowerCase()} tournaments`,
-            code: 'SUBSCRIPTION_REQUIRED',
-            message: 'Please purchase an annual subscription to participate in State and National level tournaments. You can still view tournament details and brackets.',
-            scope: tournament.scope,
-            subscriptionUrl: `/${tournament.sport.toLowerCase()}/subscription`,
-          },
-          { status: 403 }
-        );
-      }
-    }
-
     // Check if already registered
     const existingRegistration = await db.tournamentRegistration.findUnique({
       where: {
@@ -176,6 +154,17 @@ export async function POST(
           { status: 400 }
         );
       }
+    }
+
+    const membershipStatus = await getTournamentMembershipStatus(user.id, tournament.sport, tournamentId);
+    if (membershipStatus.requiresMembership) {
+      return NextResponse.json(
+        {
+          ...buildTournamentMembershipRequiredResponse(tournament.sport),
+          scope: tournament.scope ?? TournamentScope.CITY,
+        },
+        { status: 403 }
+      );
     }
 
     // Check for scheduling conflicts
@@ -309,6 +298,7 @@ export async function POST(
       return NextResponse.json({
         success: true,
         requiresPayment: true,
+        membershipExemptedForFirstTournament: membershipStatus.canUseFirstTournamentExemption,
         registration: {
           id: existingRegistration.id,
           status: existingRegistration.status,
@@ -401,6 +391,7 @@ export async function POST(
 
       return NextResponse.json({
         success: true,
+        membershipExemptedForFirstTournament: membershipStatus.canUseFirstTournamentExemption,
         registration: {
           id: result.registration.id,
           status: result.registration.status,
@@ -443,6 +434,7 @@ export async function POST(
     return NextResponse.json({
       success: true,
       requiresPayment: true,
+      membershipExemptedForFirstTournament: membershipStatus.canUseFirstTournamentExemption,
       order: {
         id: order.id,
         amount: order.amount,
