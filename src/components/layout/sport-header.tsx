@@ -86,6 +86,8 @@ export default function SportHeader({
   const copy = language === "hi"
       ? {
         dashboard: "डैशबोर्ड",
+        tournaments: "टूर्नामेंट",
+        leaderboard: "लीडरबोर्ड",
         howItIsPlayed: "कैसे खेला जाता है?",
         profile: "मेरी प्रोफाइल",
         orgProfile: "संगठन प्रोफाइल",
@@ -97,6 +99,8 @@ export default function SportHeader({
       }
     : {
         dashboard: "Dashboard",
+        tournaments: "Tournaments",
+        leaderboard: "Leaderboard",
         howItIsPlayed: "How it is played?",
         profile: "My Profile",
         orgProfile: "Org Profile",
@@ -339,6 +343,8 @@ export default function SportHeader({
     userType === "player" &&
     pathname === `/${sport}`;
   const showSearch = pathname !== `/${sport}`;
+  const showVisitorHomeTabs =
+    pathname === `/${sport}` && authenticated === false && !loading;
 
   // Render auth buttons
   const renderAuthButtons = () => {
@@ -500,7 +506,22 @@ export default function SportHeader({
             </div>
 
             <div className="flex min-w-0 flex-1 items-center justify-start sm:justify-center">
-              {showSearch ? (
+              {showVisitorHomeTabs ? (
+                <div className="hidden items-center gap-2 md:flex">
+                  <Link
+                    href={`/${sport}/tournaments`}
+                    className="rounded-full border border-border px-3 py-1.5 text-sm font-medium text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
+                  >
+                    {copy.tournaments}
+                  </Link>
+                  <Link
+                    href={`/${sport}/leaderboard`}
+                    className="rounded-full border border-border px-3 py-1.5 text-sm font-medium text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
+                  >
+                    {copy.leaderboard}
+                  </Link>
+                </div>
+              ) : showSearch ? (
                 <div className="w-full max-w-md lg:max-w-xl">
                   <GlobalSearch sport={sport} />
                 </div>
@@ -508,6 +529,22 @@ export default function SportHeader({
             </div>
 
             <div className="flex shrink-0 items-center gap-1.5 sm:gap-2">
+              {showVisitorHomeTabs ? (
+                <>
+                  <Link
+                    href={`/${sport}/tournaments`}
+                    className="inline-flex items-center rounded-full border border-border px-2.5 py-1.5 text-xs font-medium text-muted-foreground transition-colors hover:bg-accent hover:text-foreground md:hidden"
+                  >
+                    {copy.tournaments}
+                  </Link>
+                  <Link
+                    href={`/${sport}/leaderboard`}
+                    className="inline-flex items-center rounded-full border border-border px-2.5 py-1.5 text-xs font-medium text-muted-foreground transition-colors hover:bg-accent hover:text-foreground md:hidden"
+                  >
+                    {copy.leaderboard}
+                  </Link>
+                </>
+              ) : null}
               <Link
                 href={`/${sport}/how-it-is-played`}
                 className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-border text-muted-foreground transition-colors hover:bg-accent hover:text-foreground lg:hidden"
