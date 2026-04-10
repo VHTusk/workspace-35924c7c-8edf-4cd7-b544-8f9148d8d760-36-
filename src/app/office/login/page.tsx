@@ -93,7 +93,7 @@ export default function OfficeLoginPage() {
 
         <div className="text-center">
           <Link href="/" className="inline-flex items-center gap-3">
-            <Image src="/logo.png" alt="VALORHIVE" width={44} height={44} className="h-11 w-auto" priority />
+            <Image src="/logo.png" alt="VALORHIVE" width={56} height={56} className="h-14 w-auto" priority />
             <span className="text-xl font-semibold text-foreground">VALORHIVE</span>
           </Link>
         </div>

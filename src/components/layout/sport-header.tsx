@@ -490,7 +490,7 @@ export default function SportHeader({
           <div className="flex h-14 items-center gap-2 sm:h-16 sm:gap-3">
             <div className="flex min-w-0 shrink-0 items-center gap-2 max-w-[72%] sm:max-w-none">
               <Link href={`/${sport}`} className="flex min-w-0 items-center gap-2">
-                <Image src="/logo.png" alt="VALORHIVE" width={42} height={42} className="h-10 w-auto" priority />
+                <Image src="/logo.png" alt="VALORHIVE" width={56} height={56} className="h-12 w-auto" priority />
                 <span className="hidden truncate text-lg font-bold text-foreground min-[380px]:inline">VALORHIVE</span>
                 <Badge variant="outline" className={cn("hidden border-current/30 sm:inline-flex", sportBadgeClass)}>
                   {sportName}

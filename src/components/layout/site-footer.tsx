@@ -57,7 +57,7 @@ export default function SiteFooter({ variant = "default" }: { variant?: "default
         <div className="grid grid-cols-1 gap-8 sm:grid-cols-2 lg:grid-cols-4 lg:gap-12">
           <div className="sm:col-span-2 lg:col-span-1">
             <Link href="/" className="mb-4 flex items-center gap-2">
-              <Image src="/logo.png" alt="VALORHIVE" width={32} height={32} className="h-8 w-auto" />
+              <Image src="/logo.png" alt="VALORHIVE" width={40} height={40} className="h-10 w-auto" />
               <span className={isLanding ? "text-xl font-bold text-white" : "text-xl font-bold text-foreground"}>VALORHIVE</span>
             </Link>
             <p className={isLanding ? "mb-4 text-sm text-white/62" : "mb-4 text-sm text-muted-foreground"}>
@@ -112,7 +112,7 @@ export default function SiteFooter({ variant = "default" }: { variant?: "default
 
         <div className={isLanding ? "mt-10 flex flex-col items-center justify-between gap-4 border-t border-[#18AFCE]/18 pt-6 sm:flex-row" : "mt-10 flex flex-col items-center justify-between gap-4 border-t border-border pt-6 sm:flex-row"}>
           <div className="flex items-center gap-2">
-            <Image src="/logo.png" alt="VALORHIVE" width={20} height={20} className="h-5 w-auto" />
+            <Image src="/logo.png" alt="VALORHIVE" width={24} height={24} className="h-6 w-auto" />
             <span className={isLanding ? "text-sm text-white/46" : "text-sm text-muted-foreground"}>
               {copy.copyright}
             </span>

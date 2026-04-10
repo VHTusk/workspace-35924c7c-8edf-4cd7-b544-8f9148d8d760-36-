@@ -21,16 +21,8 @@ import SiteFooter from "@/components/layout/site-footer";
 import { UniversalLoginModal } from "@/components/auth/universal-login-modal";
 import { UniversalRegisterModal } from "@/components/auth/universal-register-modal";
 import { Button } from "@/components/ui/button";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import LanguageSelector from "@/components/ui/language-selector";
 import { useTranslation } from "@/hooks/use-translation";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
-import { LogOut } from "lucide-react";
 
 const HERO_OUTCOMES = [
   "Verified match results",
@@ -351,26 +343,6 @@ export default function HomePage() {
         heroVisualDescription: HERO_VISUAL.description,
       };
 
-  const handleLandingLogout = async () => {
-    try {
-      await fetch("/api/auth/logout", {
-        method: "POST",
-        credentials: "include",
-      });
-    } catch {
-      // ignore
-    }
-
-    setSessionStatus({
-      authenticated: false,
-      userType: null,
-      sport: null,
-      displayName: null,
-      avatarUrl: null,
-    });
-    router.refresh();
-  };
-
   return (
     <div className="min-h-screen bg-[#050c10] text-white">
       <main className="relative overflow-hidden px-4 py-6 sm:px-6 lg:px-8">
@@ -382,74 +354,13 @@ export default function HomePage() {
             <header className="border-b border-[#18AFCE]/18 px-4 py-4 sm:px-6 lg:px-8">
               <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
                 <Link href="/" className="inline-flex items-center gap-3">
-                  <Image src="/logo.png" alt="VALORHIVE" width={34} height={34} className="h-9 w-auto" priority />
+                  <Image src="/logo.png" alt="VALORHIVE" width={52} height={52} className="h-12 w-auto" priority />
                   <div className="leading-tight">
                     <p className="text-sm font-semibold tracking-[0.18em] text-white/90">VALORHIVE</p>
                   </div>
                 </Link>
 
                 <div className="flex items-center gap-2">
-                  <a
-                    href="#about"
-                    className="rounded-xl border border-[#18AFCE]/30 bg-[#07141c] px-4 py-2 text-sm font-semibold text-[#c6f7ff] shadow-[0_0_14px_rgba(24,175,206,0.12)] transition-all hover:-translate-y-0.5 hover:border-[#18AFCE]/70 hover:bg-[#0a1b24]"
-                  >
-                    {landingCopy.about}
-                  </a>
-                  {sessionStatus.authenticated ? (
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <Button
-                          variant="ghost"
-                          className="h-10 gap-2 rounded-full border border-[#18AFCE]/35 bg-[#07141c] px-2.5 text-[#c6f7ff] shadow-[0_0_14px_rgba(24,175,206,0.14)] transition-all hover:-translate-y-0.5 hover:border-[#18AFCE]/70 hover:bg-[#0a1b24]"
-                        >
-                          <Avatar className="h-7 w-7">
-                            <AvatarImage src={sessionStatus.avatarUrl ?? undefined} alt={sessionStatus.displayName ?? "User"} />
-                            <AvatarFallback className="bg-transparent text-xs font-semibold text-[#c6f7ff]">
-                              {sessionStatus.displayName
-                                ? sessionStatus.displayName
-                                    .split(" ")
-                                    .filter(Boolean)
-                                    .slice(0, 2)
-                                    .map((part) => part[0]?.toUpperCase())
-                                    .join("")
-                                : sessionStatus.userType === "org"
-                                  ? "O"
-                                  : "P"}
-                            </AvatarFallback>
-                          </Avatar>
-                          <span className="max-w-[140px] truncate text-sm font-semibold text-[#d8fbff]">
-                            {sessionStatus.displayName ?? (sessionStatus.userType === "org" ? "Organization" : "Player")}
-                          </span>
-                        </Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end" className="w-44">
-                        <DropdownMenuItem
-                          className="cursor-pointer text-red-600"
-                          onClick={handleLandingLogout}
-                        >
-                          <LogOut className="mr-2 h-4 w-4" />
-                          {isHindi ? "à¤²à¥‰à¤— à¤†à¤‰à¤Ÿ" : "Logout"}
-                        </DropdownMenuItem>
-                      </DropdownMenuContent>
-                    </DropdownMenu>
-                  ) : (
-                    <>
-                      <button
-                        type="button"
-                        onClick={() => openAuth("login")}
-                        className="rounded-xl border border-[#18AFCE]/35 bg-[#07141c] px-4 py-2 text-sm font-semibold text-[#c6f7ff] shadow-[0_0_14px_rgba(24,175,206,0.14)] transition-all hover:-translate-y-0.5 hover:border-[#18AFCE]/70 hover:bg-[#0a1b24]"
-                      >
-                        {landingCopy.login}
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => openAuth("register")}
-                        className="rounded-xl bg-[#d6ff3f] px-4 py-2 text-sm font-semibold text-[#10210f] shadow-[0_0_18px_rgba(214,255,63,0.28)] transition-all hover:-translate-y-0.5 hover:bg-[#c8f12c]"
-                      >
-                        {landingCopy.signUp}
-                      </button>
-                    </>
-                  )}
                   <LanguageSelector variant="compact" className="border-[#18AFCE]/30 bg-[#07141c] text-[#c6f7ff]" />
                 </div>
               </div>
