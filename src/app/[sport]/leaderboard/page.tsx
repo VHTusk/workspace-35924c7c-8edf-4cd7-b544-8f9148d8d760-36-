@@ -8,6 +8,7 @@ import {
   ChevronUp,
   Crown,
   Filter,
+  Lock,
   Search,
   Trophy,
   Users,
@@ -329,6 +330,7 @@ export default function LeaderboardPage() {
   };
 
   const rankCardLocked = !currentUserSummary || currentUserSummary.matchesPlayed === 0 || stats.totalRankedPlayers === 0;
+  const lockedGuestViews: LeaderboardView[] = ["all", "unranked"];
 
   const emptyState = useMemo(() => {
     if (stats.totalRegisteredPlayers === 0) {
@@ -455,16 +457,27 @@ export default function LeaderboardPage() {
                     <TabsTrigger
                       key={tab.value}
                       value={tab.value}
+                      disabled={!isAuthenticated && lockedGuestViews.includes(tab.value)}
                       className={cn(
                         "px-4 py-2 whitespace-nowrap",
+                        !isAuthenticated && lockedGuestViews.includes(tab.value) && "cursor-not-allowed opacity-60",
                         isCornhole ? "data-[state=active]:bg-green-500/10 data-[state=active]:text-green-700" : "data-[state=active]:bg-teal-500/10 data-[state=active]:text-teal-700",
                       )}
                     >
+                      {!isAuthenticated && lockedGuestViews.includes(tab.value) ? (
+                        <Lock className="mr-2 h-3.5 w-3.5" />
+                      ) : null}
                       {tab.label}
                     </TabsTrigger>
                   ))}
                 </TabsList>
               </div>
+
+              {!isAuthenticated ? (
+                <p className="mt-3 text-sm text-muted-foreground">
+                  Sign in to unlock <span className="font-medium text-foreground">All Players</span> and <span className="font-medium text-foreground">Unranked</span>.
+                </p>
+              ) : null}
 
               <div className="mt-4 flex flex-col gap-3 lg:flex-row lg:items-center">
                 <div className="relative flex-1">

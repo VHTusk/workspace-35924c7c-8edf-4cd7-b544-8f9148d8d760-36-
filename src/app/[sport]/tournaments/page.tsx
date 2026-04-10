@@ -22,6 +22,7 @@ import {
   X,
   ChevronRight,
   AlertCircle,
+  Lock,
 } from "lucide-react";
 import { useState, useEffect, useRef } from "react";
 import Sidebar from "@/components/layout/sidebar";
@@ -138,6 +139,7 @@ export default function TournamentsPage() {
   const currentTab = allowedTabs.includes(searchParams.get("tab") || "")
     ? (searchParams.get("tab") as string)
     : "all";
+  const myTournamentsLocked = userType !== "player";
 
   // Check if user is authenticated
   useEffect(() => {
@@ -603,8 +605,8 @@ export default function TournamentsPage() {
               <Trophy className="w-4 h-4" />
               All Tournaments ({filteredTournaments.length})
             </TabsTrigger>
-            <TabsTrigger value="my-tournaments" className="gap-2">
-              <Users className="w-4 h-4" />
+            <TabsTrigger value="my-tournaments" className="gap-2" disabled={myTournamentsLocked}>
+              {myTournamentsLocked ? <Lock className="w-4 h-4" /> : <Users className="w-4 h-4" />}
               My Tournaments ({myTournamentItems.length})
             </TabsTrigger>
             <TabsTrigger value="upcoming" className="gap-2">
@@ -617,6 +619,12 @@ export default function TournamentsPage() {
             </TabsTrigger>
           </TabsList>
           </div>
+
+          {myTournamentsLocked ? (
+            <p className="text-sm text-muted-foreground">
+              Sign in as a player to unlock <span className="font-medium text-foreground">My Tournaments</span>.
+            </p>
+          ) : null}
 
           {loading ? (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
