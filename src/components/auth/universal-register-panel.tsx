@@ -21,12 +21,14 @@ type AccountType = "player" | "org";
 
 type UniversalRegisterPanelProps = {
   initialSport?: string;
+  successRedirect?: string;
   onSwitchToLogin?: () => void;
   onSuccess?: () => void;
 };
 
 export function UniversalRegisterPanel({
   initialSport,
+  successRedirect,
   onSwitchToLogin,
   onSuccess,
 }: UniversalRegisterPanelProps) {
@@ -94,9 +96,9 @@ export function UniversalRegisterPanel({
     clearIdentifierErrors();
   };
 
-  const finishRegister = (destination: string) => {
+  const finishRegister = (destination: string, preserveDestination = false) => {
     onSuccess?.();
-    router.push(destination);
+    router.push(preserveDestination ? destination : successRedirect || destination);
   };
 
   const handleSubmit = async (event: React.FormEvent) => {
@@ -221,7 +223,10 @@ export function UniversalRegisterPanel({
 
       if (accountType === "player") {
         if (data.emailVerificationPending && typeof data.user?.email === "string") {
-          finishRegister(`/${selectedSport}/verify-email?pending=true&email=${encodeURIComponent(String(data.user.email))}`);
+          finishRegister(
+            `/${selectedSport}/verify-email?pending=true&email=${encodeURIComponent(String(data.user.email))}`,
+            true,
+          );
           return;
         }
 

@@ -8,6 +8,7 @@ export interface UniversalRegisterModalProps {
   onOpenChange: (open: boolean) => void;
   onSwitchToLogin?: () => void;
   initialSport?: string;
+  successRedirect?: string;
 }
 
 export function UniversalRegisterModal({
@@ -15,6 +16,7 @@ export function UniversalRegisterModal({
   onOpenChange,
   onSwitchToLogin,
   initialSport,
+  successRedirect,
 }: UniversalRegisterModalProps) {
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -25,6 +27,7 @@ export function UniversalRegisterModal({
         </DialogHeader>
         <UniversalRegisterPanel
           initialSport={initialSport}
+          successRedirect={successRedirect}
           onSuccess={() => onOpenChange(false)}
           onSwitchToLogin={onSwitchToLogin}
         />

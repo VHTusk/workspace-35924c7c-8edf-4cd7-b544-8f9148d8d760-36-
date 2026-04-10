@@ -17,12 +17,19 @@ import {
   Users,
 } from "lucide-react";
 import { AUTH_SPORTS } from "@/components/auth/auth-sport-config";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import SiteFooter from "@/components/layout/site-footer";
 import { UniversalLoginModal } from "@/components/auth/universal-login-modal";
 import { UniversalRegisterModal } from "@/components/auth/universal-register-modal";
 import { Button } from "@/components/ui/button";
 import LanguageSelector from "@/components/ui/language-selector";
 import { useTranslation } from "@/hooks/use-translation";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
 const HERO_OUTCOMES = [
   "Verified match results",
@@ -181,6 +188,26 @@ export default function HomePage() {
     };
   }, []);
 
+  const handleLogout = async () => {
+    try {
+      await fetch("/api/auth/logout", {
+        method: "POST",
+        credentials: "include",
+      });
+    } catch {
+      // ignore
+    }
+
+    setSessionStatus({
+      authenticated: false,
+      userType: null,
+      sport: null,
+      displayName: null,
+      avatarUrl: null,
+    });
+    router.replace("/");
+  };
+
   const openAuth = (view: "login" | "register") => {
     const params = new URLSearchParams(searchParams.toString());
     params.set("auth", view);
@@ -202,6 +229,14 @@ export default function HomePage() {
   const isHindi = language === "hi";
   const defaultSportHref = `/${AUTH_SPORTS[0].slug}`;
   const loggedInHref = sessionStatus.sport ? `/${sessionStatus.sport}` : defaultSportHref;
+  const landingInitials = sessionStatus.displayName
+    ? sessionStatus.displayName
+        .split(" ")
+        .filter(Boolean)
+        .slice(0, 2)
+        .map((part) => part.charAt(0).toUpperCase())
+        .join("")
+    : "VH";
   const heroOutcomes = isHindi
     ? ["सत्यापित मैच परिणाम", "दोहराए जाने वाले सिटी टूर्नामेंट", "लगातार बदलती रैंकिंग"]
     : HERO_OUTCOMES;
@@ -377,7 +412,32 @@ export default function HomePage() {
                         {landingCopy.signUp}
                       </Button>
                     </>
-                  ) : null}
+                  ) : (
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <button
+                          type="button"
+                          className="inline-flex items-center gap-2.5 rounded-xl border border-[#18AFCE]/30 bg-[#07141c] px-2.5 py-1.5 text-left text-white transition-all hover:bg-[#0c1b24]"
+                        >
+                          <Avatar className="h-9 w-9 border border-[#18AFCE]/25">
+                            <AvatarImage src={sessionStatus.avatarUrl ?? undefined} />
+                            <AvatarFallback className="bg-[#0f2a36] text-sm font-semibold text-[#c8f7ff]">
+                              {landingInitials}
+                            </AvatarFallback>
+                          </Avatar>
+                          <span className="max-w-[160px] truncate text-sm font-semibold text-white/92">
+                            {sessionStatus.displayName ?? "VALORHIVE User"}
+                          </span>
+                        </button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end" className="w-44">
+                        <DropdownMenuItem asChild>
+                          <Link href={loggedInHref}>Open Sport Home</Link>
+                        </DropdownMenuItem>
+                        <DropdownMenuItem onClick={handleLogout}>Logout</DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  )}
                   <LanguageSelector variant="compact" className="border-[#18AFCE]/30 bg-[#07141c] text-[#c6f7ff]" />
                 </div>
               </div>
@@ -632,11 +692,14 @@ export default function HomePage() {
         open={authView === "login"}
         onOpenChange={(open) => handleAuthChange(open ? "login" : null)}
         onSwitchToRegister={() => handleAuthChange("register")}
+        hideSportSelection
+        successRedirect="/"
       />
       <UniversalRegisterModal
         open={authView === "register"}
         onOpenChange={(open) => handleAuthChange(open ? "register" : null)}
         onSwitchToLogin={() => handleAuthChange("login")}
+        successRedirect="/"
       />
     </div>
   );

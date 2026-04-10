@@ -19,6 +19,7 @@ import { toast } from "sonner";
 type UniversalLoginPanelProps = {
   initialSport?: string;
   hideSportSelection?: boolean;
+  successRedirect?: string;
   onSwitchToRegister?: () => void;
   onSuccess?: () => void;
 };
@@ -26,6 +27,7 @@ type UniversalLoginPanelProps = {
 export function UniversalLoginPanel({
   initialSport,
   hideSportSelection = false,
+  successRedirect,
   onSwitchToRegister,
   onSuccess,
 }: UniversalLoginPanelProps) {
@@ -84,7 +86,7 @@ export function UniversalLoginPanel({
 
   const finishLogin = (destination?: string) => {
     onSuccess?.();
-    window.location.href = destination || `/${selectedSport}/dashboard`;
+    window.location.href = destination || successRedirect || `/${selectedSport}/dashboard`;
   };
 
   const applyErrorState = (

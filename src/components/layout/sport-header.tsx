@@ -83,6 +83,7 @@ export default function SportHeader({
   const [org, setOrg] = useState<OrgData | null>(null);
   const copy = language === "hi"
       ? {
+        home: "होम",
         dashboard: "डैशबोर्ड",
         tournaments: "टूर्नामेंट",
         leaderboard: "लीडरबोर्ड",
@@ -96,6 +97,7 @@ export default function SportHeader({
         register: "रजिस्टर",
       }
     : {
+        home: "Home",
         dashboard: "Dashboard",
         tournaments: "Tournaments",
         leaderboard: "Leaderboard",
@@ -450,12 +452,18 @@ export default function SportHeader({
         <div className="container mx-auto px-4">
           <div className="flex h-14 items-center gap-2 sm:h-16 sm:gap-3">
             <div className="flex min-w-0 shrink-0 items-center gap-2 max-w-[72%] sm:max-w-none">
-              <Link href={`/${sport}`} className="flex min-w-0 items-center gap-2">
+              <Link href="/" className="flex min-w-0 items-center gap-2">
                 <Image src="/logo.png" alt="VALORHIVE" width={56} height={56} className="h-12 w-auto" priority />
                 <span className="hidden truncate text-lg font-bold text-foreground min-[380px]:inline">VALORHIVE</span>
                 <Badge variant="outline" className={cn("hidden border-current/30 sm:inline-flex", sportBadgeClass)}>
                   {sportName}
                 </Badge>
+              </Link>
+              <Link
+                href="/"
+                className="hidden items-center gap-1.5 rounded-full border border-border px-3 py-1.5 text-sm font-medium text-muted-foreground transition-colors hover:bg-accent hover:text-foreground lg:inline-flex"
+              >
+                {copy.home}
               </Link>
               <Link
                 href={`/${sport}/how-it-is-played`}
@@ -469,6 +477,12 @@ export default function SportHeader({
             <div className="flex min-w-0 flex-1 items-center justify-start sm:justify-center">
               {showVisitorHomeTabs ? (
                 <div className="hidden items-center gap-2 md:flex">
+                  <Link
+                    href="/"
+                    className="rounded-full border border-border px-3 py-1.5 text-sm font-medium text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
+                  >
+                    {copy.home}
+                  </Link>
                   <Link
                     href={`/${sport}/tournaments`}
                     className="rounded-full border border-border px-3 py-1.5 text-sm font-medium text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
@@ -490,6 +504,12 @@ export default function SportHeader({
             </div>
 
             <div className="flex shrink-0 items-center gap-1.5 sm:gap-2">
+              <Link
+                href="/"
+                className="inline-flex items-center rounded-full border border-border px-2.5 py-1.5 text-xs font-medium text-muted-foreground transition-colors hover:bg-accent hover:text-foreground md:hidden"
+              >
+                {copy.home}
+              </Link>
               {showVisitorHomeTabs ? (
                 <>
                   <Link
