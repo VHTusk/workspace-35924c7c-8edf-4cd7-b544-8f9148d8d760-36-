@@ -361,6 +361,23 @@ export default function HomePage() {
                 </Link>
 
                 <div className="flex items-center gap-2">
+                  {!sessionStatus.authenticated ? (
+                    <>
+                      <Button
+                        variant="outline"
+                        className="h-10 rounded-xl border-[#18AFCE]/36 bg-[#08141c] px-4 text-sm font-semibold text-[#c8f7ff] shadow-[0_0_18px_rgba(24,175,206,0.1)] transition-all hover:-translate-y-0.5 hover:bg-[#0d1b24]"
+                        onClick={() => openAuth("login")}
+                      >
+                        {landingCopy.login}
+                      </Button>
+                      <Button
+                        className="h-10 rounded-xl bg-[#d6ff3f] px-4 text-sm font-semibold text-[#12230f] shadow-[0_0_20px_rgba(214,255,63,0.22)] transition-all hover:-translate-y-0.5 hover:bg-[#c8f12c]"
+                        onClick={() => openAuth("register")}
+                      >
+                        {landingCopy.signUp}
+                      </Button>
+                    </>
+                  ) : null}
                   <LanguageSelector variant="compact" className="border-[#18AFCE]/30 bg-[#07141c] text-[#c6f7ff]" />
                 </div>
               </div>
