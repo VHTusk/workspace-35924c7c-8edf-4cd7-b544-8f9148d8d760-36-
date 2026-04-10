@@ -16,7 +16,6 @@ import {
   Trophy,
   Users,
 } from "lucide-react";
-import GoogleOneTap from "@/components/auth/google-one-tap";
 import { AUTH_SPORTS } from "@/components/auth/auth-sport-config";
 import SiteFooter from "@/components/layout/site-footer";
 import { UniversalLoginModal } from "@/components/auth/universal-login-modal";
@@ -374,8 +373,6 @@ export default function HomePage() {
 
   return (
     <div className="min-h-screen bg-[#050c10] text-white">
-      <GoogleOneTap showButton={false} autoPrompt />
-
       <main className="relative overflow-hidden px-4 py-6 sm:px-6 lg:px-8">
         <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top,rgba(24,175,206,0.18),transparent_30%),radial-gradient(circle_at_80%_0%,rgba(238,93,14,0.14),transparent_28%),linear-gradient(180deg,#041017_0%,#050c10_48%,#03080c_100%)]" />
         <div className="pointer-events-none absolute inset-0 opacity-35 [background-image:linear-gradient(rgba(24,175,206,0.12)_1px,transparent_1px),linear-gradient(90deg,rgba(24,175,206,0.12)_1px,transparent_1px)] [background-size:48px_48px]" />
