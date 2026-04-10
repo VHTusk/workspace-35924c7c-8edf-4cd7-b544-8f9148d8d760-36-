@@ -321,7 +321,7 @@ export default function HomePage() {
         sportsEyebrow: "Sports",
         sportsTitle: "Pick your starting sport",
         sportsDescription: "Select the competition format you want to enter first and move into scheduled local play.",
-        details: "View Details",
+        details: "Enter",
         players: "Players",
         tournaments: "Tournaments",
         prizePool: "Prize Pool",
