@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getAuthenticatedUser, getAuthenticatedOrg } from '@/lib/auth';
+import { getAuthenticatedAdmin, getAuthenticatedOrg, getAuthenticatedUser } from '@/lib/auth';
 import { setCsrfCookie } from '@/lib/csrf';
 
 /**
@@ -10,11 +10,12 @@ import { setCsrfCookie } from '@/lib/csrf';
  */
 export async function GET(request: NextRequest) {
   try {
-    // Check if user or org is authenticated
+    // Check if player, org, or office admin is authenticated
     const userAuth = await getAuthenticatedUser(request);
     const orgAuth = await getAuthenticatedOrg(request);
+    const adminAuth = await getAuthenticatedAdmin(request);
 
-    if (!userAuth && !orgAuth) {
+    if (!userAuth && !orgAuth && !adminAuth) {
       return NextResponse.json(
         { error: 'Not authenticated' },
         { status: 401 }

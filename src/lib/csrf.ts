@@ -25,11 +25,14 @@ const CSRF_EXEMPT_ROUTES = [
   '/api/auth/logout',
   '/api/auth/org/login',
   '/api/auth/org/register',
+  '/api/org/login',
   '/api/auth/google-onetap',
   '/api/auth/send-otp',
   '/api/auth/verify-otp',
   '/api/auth/whatsapp/send-otp',
   '/api/auth/whatsapp/verify-otp',
+  '/api/admin/auth/login',
+  '/api/admin/auth/logout',
   '/api/auth/captcha',
   '/api/auth/csrf-token', // Endpoint to get/refresh CSRF token
   '/api/payments/webhook', // Webhooks have their own signature verification

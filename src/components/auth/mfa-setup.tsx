@@ -21,6 +21,7 @@ import {
   Eye,
   EyeOff,
 } from "lucide-react";
+import { fetchWithCsrf } from "@/lib/client-csrf";
 
 interface MfaSetupProps {
   onComplete?: () => void;
@@ -128,7 +129,7 @@ export function MfaSetup({ onComplete, onCancel }: MfaSetupProps) {
     setError("");
 
     try {
-      const response = await fetch('/api/admin/mfa/setup', {
+      const response = await fetchWithCsrf('/api/admin/mfa/setup', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ code: verificationCode }),
