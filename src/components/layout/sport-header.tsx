@@ -7,8 +7,6 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
-  LogIn,
-  UserPlus,
   Loader2,
   LayoutDashboard,
   BookOpen,
@@ -438,49 +436,12 @@ export default function SportHeader({
       );
     }
 
-    // Show Login/Register when not logged in (hide if already on auth pages)
-    if (isAuthPage) {
+    // Keep auth entry points on the landing page only.
+    if (isAuthPage || !authenticated) {
       return null;
     }
 
-    // On org pages, show org login/register
-    if (isOrgPage) {
-      return (
-        <>
-          <Link href={`/${sport}/org/login`}>
-            <Button variant="ghost" size="sm" className="px-2 text-muted-foreground sm:px-3">
-              <LogIn className="w-4 h-4 sm:mr-2" />
-              <span className="hidden sm:inline">{copy.login}</span>
-            </Button>
-          </Link>
-          <Link href={`/${sport}/org/register`}>
-            <Button size="sm" className={cn("px-2.5 shadow-sm sm:px-3", primaryBtnClass)}>
-              <Building2 className="w-4 h-4 sm:mr-2" />
-              <span className="hidden sm:inline">{copy.register} Org</span>
-              <span className="sm:hidden">Org</span>
-            </Button>
-          </Link>
-        </>
-      );
-    }
-
-    return (
-      <>
-        <Link href={`/${sport}/login`}>
-            <Button variant="ghost" size="sm" className="px-2 text-muted-foreground sm:px-3">
-              <LogIn className="w-4 h-4 sm:mr-2" />
-            <span className="hidden sm:inline">{copy.login}</span>
-            </Button>
-          </Link>
-        <Link href={`/${sport}/register`}>
-          <Button size="sm" className={cn("px-2.5 shadow-sm sm:px-3", primaryBtnClass)}>
-            <UserPlus className="w-4 h-4 sm:mr-2" />
-            <span className="hidden sm:inline">{copy.register}</span>
-            <span className="sm:hidden">Join</span>
-          </Button>
-        </Link>
-      </>
-    );
+    return null;
   };
 
   return (
