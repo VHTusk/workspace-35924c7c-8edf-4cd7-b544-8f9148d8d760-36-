@@ -264,7 +264,7 @@ export default function SidebarAdmin() {
         method: "POST",
         credentials: "include",
       });
-      window.location.href = `/${sport}/admin/login`;
+      window.location.href = "/office/login";
     } catch (error) {
       console.error("Logout failed:", error);
     }

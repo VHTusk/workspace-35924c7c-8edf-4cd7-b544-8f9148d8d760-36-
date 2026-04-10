@@ -1,8 +1,9 @@
 /**
  * TOTP-based Multi-Factor Authentication (MFA) System
- * Implements secure MFA for admin accounts using otplib
+ * Implements secure MFA for office admins and tournament directors using otplib.
  *
- * Supports: ADMIN, SUB_ADMIN, TOURNAMENT_DIRECTOR roles
+ * Structured office admins are determined by AdminAssignment.
+ * Legacy ADMIN / SUB_ADMIN roles are supported only as compatibility fallback.
  */
 
 import { totp } from 'otplib';
@@ -10,7 +11,7 @@ import { db } from '@/lib/db';
 import { Role } from '@prisma/client';
 import crypto from 'crypto';
 
-// Roles that require MFA
+// Legacy fallback roles that require MFA
 const MFA_REQUIRED_ROLES: Role[] = ['ADMIN', 'SUB_ADMIN', 'TOURNAMENT_DIRECTOR'];
 
 /**
@@ -391,14 +392,25 @@ export async function checkMfaRequirement(userId: string): Promise<{
 }> {
   const user = await db.user.findUnique({
     where: { id: userId },
-    select: { role: true },
+    select: {
+      role: true,
+      adminAssignments: {
+        where: {
+          isActive: true,
+          OR: [{ expiresAt: null }, { expiresAt: { gt: new Date() } }],
+        },
+        select: {
+          id: true,
+        },
+      },
+    },
   });
 
   if (!user) {
     return { required: false, enabled: false };
   }
 
-  const required = isMfaRequiredForRole(user.role);
+  const required = user.adminAssignments.length > 0 || isMfaRequiredForRole(user.role);
   
   if (!required) {
     return { required: false, enabled: true };

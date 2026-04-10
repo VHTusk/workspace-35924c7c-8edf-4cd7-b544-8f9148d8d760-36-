@@ -122,7 +122,7 @@ export default function SiteFooter({ variant = "default" }: { variant?: "default
               {copy.madeWithPrefix} <Heart className="h-4 w-4 text-red-500" /> {copy.madeWithSuffix}
             </p>
             <Link
-              href="/admin/login"
+              href="/office/login"
               className={isLanding ? "text-xs text-white/30 transition-colors hover:text-white/55" : "text-xs text-muted-foreground/50 transition-colors hover:text-muted-foreground"}
               aria-label="Admin login (office use only)"
             >

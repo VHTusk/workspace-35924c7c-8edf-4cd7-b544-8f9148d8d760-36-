@@ -19,6 +19,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 import { Role, SportType, AuditAction } from '@prisma/client';
 import { hashToken } from '@/lib/auth';
+import { OFFICE_ADMIN_ROLES } from '@/lib/office-auth';
 
 // Re-export types and configuration from shared module
 export { 
@@ -162,6 +163,11 @@ export function getClientIdentifier(request: NextRequest): string {
  * Extract session token from request (cookie or bearer header)
  */
 function extractSessionToken(request: NextRequest): string | null {
+  const adminCookieToken = request.cookies.get('admin_session')?.value;
+  if (adminCookieToken) {
+    return adminCookieToken;
+  }
+
   // First, check for Bearer token (mobile apps)
   const authHeader = request.headers.get('authorization');
   if (authHeader) {
@@ -200,7 +206,7 @@ export interface AdminSessionValidationResult {
 /**
  * Validate admin session from database
  * 
- * SECURITY: This function is the ONLY way to verify admin privileges for rate limit bypass.
+ * SECURITY: This function is the ONLY way to verify office admin privileges for rate limit bypass.
  * Headers are NEVER trusted for privilege decisions.
  * 
  * @param request - The NextRequest object
@@ -271,11 +277,27 @@ export async function validateAdminSession(request: NextRequest): Promise<AdminS
       };
     }
 
-    // Check if user has ADMIN role
-    if (session.user.role !== Role.ADMIN) {
+    const activeOfficeAssignments = await db.adminAssignment.findMany({
+      where: {
+        userId: session.user.id,
+        isActive: true,
+        adminRole: { in: [...OFFICE_ADMIN_ROLES] },
+        OR: [{ expiresAt: null }, { expiresAt: { gt: new Date() } }],
+      },
+      select: {
+        adminRole: true,
+      },
+    });
+
+    const hasOfficeAssignment = activeOfficeAssignments.length > 0;
+
+    const hasLegacyOfficeRole =
+      session.user.role === Role.ADMIN || session.user.role === Role.SUB_ADMIN;
+
+    if (!hasOfficeAssignment && !hasLegacyOfficeRole) {
       return { 
         isValid: false, 
-        reason: 'NOT_ADMIN_ROLE',
+        reason: 'NOT_OFFICE_ROLE',
         userId: session.user.id,
         sport: session.user.sport,
       };
@@ -353,8 +375,8 @@ async function logBypassAttempt(
 /**
  * Rate limit middleware wrapper with secure admin bypass
  * 
- * Super Admin Bypass (SECURE):
- * - ADMIN role users can bypass rate limits for emergency operations
+ * Office Admin Bypass (SECURE):
+ * - Office admins can bypass rate limits for emergency operations
  * - Bypass is validated against the DATABASE SESSION, not headers
  * - Headers are NEVER trusted for privilege decisions
  * - All bypass attempts are logged to AuditLog for accountability
@@ -381,7 +403,7 @@ export function withRateLimit(
         const response = await handler(request, context);
         response.headers.set('X-RateLimit-Bypassed', 'true');
         return response;
-      } else if (validation.userId && validation.reason === 'NOT_ADMIN_ROLE') {
+      } else if (validation.userId && validation.reason === 'NOT_OFFICE_ROLE') {
         // Log failed bypass attempt (user tried but doesn't have admin role)
         await logBypassAttempt(request, validation, false);
       }

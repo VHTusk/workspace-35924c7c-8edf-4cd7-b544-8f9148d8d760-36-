@@ -3,6 +3,11 @@ import { Role } from "@prisma/client";
 import { db } from "@/lib/db";
 import { createSession, verifyPassword } from "@/lib/auth";
 import { getMfaStatus, isMfaRequiredForRole, verifyMfaLogin } from "@/lib/mfa";
+import {
+  getOfficeDashboardPath,
+  getOfficeAssignmentsForUser,
+  resolveHighestPriorityOfficeAssignment,
+} from "@/lib/office-auth";
 import { withRateLimit } from "@/lib/rate-limit";
 
 const MAX_FAILED_ATTEMPTS = 5;
@@ -27,7 +32,6 @@ async function adminLoginHandler(request: NextRequest): Promise<NextResponse> {
     const adminUser = await db.user.findFirst({
       where: {
         email,
-        role: { in: [Role.ADMIN, Role.SUB_ADMIN, Role.TOURNAMENT_DIRECTOR] },
       },
     });
 
@@ -61,7 +65,31 @@ async function adminLoginHandler(request: NextRequest): Promise<NextResponse> {
       return NextResponse.json({ error: "Invalid credentials." }, { status: 401 });
     }
 
-    const mfaRequired = isMfaRequiredForRole(adminUser.role);
+    const officeAssignments = await getOfficeAssignmentsForUser(adminUser.id);
+    const resolvedAssignment = resolveHighestPriorityOfficeAssignment(officeAssignments);
+    const legacyOfficeRole =
+      !resolvedAssignment && adminUser.role === Role.ADMIN
+        ? "SUPER_ADMIN"
+        : !resolvedAssignment && adminUser.role === Role.SUB_ADMIN
+          ? "SPORT_ADMIN"
+          : null;
+
+    if (!resolvedAssignment && !legacyOfficeRole) {
+      return NextResponse.json(
+        { error: "Office access requires an active admin assignment." },
+        { status: 403 },
+      );
+    }
+
+    const resolvedRole = resolvedAssignment?.adminRole ?? legacyOfficeRole;
+    const redirectPath = getOfficeDashboardPath(
+      resolvedAssignment?.adminRole ??
+        (adminUser.role === Role.ADMIN ? "SUPER_ADMIN" : "SPORT_ADMIN"),
+    );
+
+    const mfaRequired =
+      officeAssignments.length > 0 ||
+      isMfaRequiredForRole(adminUser.role);
     const mfaStatus = await getMfaStatus(adminUser.id);
 
     if (mfaRequired && mfaStatus.enabled) {
@@ -103,6 +131,18 @@ async function adminLoginHandler(request: NextRequest): Promise<NextResponse> {
         lastName: adminUser.lastName,
         role: adminUser.role,
         sport: adminUser.sport,
+      },
+      office: {
+        role: resolvedRole,
+        redirectPath,
+        assignments: officeAssignments.map((assignment) => ({
+          id: assignment.id,
+          adminRole: assignment.adminRole,
+          sport: assignment.sport,
+          stateCode: assignment.stateCode,
+          districtName: assignment.districtName,
+        })),
+        legacyFallback: officeAssignments.length === 0,
       },
       mfaStatus: {
         required: mfaRequired,

@@ -12,6 +12,7 @@ import { Role, OrgAdminRole } from '@prisma/client';
 import { validateSession, validateOrgSession } from '@/lib/auth';
 import { setCsrfCookie } from '@/lib/csrf';
 import { setSessionCookie, SESSION_COOKIE_NAME } from '@/lib/session-helpers';
+import { getOfficeAccess } from '@/lib/office-auth';
 
 // ============================================
 // Types
@@ -202,53 +203,31 @@ export async function validateOrganizationSession(): Promise<AuthResult> {
 }
 
 /**
- * Validate admin session from request
+ * Validate office admin session from request
  */
 export async function validateAdminSession(): Promise<AuthResult> {
   try {
-    const cookieStore = await cookies();
-    const token = cookieStore.get('admin_session')?.value;
+    const access = await getOfficeAccess(await cookies());
 
-    if (!token) {
+    if (!access) {
       return { 
         authenticated: false, 
-        error: 'Admin authentication required', 
+        error: 'Office authentication required', 
         code: 'ADMIN_AUTH_REQUIRED' 
-      };
-    }
-
-    const session = await db.session.findUnique({
-      where: { token },
-      include: { user: true },
-    });
-
-    if (!session || !session.user) {
-      return { 
-        authenticated: false, 
-        error: 'Invalid admin session', 
-        code: 'SESSION_INVALID' 
-      };
-    }
-
-    if (!isAdmin(session.user.role as Role)) {
-      return { 
-        authenticated: false, 
-        error: 'Admin privileges required', 
-        code: 'FORBIDDEN' 
       };
     }
 
     return {
       authenticated: true,
-      userId: session.user.id,
+      userId: access.user.id,
       user: {
-        id: session.user.id,
-        email: session.user.email,
-        phone: session.user.phone,
-        firstName: session.user.firstName,
-        lastName: session.user.lastName,
-        role: session.user.role as Role,
-        sport: session.user.sport,
+        id: access.user.id,
+        email: access.user.email,
+        phone: access.user.phone,
+        firstName: access.user.firstName,
+        lastName: access.user.lastName,
+        role: access.user.role as Role,
+        sport: access.user.sport,
       },
     };
   } catch (error) {
