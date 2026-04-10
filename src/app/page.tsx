@@ -22,7 +22,7 @@ import SiteFooter from "@/components/layout/site-footer";
 import { UniversalLoginModal } from "@/components/auth/universal-login-modal";
 import { UniversalRegisterModal } from "@/components/auth/universal-register-modal";
 import { Button } from "@/components/ui/button";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import LanguageSelector from "@/components/ui/language-selector";
 import { useTranslation } from "@/hooks/use-translation";
 import {
@@ -127,10 +127,14 @@ export default function HomePage() {
     authenticated: boolean;
     userType: "player" | "org" | null;
     sport: string | null;
+    displayName: string | null;
+    avatarUrl: string | null;
   }>({
     authenticated: false,
     userType: null,
     sport: null,
+    displayName: null,
+    avatarUrl: null,
   });
 
   useEffect(() => {
@@ -162,6 +166,8 @@ export default function HomePage() {
             authenticated: data.authenticated === true,
             userType: data.userType ?? null,
             sport: typeof data.sport === "string" ? data.sport.toLowerCase() : null,
+            displayName: typeof data.displayName === "string" ? data.displayName : null,
+            avatarUrl: typeof data.avatarUrl === "string" ? data.avatarUrl : null,
           });
         }
       } catch {
@@ -170,6 +176,8 @@ export default function HomePage() {
             authenticated: false,
             userType: null,
             sport: null,
+            displayName: null,
+            avatarUrl: null,
           });
         }
       }
@@ -201,11 +209,8 @@ export default function HomePage() {
   };
 
   const isHindi = language === "hi";
-  const loggedInHref = sessionStatus.sport
-    ? sessionStatus.userType === "org"
-      ? `/${sessionStatus.sport}/org/profile`
-      : `/${sessionStatus.sport}/dashboard`
-    : "/";
+  const defaultSportHref = `/${AUTH_SPORTS[0].slug}`;
+  const loggedInHref = sessionStatus.sport ? `/${sessionStatus.sport}` : defaultSportHref;
   const heroOutcomes = isHindi
     ? ["सत्यापित मैच परिणाम", "दोहराए जाने वाले सिटी टूर्नामेंट", "लगातार बदलती रैंकिंग"]
     : HERO_OUTCOMES;
@@ -279,8 +284,8 @@ export default function HomePage() {
         heroDescription:
           "हर खेल। हर शहर। एक प्रतिस्पर्धी सिस्टम जहाँ टूर्नामेंट संरचित रहते हैं और रैंकिंग लगातार बदलती रहती है।",
         primaryCta: "आगामी प्रतियोगिताओं में जुड़ें",
-        primaryCtaLoggedIn: "डैशबोर्ड पर जाएँ",
-        secondaryCta: "टूर्नामेंट देखें",
+        primaryCtaLoggedIn: "स्पोर्ट होम खोलें",
+        secondaryCta: "स्पोर्ट होम देखें",
         sportsLine: "शुरुआत कॉर्नहोल, डार्ट्स, फ्रिस्बी गोल्फ, पिकलबॉल से",
         sportsEyebrow: "खेल",
         sportsTitle: "अपना शुरुआती खेल चुनें",
@@ -301,7 +306,7 @@ export default function HomePage() {
         ctaDescription:
           "संरचित प्रतियोगिताओं में जुड़ें, अपनी रैंकिंग बनाएं और एक अधिक स्थिर प्रतिस्पर्धी सिस्टम में आगे बढ़ें।",
         ctaButton: "शुरू करें",
-        ctaButtonLoggedIn: "डैशबोर्ड खोलें",
+        ctaButtonLoggedIn: "स्पोर्ट होम खोलें",
         heroVisualEyebrow: "संरचित लीग एक्शन",
         heroVisualDescription:
           "हर राउंड के साथ दोहराए जाने वाले मैच, दृश्यमान रैंकिंग और सत्यापित परिणाम।",
@@ -319,8 +324,8 @@ export default function HomePage() {
         heroDescription:
           "Every sport. Every city. One competitive system where tournaments stay structured and rankings keep moving.",
         primaryCta: "Join Upcoming Competitions",
-        primaryCtaLoggedIn: "Go to Dashboard",
-        secondaryCta: "View Tournaments",
+        primaryCtaLoggedIn: "Open Sport Home",
+        secondaryCta: "View Sport Home",
         sportsLine: "Starting with Cornhole, Darts, Frisbee Golf, Pickleball",
         sportsEyebrow: "Sports",
         sportsTitle: "Pick your starting sport",
@@ -342,7 +347,7 @@ export default function HomePage() {
         ctaDescription:
           "Join structured competitions, build your ranking, and move through a more consistent competitive system.",
         ctaButton: "Get Started",
-        ctaButtonLoggedIn: "Open Dashboard",
+        ctaButtonLoggedIn: "Open Sport Home",
         heroVisualEyebrow: HERO_VISUAL.eyebrow,
         heroVisualDescription: HERO_VISUAL.description,
       };
@@ -361,6 +366,8 @@ export default function HomePage() {
       authenticated: false,
       userType: null,
       sport: null,
+      displayName: null,
+      avatarUrl: null,
     });
     router.refresh();
   };
@@ -396,14 +403,26 @@ export default function HomePage() {
                       <DropdownMenuTrigger asChild>
                         <Button
                           variant="ghost"
-                          size="icon"
-                          className="h-10 w-10 rounded-full border border-[#18AFCE]/35 bg-[#07141c] text-[#c6f7ff] shadow-[0_0_14px_rgba(24,175,206,0.14)] transition-all hover:-translate-y-0.5 hover:border-[#18AFCE]/70 hover:bg-[#0a1b24]"
+                          className="h-10 gap-2 rounded-full border border-[#18AFCE]/35 bg-[#07141c] px-2.5 text-[#c6f7ff] shadow-[0_0_14px_rgba(24,175,206,0.14)] transition-all hover:-translate-y-0.5 hover:border-[#18AFCE]/70 hover:bg-[#0a1b24]"
                         >
                           <Avatar className="h-7 w-7">
+                            <AvatarImage src={sessionStatus.avatarUrl ?? undefined} alt={sessionStatus.displayName ?? "User"} />
                             <AvatarFallback className="bg-transparent text-xs font-semibold text-[#c6f7ff]">
-                              {sessionStatus.userType === "org" ? "O" : "P"}
+                              {sessionStatus.displayName
+                                ? sessionStatus.displayName
+                                    .split(" ")
+                                    .filter(Boolean)
+                                    .slice(0, 2)
+                                    .map((part) => part[0]?.toUpperCase())
+                                    .join("")
+                                : sessionStatus.userType === "org"
+                                  ? "O"
+                                  : "P"}
                             </AvatarFallback>
                           </Avatar>
+                          <span className="max-w-[140px] truncate text-sm font-semibold text-[#d8fbff]">
+                            {sessionStatus.displayName ?? (sessionStatus.userType === "org" ? "Organization" : "Player")}
+                          </span>
                         </Button>
                       </DropdownMenuTrigger>
                       <DropdownMenuContent align="end" className="w-44">
@@ -519,7 +538,7 @@ export default function HomePage() {
                       variant="outline"
                       className="h-11 rounded-xl border-[#18AFCE]/40 bg-[#08141c] px-5 text-sm font-semibold text-[#c3f8ff] shadow-[0_0_18px_rgba(24,175,206,0.14)] transition-all hover:-translate-y-0.5 hover:bg-[#0c1c26] hover:text-white"
                     >
-                      <Link href="/tournaments">
+                      <Link href={defaultSportHref}>
                         {landingCopy.secondaryCta}
                         <ArrowRight className="ml-2 h-4 w-4" />
                       </Link>
@@ -673,7 +692,7 @@ export default function HomePage() {
                     variant="outline"
                     className="h-11 rounded-xl border-[#18AFCE]/40 bg-[#08151d] px-6 text-sm font-semibold text-[#c8f7ff] shadow-[0_0_18px_rgba(24,175,206,0.12)] transition-all hover:-translate-y-0.5 hover:bg-[#0d1b24]"
                   >
-                    <Link href="/tournaments">{landingCopy.secondaryCta}</Link>
+                    <Link href={defaultSportHref}>{landingCopy.secondaryCta}</Link>
                   </Button>
                 </div>
               </div>

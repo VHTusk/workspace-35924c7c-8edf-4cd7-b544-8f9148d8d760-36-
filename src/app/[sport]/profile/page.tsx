@@ -1415,7 +1415,7 @@ export default function ProfilePage() {
                       <div className="p-2 text-foreground bg-muted rounded-md flex items-center gap-2">
                         <Phone className="w-4 h-4 text-muted-foreground" />
                         <span className="truncate">{profile.phone || "-"}</span>
-                        {profile.phoneVerified && (
+                        {profile.phone && profile.phoneVerified && (
                           <span className="ml-auto inline-flex items-center gap-1 rounded-full bg-green-100 px-2 py-0.5 text-[11px] font-medium text-green-700 dark:bg-green-900/30 dark:text-green-400">
                             <CheckCircle className="w-3 h-3" />
                             Verified

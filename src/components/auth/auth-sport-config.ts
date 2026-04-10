@@ -28,7 +28,7 @@ export const AUTH_SPORTS: AuthSportOption[] = [
     accentBackground: "bg-green-500/10 dark:bg-green-500/20",
     accentButton: "bg-green-600 hover:bg-green-700 dark:bg-green-500 dark:hover:bg-green-600",
     hoverBorder: "hover:border-green-500/50",
-    tournamentsHref: "/cornhole/tournaments",
+    tournamentsHref: "/cornhole",
     leaderboardHref: "/cornhole/leaderboard",
   },
   {
@@ -41,7 +41,7 @@ export const AUTH_SPORTS: AuthSportOption[] = [
     accentBackground: "bg-teal-500/10 dark:bg-teal-500/20",
     accentButton: "bg-teal-600 hover:bg-teal-700 dark:bg-teal-500 dark:hover:bg-teal-600",
     hoverBorder: "hover:border-teal-500/50",
-    tournamentsHref: "/darts/tournaments",
+    tournamentsHref: "/darts",
     leaderboardHref: "/darts/leaderboard",
   },
 ];
