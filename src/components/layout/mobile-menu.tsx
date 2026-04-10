@@ -7,8 +7,6 @@ import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { 
   Menu, 
-  LogIn, 
-  UserPlus, 
   Home, 
   Trophy, 
   TrendingUp, 
@@ -212,22 +210,7 @@ export function MobileMenu({
                   {loggingOut ? "Logging out..." : "Logout"}
                 </Button>
               </>
-            ) : (
-              <>
-                <Link href={`/${sport}/login`} onClick={() => setOpen(false)} className="block">
-                  <Button variant="outline" className="w-full gap-2">
-                    <LogIn className="w-4 h-4" />
-                    Login
-                  </Button>
-                </Link>
-                <Link href={`/${sport}/register`} onClick={() => setOpen(false)} className="block">
-                  <Button className={cn("w-full text-white gap-2", primaryBtnClass)}>
-                    <UserPlus className="w-4 h-4" />
-                    Register
-                  </Button>
-                </Link>
-              </>
-            )}
+            ) : null}
           </div>
         </div>
       </SheetContent>
