@@ -338,11 +338,13 @@ export default function SportHeader({
     }
     return `/${sport}/profile`;
   };
+  const getDashboardUrl = () => {
+    if (userType === "org") {
+      return `/${sport}/org/dashboard`;
+    }
+    return `/${sport}/dashboard`;
+  };
   const isSportHomePage = pathname === `/${sport}`;
-  const showDashboardButton =
-    authenticated === true &&
-    userType === "player" &&
-    isSportHomePage;
   const showSearch = !isSportHomePage;
   const showVisitorHomeTabs =
     isSportHomePage && authenticated === false && !loading;
@@ -361,15 +363,6 @@ export default function SportHeader({
       // Show notification bell + user dropdown when logged in
       return (
         <div className="flex items-center gap-2">
-          {showDashboardButton && (
-            <Link href={`/${sport}/dashboard`}>
-              <Button variant="outline" size="sm" className="gap-2 px-2.5 sm:px-3">
-                <LayoutDashboard className="h-4 w-4" />
-                <span className="hidden md:inline">{copy.dashboard}</span>
-              </Button>
-            </Link>
-          )}
-
           {/* Notification Bell */}
           {userType === "player" && <NotificationDropdown sport={sport} />}
 
@@ -403,6 +396,12 @@ export default function SportHeader({
                 </div>
               </DropdownMenuLabel>
               <DropdownMenuSeparator />
+              <DropdownMenuItem asChild>
+                <Link href={getDashboardUrl()} className="cursor-pointer">
+                  <LayoutDashboard className="mr-2 h-4 w-4" />
+                  {copy.dashboard}
+                </Link>
+              </DropdownMenuItem>
               <DropdownMenuItem asChild>
                 <Link href={getProfileUrl()} className="cursor-pointer">
                   {userType === "org" ? (
@@ -439,12 +438,17 @@ export default function SportHeader({
       );
     }
 
-    // Keep auth entry points on the landing page only.
-    if (isAuthPage || !authenticated) {
+    if (isAuthPage) {
       return null;
     }
 
-    return null;
+    return (
+      <Link href={`/${sport}?auth=login`}>
+        <Button variant="outline" size="sm" className="rounded-full px-3.5">
+          {language === "hi" ? "लॉग इन / रजिस्टर" : "Login / Register"}
+        </Button>
+      </Link>
+    );
   };
 
   return (
