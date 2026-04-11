@@ -138,10 +138,10 @@ const CORNHOLE_THEME: SportTheme = {
   tailwindShade: 600,
 
   // Images
-  heroImage: "/images/hero/cornhole/action-shot.png",
-  tournamentImage: "/images/hero/cornhole/tournament-scene.png",
-  actionImage: "/images/hero/cornhole/action-shot.png",
-  trophyImage: "/images/hero/cornhole/trophy-presentation.png",
+  heroImage: "/images/hero/cornhole/professional-match.png",
+  tournamentImage: "/images/hero/cornhole/tournament-action.png",
+  actionImage: "/images/hero/cornhole/sportsmanship.png",
+  trophyImage: "/images/hero/cornhole/league-court-setup.png",
 
   // Semantic
   statusLiveColor: "#22C55E", // Green 500
@@ -173,10 +173,10 @@ const DARTS_THEME: SportTheme = {
   tailwindShade: 600,
 
   // Images
-  heroImage: "/images/hero/darts/action-shot.png",
-  tournamentImage: "/images/hero/darts/tournament-scene.png",
-  actionImage: "/images/hero/darts/action-shot.png",
-  trophyImage: "/images/hero/darts/dartboard-closeup.png",
+  heroImage: "/images/hero/darts/focused-moment.png",
+  tournamentImage: "/images/hero/darts/focused-throw.png",
+  actionImage: "/images/hero/darts/target-alignment.png",
+  trophyImage: "/images/hero/darts/trophy-globe.png",
 
   // Semantic
   statusLiveColor: "#14B8A6", // Teal 500

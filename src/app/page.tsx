@@ -95,14 +95,14 @@ const HERO_SLIDES = [
     title: "Cornhole",
     eyebrow: "Structured league action",
     description: "Recurring matches, visible rankings, and verified results built around every round.",
-    image: "/images/hero/cornhole/action-shot.png",
+    image: "/images/hero/cornhole/professional-match.png",
     accent: "text-[#cfff35]",
   },
   {
     title: "Darts",
     eyebrow: "Precision under pressure",
     description: "City competitions where every throw counts and leaderboard movement stays visible.",
-    image: "/images/hero/darts/action-shot.png",
+    image: "/images/hero/darts/focused-moment.png",
     accent: "text-[#4fe2ff]",
   },
   {
