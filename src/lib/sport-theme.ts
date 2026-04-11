@@ -138,9 +138,9 @@ const CORNHOLE_THEME: SportTheme = {
   tailwindShade: 600,
 
   // Images
-  heroImage: "/images/hero/cornhole/professional-match.png",
-  tournamentImage: "/images/hero/cornhole/tournament-action.png",
-  actionImage: "/images/hero/cornhole/sportsmanship.png",
+  heroImage: "/images/hero/cornhole/focused-shot.png",
+  tournamentImage: "/images/hero/cornhole/tournament-progress.png",
+  actionImage: "/images/hero/cornhole/action-panels.png",
   trophyImage: "/images/hero/cornhole/league-court-setup.png",
 
   // Semantic
