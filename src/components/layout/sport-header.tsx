@@ -338,13 +338,14 @@ export default function SportHeader({
     }
     return `/${sport}/profile`;
   };
+  const isSportHomePage = pathname === `/${sport}`;
   const showDashboardButton =
     authenticated === true &&
     userType === "player" &&
-    pathname === `/${sport}`;
-  const showSearch = pathname !== `/${sport}`;
+    isSportHomePage;
+  const showSearch = !isSportHomePage;
   const showVisitorHomeTabs =
-    pathname === `/${sport}` && authenticated === false && !loading;
+    isSportHomePage && authenticated === false && !loading;
 
   // Render auth buttons
   const renderAuthButtons = () => {
@@ -459,12 +460,14 @@ export default function SportHeader({
                   {sportName}
                 </Badge>
               </Link>
-              <Link
-                href="/"
-                className="hidden items-center gap-1.5 rounded-full border border-border px-3 py-1.5 text-sm font-medium text-muted-foreground transition-colors hover:bg-accent hover:text-foreground lg:inline-flex"
-              >
-                {copy.home}
-              </Link>
+              {!isSportHomePage && (
+                <Link
+                  href="/"
+                  className="hidden items-center gap-1.5 rounded-full border border-border px-3 py-1.5 text-sm font-medium text-muted-foreground transition-colors hover:bg-accent hover:text-foreground lg:inline-flex"
+                >
+                  {copy.home}
+                </Link>
+              )}
               <Link
                 href={`/${sport}/how-it-is-played`}
                 className="hidden items-center gap-1.5 rounded-full border border-border px-3 py-1.5 text-sm font-medium text-muted-foreground transition-colors hover:bg-accent hover:text-foreground lg:inline-flex"
@@ -477,12 +480,6 @@ export default function SportHeader({
             <div className="flex min-w-0 flex-1 items-center justify-start sm:justify-center">
               {showVisitorHomeTabs ? (
                 <div className="hidden items-center gap-2 md:flex">
-                  <Link
-                    href="/"
-                    className="rounded-full border border-border px-3 py-1.5 text-sm font-medium text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
-                  >
-                    {copy.home}
-                  </Link>
                   <Link
                     href={`/${sport}/tournaments`}
                     className="rounded-full border border-border px-3 py-1.5 text-sm font-medium text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
@@ -504,12 +501,14 @@ export default function SportHeader({
             </div>
 
             <div className="flex shrink-0 items-center gap-1.5 sm:gap-2">
-              <Link
-                href="/"
-                className="inline-flex items-center rounded-full border border-border px-2.5 py-1.5 text-xs font-medium text-muted-foreground transition-colors hover:bg-accent hover:text-foreground md:hidden"
-              >
-                {copy.home}
-              </Link>
+              {!isSportHomePage && (
+                <Link
+                  href="/"
+                  className="inline-flex items-center rounded-full border border-border px-2.5 py-1.5 text-xs font-medium text-muted-foreground transition-colors hover:bg-accent hover:text-foreground md:hidden"
+                >
+                  {copy.home}
+                </Link>
+              )}
               {showVisitorHomeTabs ? (
                 <>
                   <Link
