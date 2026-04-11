@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import SiteFooter from "@/components/layout/site-footer";
 import { SportAuthOverlay } from "@/components/auth/sport-auth-overlay";
+import SportImageCarousel from "@/components/sport-image-carousel";
 import { db } from "@/lib/db";
 import { cn } from "@/lib/utils";
 import { buildLeaderboardEligibleUserWhere } from "@/lib/user-sport";
@@ -295,8 +296,12 @@ export default async function SportHomePage({ params, searchParams }: Props) {
 
               <Card className="overflow-hidden border-border/70 bg-card shadow-sm">
                 <div className="grid gap-0 md:grid-cols-[1.05fr_0.95fr]">
-                  <div className="relative min-h-[240px]">
-                    <Image src={config.demoImage} alt={`${sportName} gameplay`} fill className="object-cover" />
+                  <div className="p-4 sm:p-5">
+                    <SportImageCarousel
+                      images={[config.demoImage, ...config.mediaImages.slice(0, 2)]}
+                      altPrefix={`${sportName} basics`}
+                      className="h-full"
+                    />
                   </div>
                   <CardContent className="flex flex-col justify-center p-6">
                     <div className="inline-flex w-fit items-center gap-2 rounded-full border border-border/70 bg-muted/40 px-3 py-1 text-xs font-medium text-muted-foreground">
@@ -504,22 +509,11 @@ export default async function SportHomePage({ params, searchParams }: Props) {
               accentClass={config.accentClass}
             />
 
-            <div className="grid gap-4 lg:grid-cols-[1.15fr_0.85fr]">
-              <Card className="overflow-hidden border-border/70 bg-card shadow-sm">
-                <div className="relative aspect-[16/10]">
-                  <Image src={config.mediaImages[0]} alt={`${sportName} action`} fill className="object-cover" />
-                </div>
-              </Card>
-              <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-1">
-                {config.mediaImages.slice(1).map((src, index) => (
-                  <Card key={src} className="overflow-hidden border-border/70 bg-card shadow-sm">
-                    <div className="relative aspect-[16/10] lg:aspect-[16/9]">
-                      <Image src={src} alt={`${sportName} media ${index + 2}`} fill className="object-cover" />
-                    </div>
-                  </Card>
-                ))}
+            <Card className="overflow-hidden border-border/70 bg-card shadow-sm">
+              <div className="p-4 sm:p-5">
+                <SportImageCarousel images={config.mediaImages} altPrefix={`${sportName} event gallery`} />
               </div>
-            </div>
+            </Card>
           </div>
         </section>
 
