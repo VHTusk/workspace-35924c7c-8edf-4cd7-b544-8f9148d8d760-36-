@@ -173,10 +173,10 @@ const DARTS_THEME: SportTheme = {
   tailwindShade: 600,
 
   // Images
-  heroImage: "/images/hero/darts/focused-moment.png",
-  tournamentImage: "/images/hero/darts/focused-throw.png",
+  heroImage: "/images/hero/darts/champions-collage.png",
+  tournamentImage: "/images/hero/darts/match-in-progress.png",
   actionImage: "/images/hero/darts/target-alignment.png",
-  trophyImage: "/images/hero/darts/trophy-globe.png",
+  trophyImage: "/images/hero/darts/champion-stage.png",
 
   // Semantic
   statusLiveColor: "#14B8A6", // Teal 500
