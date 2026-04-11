@@ -24,6 +24,7 @@ import { UniversalRegisterModal } from "@/components/auth/universal-register-mod
 import { Button } from "@/components/ui/button";
 import LanguageSelector from "@/components/ui/language-selector";
 import { useTranslation } from "@/hooks/use-translation";
+import SportImageCarousel from "@/components/sport-image-carousel";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -90,31 +91,12 @@ const STATS = [
   { value: "350L+", label: "Prize Pool" },
 ];
 
-const HERO_SLIDES = [
-  {
-    title: "Cornhole",
-    eyebrow: "Structured league action",
-    description: "Recurring matches, visible rankings, and verified results built around every round.",
-    image: "/images/hero/cornhole/professional-match.png",
-    accent: "text-[#cfff35]",
-  },
-  {
-    title: "Darts",
-    eyebrow: "Precision under pressure",
-    description: "City competitions where every throw counts and leaderboard movement stays visible.",
-    image: "/images/hero/darts/focused-moment.png",
-    accent: "text-[#4fe2ff]",
-  },
-  {
-    title: "Slingshots",
-    eyebrow: "Fast, focused competition",
-    description: "A new format ready for repeat play, clean scorekeeping, and progression-based ranking.",
-    image: null,
-    accent: "text-[#ff8b45]",
-  },
+const LANDING_SHOWCASE_IMAGES = [
+  "/images/hero/cornhole/professional-match.png",
+  "/images/hero/cornhole/tournament-action.png",
+  "/images/hero/darts/champions-collage.png",
+  "/images/hero/darts/match-in-progress.png",
 ];
-
-const HERO_VISUAL = HERO_SLIDES[0];
 
 export default function HomePage() {
   const { language } = useTranslation();
@@ -333,9 +315,6 @@ export default function HomePage() {
           "संरचित प्रतियोगिताओं में जुड़ें, अपनी रैंकिंग बनाएं और एक अधिक स्थिर प्रतिस्पर्धी सिस्टम में आगे बढ़ें।",
         ctaButton: "शुरू करें",
         ctaButtonLoggedIn: "स्पोर्ट होम खोलें",
-        heroVisualEyebrow: "संरचित लीग एक्शन",
-        heroVisualDescription:
-          "हर राउंड के साथ दोहराए जाने वाले मैच, दृश्यमान रैंकिंग और सत्यापित परिणाम।",
       }
     : {
         about: "About",
@@ -374,9 +353,32 @@ export default function HomePage() {
           "Join structured competitions, build your ranking, and move through a more consistent competitive system.",
         ctaButton: "Get Started",
         ctaButtonLoggedIn: "Open Sport Home",
-        heroVisualEyebrow: HERO_VISUAL.eyebrow,
-        heroVisualDescription: HERO_VISUAL.description,
       };
+  const sportShowcaseCopy = isHindi
+    ? [
+        {
+          title: "कॉर्नहोल",
+          description: "बैग टॉस फॉर्मैट जिसमें सिंगल्स, टीम मैच और आधिकारिक टूर्नामेंट शामिल हैं।",
+          accent: "text-[#d6ff3f]",
+        },
+        {
+          title: "डार्ट्स",
+          description: "प्रिसिजन मैच प्ले जहाँ हर थ्रो रैंकिंग, पॉइंट्स और आगे की प्रगति को प्रभावित करता है।",
+          accent: "text-[#64eaff]",
+        },
+      ]
+    : [
+        {
+          title: "Cornhole",
+          description: "Bag-toss competition with singles, team play, and official tournament formats.",
+          accent: "text-[#d6ff3f]",
+        },
+        {
+          title: "Darts",
+          description: "Precision match play where every throw shapes points, ranking, and progression.",
+          accent: "text-[#64eaff]",
+        },
+      ];
 
   return (
     <div className="min-h-screen bg-[#050c10] text-white">
@@ -446,47 +448,31 @@ export default function HomePage() {
             <section id="overview" className="px-4 py-6 sm:px-6 sm:py-8 lg:px-8">
               <div className="grid gap-6 lg:grid-cols-[1.1fr_0.9fr]">
                 <div className="overflow-hidden rounded-[26px] border border-[#18AFCE]/28 bg-[#07131b] shadow-[0_0_30px_rgba(24,175,206,0.1)]">
-                  <div className="relative aspect-[16/11]">
-                    {HERO_VISUAL.image ? (
-                      <Image
-                        src={HERO_VISUAL.image}
-                        alt={`${HERO_VISUAL.title} competition`}
-                        fill
-                        priority
-                        className="object-cover"
-                      />
-                    ) : (
-                      <div className="absolute inset-0">
-                        <div className="absolute inset-0 bg-[radial-gradient(circle_at_20%_20%,rgba(238,93,14,0.38),transparent_24%),radial-gradient(circle_at_75%_30%,rgba(24,175,206,0.32),transparent_26%),linear-gradient(145deg,#091117_0%,#10242f_52%,#180d08_100%)]" />
-                        <div className="absolute inset-0 opacity-40 [background-image:linear-gradient(rgba(24,175,206,0.12)_1px,transparent_1px),linear-gradient(90deg,rgba(24,175,206,0.12)_1px,transparent_1px)] [background-size:40px_40px]" />
-                        <div className="absolute inset-x-0 bottom-0 top-0 flex items-center justify-center">
-                          <div className="rounded-[28px] border border-white/12 bg-black/18 p-8 shadow-[0_0_40px_rgba(238,93,14,0.18)] backdrop-blur-sm">
-                            <Target className="h-20 w-20 text-[#ff8b45] drop-shadow-[0_0_22px_rgba(238,93,14,0.42)]" />
+                  <SportImageCarousel
+                    images={LANDING_SHOWCASE_IMAGES}
+                    altPrefix="ValorHive sports showcase"
+                    aspectClass="aspect-[16/11]"
+                    className="space-y-0"
+                    overlay={
+                      <>
+                        <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(180deg,rgba(5,12,16,0.08),rgba(5,12,16,0.24)_38%,rgba(5,12,16,0.72)_100%)]" />
+                        <div className="absolute left-4 top-4 inline-flex items-center gap-2 rounded-full border border-white/18 bg-[#09161f]/78 px-3 py-1.5 backdrop-blur">
+                          <CircleCheckBig className="h-4 w-4 text-[#18AFCE]" />
+                          <span className="text-xs font-medium text-white/88">VALORHIVE</span>
+                        </div>
+                        <div className="absolute inset-x-0 bottom-0 p-5 sm:p-6">
+                          <div className="grid gap-3 rounded-[22px] border border-white/12 bg-[#07131b]/72 p-4 shadow-[0_0_24px_rgba(24,175,206,0.12)] backdrop-blur-md sm:grid-cols-2">
+                            {sportShowcaseCopy.map((sport) => (
+                              <div key={sport.title} className="rounded-2xl border border-white/10 bg-black/14 p-4">
+                                <p className={`text-xl font-semibold ${sport.accent}`}>{sport.title}</p>
+                                <p className="mt-1 text-sm leading-6 text-white/74">{sport.description}</p>
+                              </div>
+                            ))}
                           </div>
                         </div>
-                      </div>
-                    )}
-                    <div className="absolute inset-0 bg-[linear-gradient(180deg,rgba(5,12,16,0.08),rgba(5,12,16,0.24)_38%,rgba(5,12,16,0.68)_100%)]" />
-                    <div className="absolute left-4 top-4 inline-flex items-center gap-2 rounded-full border border-white/18 bg-[#09161f]/78 px-3 py-1.5 backdrop-blur">
-                      <CircleCheckBig className="h-4 w-4 text-[#18AFCE]" />
-                      <span className="text-xs font-medium text-white/88">VALORHIVE</span>
-                    </div>
-                    <div className="absolute inset-x-0 bottom-0 p-5 sm:p-6">
-                      <div className="rounded-[22px] border border-white/12 bg-[#07131b]/72 p-4 shadow-[0_0_24px_rgba(24,175,206,0.12)] backdrop-blur-md">
-                        <p className="text-[11px] font-semibold uppercase tracking-[0.24em] text-white/45">
-                          {landingCopy.heroVisualEyebrow}
-                        </p>
-                        <div className="mt-2">
-                          <div>
-                            <h3 className={`text-2xl font-semibold ${HERO_VISUAL.accent}`}>{HERO_VISUAL.title}</h3>
-                            <p className="mt-1 max-w-md text-sm leading-6 text-white/72">
-                              {landingCopy.heroVisualDescription}
-                            </p>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
+                      </>
+                    }
+                  />
                 </div>
 
                 <div className="flex flex-col justify-center rounded-[26px] border border-[#18AFCE]/22 bg-[linear-gradient(180deg,rgba(9,19,27,0.96),rgba(5,11,15,0.96))] p-6 shadow-[inset_0_0_0_1px_rgba(24,175,206,0.06),0_0_32px_rgba(24,175,206,0.08)] sm:p-8">

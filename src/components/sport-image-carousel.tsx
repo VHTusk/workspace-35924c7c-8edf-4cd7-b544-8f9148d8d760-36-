@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, type ReactNode } from "react";
 import Image from "next/image";
 import {
   Carousel,
@@ -18,6 +18,7 @@ type SportImageCarouselProps = {
   aspectClass?: string;
   className?: string;
   imageClassName?: string;
+  overlay?: ReactNode;
 };
 
 export default function SportImageCarousel({
@@ -26,6 +27,7 @@ export default function SportImageCarousel({
   aspectClass = "aspect-[16/10]",
   className,
   imageClassName,
+  overlay,
 }: SportImageCarouselProps) {
   const [current, setCurrent] = useState(0);
 
@@ -40,28 +42,31 @@ export default function SportImageCarousel({
 
   return (
     <div className={cn("space-y-3", className)}>
-      <Carousel setApi={handleApi} opts={{ loop: images.length > 1 }}>
-        <CarouselContent>
-          {images.map((src, index) => (
-            <CarouselItem key={`${src}-${index}`}>
-              <div className={cn("relative overflow-hidden rounded-2xl", aspectClass)}>
-                <Image
-                  src={src}
-                  alt={`${altPrefix} ${index + 1}`}
-                  fill
-                  className={cn("object-cover", imageClassName)}
-                />
-              </div>
-            </CarouselItem>
-          ))}
-        </CarouselContent>
-        {images.length > 1 ? (
-          <>
-            <CarouselPrevious className="left-3 top-1/2 h-9 w-9 -translate-y-1/2 border-white/20 bg-black/45 text-white hover:bg-black/60 disabled:opacity-40" />
-            <CarouselNext className="right-3 top-1/2 h-9 w-9 -translate-y-1/2 border-white/20 bg-black/45 text-white hover:bg-black/60 disabled:opacity-40" />
-          </>
-        ) : null}
-      </Carousel>
+      <div className="relative">
+        <Carousel setApi={handleApi} opts={{ loop: images.length > 1 }}>
+          <CarouselContent>
+            {images.map((src, index) => (
+              <CarouselItem key={`${src}-${index}`}>
+                <div className={cn("relative overflow-hidden rounded-2xl", aspectClass)}>
+                  <Image
+                    src={src}
+                    alt={`${altPrefix} ${index + 1}`}
+                    fill
+                    className={cn("object-cover", imageClassName)}
+                  />
+                </div>
+              </CarouselItem>
+            ))}
+          </CarouselContent>
+          {images.length > 1 ? (
+            <>
+              <CarouselPrevious className="left-3 top-1/2 h-9 w-9 -translate-y-1/2 border-white/20 bg-black/45 text-white hover:bg-black/60 disabled:opacity-40" />
+              <CarouselNext className="right-3 top-1/2 h-9 w-9 -translate-y-1/2 border-white/20 bg-black/45 text-white hover:bg-black/60 disabled:opacity-40" />
+            </>
+          ) : null}
+        </Carousel>
+        {overlay ? <div className="absolute inset-0">{overlay}</div> : null}
+      </div>
 
       {images.length > 1 ? (
         <div className="flex justify-center gap-2">
