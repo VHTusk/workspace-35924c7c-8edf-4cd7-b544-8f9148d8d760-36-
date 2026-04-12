@@ -7,6 +7,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import {
   ArrowRight,
   ChartNoAxesColumn,
+  ChevronDown,
   CircleCheckBig,
   MapPinned,
   Search,
@@ -170,26 +171,6 @@ export default function HomePage() {
     };
   }, []);
 
-  const handleLogout = async () => {
-    try {
-      await fetch("/api/auth/logout", {
-        method: "POST",
-        credentials: "include",
-      });
-    } catch {
-      // ignore
-    }
-
-    setSessionStatus({
-      authenticated: false,
-      userType: null,
-      sport: null,
-      displayName: null,
-      avatarUrl: null,
-    });
-    router.replace("/");
-  };
-
   const openAuth = (view: "login" | "register") => {
     const params = new URLSearchParams(searchParams.toString());
     params.set("auth", view);
@@ -209,6 +190,7 @@ export default function HomePage() {
   };
 
   const isHindi = language === "hi";
+  const sportsMenuLabel = isHindi ? "स्पोर्ट्स" : "Sports";
   const defaultSportHref = `/${AUTH_SPORTS[0].slug}`;
   const loggedInHref = sessionStatus.sport ? `/${sessionStatus.sport}` : defaultSportHref;
   const landingInitials = sessionStatus.displayName
@@ -415,30 +397,56 @@ export default function HomePage() {
                       </Button>
                     </>
                   ) : (
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <button
-                          type="button"
-                          className="inline-flex items-center gap-2.5 rounded-xl border border-[#18AFCE]/30 bg-[#07141c] px-2.5 py-1.5 text-left text-white transition-all hover:bg-[#0c1b24]"
-                        >
-                          <Avatar className="h-9 w-9 border border-[#18AFCE]/25">
-                            <AvatarImage src={sessionStatus.avatarUrl ?? undefined} />
-                            <AvatarFallback className="bg-[#0f2a36] text-sm font-semibold text-[#c8f7ff]">
-                              {landingInitials}
-                            </AvatarFallback>
-                          </Avatar>
-                          <span className="max-w-[160px] truncate text-sm font-semibold text-white/92">
-                            {sessionStatus.displayName ?? "VALORHIVE User"}
-                          </span>
-                        </button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end" className="w-44">
-                        <DropdownMenuItem asChild>
-                          <Link href={loggedInHref}>Open Sport Home</Link>
-                        </DropdownMenuItem>
-                        <DropdownMenuItem onClick={handleLogout}>Logout</DropdownMenuItem>
-                      </DropdownMenuContent>
-                    </DropdownMenu>
+                    <>
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <button
+                            type="button"
+                            className="inline-flex items-center gap-2 rounded-xl border border-[#18AFCE]/30 bg-[#07141c] px-3 py-2 text-sm font-semibold text-[#c8f7ff] transition-all hover:bg-[#0c1b24]"
+                          >
+                            <span>{sportsMenuLabel}</span>
+                            <ChevronDown className="h-4 w-4" />
+                          </button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end" className="w-48">
+                          {AUTH_SPORTS.map((sport) => {
+                            const Icon = sport.icon;
+                            return (
+                              <DropdownMenuItem key={sport.slug} asChild>
+                                <Link href={`/${sport.slug}`} className="flex items-center gap-2">
+                                  <Icon className="h-4 w-4" />
+                                  {sport.label}
+                                </Link>
+                              </DropdownMenuItem>
+                            );
+                          })}
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <button
+                            type="button"
+                            className="inline-flex items-center gap-2.5 rounded-xl border border-[#18AFCE]/30 bg-[#07141c] px-2.5 py-1.5 text-left text-white transition-all hover:bg-[#0c1b24]"
+                          >
+                            <Avatar className="h-9 w-9 border border-[#18AFCE]/25">
+                              <AvatarImage src={sessionStatus.avatarUrl ?? undefined} />
+                              <AvatarFallback className="bg-[#0f2a36] text-sm font-semibold text-[#c8f7ff]">
+                                {landingInitials}
+                              </AvatarFallback>
+                            </Avatar>
+                            <span className="max-w-[160px] truncate text-sm font-semibold text-white/92">
+                              {sessionStatus.displayName ?? "VALORHIVE User"}
+                            </span>
+                          </button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end" className="w-44">
+                          <DropdownMenuItem asChild>
+                            <Link href={loggedInHref}>Open Sport Home</Link>
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    </>
                   )}
                   <LanguageSelector variant="compact" className="border-[#18AFCE]/30 bg-[#07141c] text-[#c6f7ff]" />
                 </div>
