@@ -118,6 +118,26 @@ export default function HomePage() {
     avatarUrl: null,
   });
 
+  const handleLogout = async () => {
+    try {
+      await fetch("/api/auth/logout", {
+        method: "POST",
+        credentials: "include",
+      });
+    } catch {
+      // ignore
+    }
+
+    setSessionStatus({
+      authenticated: false,
+      userType: null,
+      sport: null,
+      displayName: null,
+      avatarUrl: null,
+    });
+    router.replace("/");
+  };
+
   useEffect(() => {
     const authParam = searchParams.get("auth");
     if (authParam === "login" || authParam === "register") {
@@ -444,6 +464,7 @@ export default function HomePage() {
                           <DropdownMenuItem asChild>
                             <Link href={loggedInHref}>Open Sport Home</Link>
                           </DropdownMenuItem>
+                          <DropdownMenuItem onClick={handleLogout}>Logout</DropdownMenuItem>
                         </DropdownMenuContent>
                       </DropdownMenu>
                     </>
