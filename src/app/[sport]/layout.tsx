@@ -16,7 +16,7 @@ export default async function SportLayout({
   const sportBadgeClass = isCornhole ? "border-green-500 text-green-600" : "border-teal-500 text-teal-600";
 
   return (
-    <div className={`vh-sport-shell flex min-h-screen flex-col ${themeClass}`}>
+    <div className={`flex min-h-screen flex-col ${themeClass}`}>
       {/* Header with client-side auth */}
       <SportHeader
         sport={sport}
@@ -26,7 +26,7 @@ export default async function SportLayout({
       />
 
       {/* Main Content */}
-      <main id="main-content" className="vh-sport-main flex-1 pt-16">
+      <main id="main-content" className="flex-1 pt-16">
         {children}
       </main>
     </div>

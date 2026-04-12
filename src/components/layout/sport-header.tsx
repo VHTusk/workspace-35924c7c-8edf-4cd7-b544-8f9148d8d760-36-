@@ -344,6 +344,7 @@ export default function SportHeader({
     }
     return `/${sport}/dashboard`;
   };
+  const sportHomeUrl = `/${sport}`;
   const isSportHomePage = pathname === `/${sport}`;
   const showSearch = !isSportHomePage;
   const showVisitorHomeTabs =
@@ -369,11 +370,7 @@ export default function SportHeader({
           {/* User Dropdown */}
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button
-                variant="ghost"
-                size="icon"
-                className="h-9 w-9 rounded-full border border-white/10 bg-[#08141c]/70 text-white hover:bg-[#10212b] hover:text-white"
-              >
+              <Button variant="ghost" size="icon" className="h-9 w-9 rounded-full">
                 <Avatar className="h-7 w-7">
                   <AvatarImage src={user?.photoUrl || org?.photoUrl || undefined} />
                   <AvatarFallback className={cn("text-white text-xs", primaryBtnClass)}>
@@ -382,19 +379,16 @@ export default function SportHeader({
                 </Avatar>
               </Button>
             </DropdownMenuTrigger>
-            <DropdownMenuContent
-              align="end"
-              className="w-56 border-white/10 bg-[#07141c]/96 text-white shadow-[0_18px_44px_rgba(0,0,0,0.34)] backdrop-blur-xl"
-            >
+            <DropdownMenuContent align="end" className="w-56">
               <DropdownMenuLabel>
                 <div className="flex flex-col">
                   <span>{getDisplayName()}</span>
                   {getLoginIdentifier() && (
-                    <span className="text-xs font-normal text-white/55">
+                    <span className="text-xs font-normal text-muted-foreground">
                       {getLoginIdentifier()}
                     </span>
                   )}
-                  <span className="text-xs font-normal text-white/55">
+                  <span className="text-xs font-normal text-muted-foreground">
                     {getSubscriptionStatus()}
                     {userType === "org" && org?.type && (
                       <span className="ml-1">• {org.type.toLowerCase()}</span>
@@ -433,7 +427,7 @@ export default function SportHeader({
               </DropdownMenuItem>
               <DropdownMenuSeparator />
               <DropdownMenuItem 
-                className="cursor-pointer text-red-400 focus:text-red-300"
+                className="text-red-600 cursor-pointer"
                 onClick={handleLogout}
               >
                 <LogOut className="mr-2 h-4 w-4" />
@@ -451,11 +445,7 @@ export default function SportHeader({
 
     return (
       <Link href={`/${sport}?auth=login`}>
-        <Button
-          variant="outline"
-          size="sm"
-          className="rounded-full border-white/12 bg-[#08141c]/78 px-3.5 text-white/84 hover:bg-[#10212b] hover:text-white"
-        >
+        <Button variant="outline" size="sm" className="rounded-full px-3.5">
           {language === "hi" ? "लॉग इन / रजिस्टर" : "Login / Register"}
         </Button>
       </Link>
@@ -464,28 +454,28 @@ export default function SportHeader({
 
   return (
     <>
-      <header className="fixed top-0 left-0 right-0 z-50 border-b border-white/10 bg-[#06131c]/92 backdrop-blur-xl supports-[backdrop-filter]:bg-[#06131c]/78">
-        <div className="mx-auto max-w-[1500px] px-4">
+      <header className="fixed top-0 left-0 right-0 z-50 border-b border-border bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+        <div className="container mx-auto px-4">
           <div className="flex h-14 items-center gap-2 sm:h-16 sm:gap-3">
             <div className="flex min-w-0 shrink-0 items-center gap-2 max-w-[72%] sm:max-w-none">
               <Link href="/" className="flex min-w-0 items-center gap-2">
                 <Image src="/logo.png" alt="VALORHIVE" width={56} height={56} className="h-12 w-auto" priority />
                 <span className="hidden truncate text-lg font-bold text-foreground min-[380px]:inline">VALORHIVE</span>
-                <Badge variant="outline" className={cn("hidden border-current/30 bg-white/5 sm:inline-flex", sportBadgeClass)}>
+                <Badge variant="outline" className={cn("hidden border-current/30 sm:inline-flex", sportBadgeClass)}>
                   {sportName}
                 </Badge>
               </Link>
               {!isSportHomePage && (
                 <Link
-                  href="/"
-                  className="hidden items-center gap-1.5 rounded-full border border-white/10 bg-[#08141c]/70 px-3 py-1.5 text-sm font-medium text-white/72 transition-colors hover:bg-[#10212b] hover:text-white lg:inline-flex"
+                  href={sportHomeUrl}
+                  className="hidden items-center gap-1.5 rounded-full border border-border px-3 py-1.5 text-sm font-medium text-muted-foreground transition-colors hover:bg-accent hover:text-foreground lg:inline-flex"
                 >
                   {copy.home}
                 </Link>
               )}
               <Link
                 href={`/${sport}/how-it-is-played`}
-                className="hidden items-center gap-1.5 rounded-full border border-white/10 bg-[#08141c]/70 px-3 py-1.5 text-sm font-medium text-white/72 transition-colors hover:bg-[#10212b] hover:text-white lg:inline-flex"
+                className="hidden items-center gap-1.5 rounded-full border border-border px-3 py-1.5 text-sm font-medium text-muted-foreground transition-colors hover:bg-accent hover:text-foreground lg:inline-flex"
               >
                 <BookOpen className="h-4 w-4" />
                 {copy.howItIsPlayed}
@@ -497,13 +487,13 @@ export default function SportHeader({
                 <div className="hidden items-center gap-2 md:flex">
                   <Link
                     href={`/${sport}/tournaments`}
-                    className="rounded-full border border-white/10 bg-[#08141c]/70 px-3 py-1.5 text-sm font-medium text-white/72 transition-colors hover:bg-[#10212b] hover:text-white"
+                    className="rounded-full border border-border px-3 py-1.5 text-sm font-medium text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
                   >
                     {copy.tournaments}
                   </Link>
                   <Link
                     href={`/${sport}/leaderboard`}
-                    className="rounded-full border border-white/10 bg-[#08141c]/70 px-3 py-1.5 text-sm font-medium text-white/72 transition-colors hover:bg-[#10212b] hover:text-white"
+                    className="rounded-full border border-border px-3 py-1.5 text-sm font-medium text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
                   >
                     {copy.leaderboard}
                   </Link>
@@ -518,8 +508,8 @@ export default function SportHeader({
             <div className="flex shrink-0 items-center gap-1.5 sm:gap-2">
               {!isSportHomePage && (
                 <Link
-                  href="/"
-                  className="inline-flex items-center rounded-full border border-white/10 bg-[#08141c]/70 px-2.5 py-1.5 text-xs font-medium text-white/72 transition-colors hover:bg-[#10212b] hover:text-white md:hidden"
+                  href={sportHomeUrl}
+                  className="inline-flex items-center rounded-full border border-border px-2.5 py-1.5 text-xs font-medium text-muted-foreground transition-colors hover:bg-accent hover:text-foreground md:hidden"
                 >
                   {copy.home}
                 </Link>
@@ -528,13 +518,13 @@ export default function SportHeader({
                 <>
                   <Link
                     href={`/${sport}/tournaments`}
-                    className="inline-flex items-center rounded-full border border-white/10 bg-[#08141c]/70 px-2.5 py-1.5 text-xs font-medium text-white/72 transition-colors hover:bg-[#10212b] hover:text-white md:hidden"
+                    className="inline-flex items-center rounded-full border border-border px-2.5 py-1.5 text-xs font-medium text-muted-foreground transition-colors hover:bg-accent hover:text-foreground md:hidden"
                   >
                     {copy.tournaments}
                   </Link>
                   <Link
                     href={`/${sport}/leaderboard`}
-                    className="inline-flex items-center rounded-full border border-white/10 bg-[#08141c]/70 px-2.5 py-1.5 text-xs font-medium text-white/72 transition-colors hover:bg-[#10212b] hover:text-white md:hidden"
+                    className="inline-flex items-center rounded-full border border-border px-2.5 py-1.5 text-xs font-medium text-muted-foreground transition-colors hover:bg-accent hover:text-foreground md:hidden"
                   >
                     {copy.leaderboard}
                   </Link>
@@ -542,7 +532,7 @@ export default function SportHeader({
               ) : null}
               <Link
                 href={`/${sport}/how-it-is-played`}
-                className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-white/10 bg-[#08141c]/70 text-white/72 transition-colors hover:bg-[#10212b] hover:text-white lg:hidden"
+                className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-border text-muted-foreground transition-colors hover:bg-accent hover:text-foreground lg:hidden"
                 aria-label={copy.howItIsPlayed}
               >
                 <BookOpen className="h-4 w-4" />

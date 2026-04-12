@@ -264,13 +264,9 @@ export default function Sidebar({ userType = "player" }: SidebarProps) {
   // Listen for follow changes to refresh counts
   const followRefreshKey = useFollowCountRefresh();
 
-  const primaryClass = isCornhole
-    ? "bg-[linear-gradient(135deg,#0d8f5d_0%,#16c47f_100%)]"
-    : "bg-[linear-gradient(135deg,#0f7b92_0%,#18afce_100%)]";
-  const primaryTextClass = isCornhole ? "text-[#d6ff3f]" : "text-[#7de8ff]";
-  const primaryBgClass = isCornhole
-    ? "border border-[rgba(214,255,63,0.16)] bg-[rgba(214,255,63,0.08)]"
-    : "border border-[rgba(125,232,255,0.16)] bg-[rgba(125,232,255,0.08)]";
+  const primaryClass = isCornhole ? "bg-green-600" : "bg-teal-600";
+  const primaryTextClass = isCornhole ? "text-green-600" : "text-teal-600";
+  const primaryBgClass = isCornhole ? "bg-green-50 dark:bg-green-950/30" : "bg-teal-50 dark:bg-teal-950/30";
   const common = language === "hi"
     ? {
         dashboard: "डैशबोर्ड",
@@ -390,13 +386,13 @@ export default function Sidebar({ userType = "player" }: SidebarProps) {
           <Button
             variant="ghost"
             size="icon"
-            className="fixed top-[4.4rem] left-3 z-50 h-10 w-10 rounded-xl border border-white/10 bg-[#08141c]/92 text-white shadow-[0_12px_28px_rgba(0,0,0,0.28)] backdrop-blur-xl supports-[backdrop-filter]:bg-[#08141c]/76 md:hidden"
+            className="fixed top-[4.4rem] left-3 z-50 h-10 w-10 rounded-xl bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 border shadow-sm md:hidden"
             aria-label="Toggle menu"
           >
             <Menu className="h-5 w-5" />
           </Button>
         </SheetTrigger>
-        <SheetContent side="left" className="mobile-safe-bottom w-[min(88vw,20rem)] border-white/10 bg-[linear-gradient(180deg,rgba(7,20,28,0.98),rgba(4,10,14,0.98))] p-0 text-white flex flex-col">
+        <SheetContent side="left" className="mobile-safe-bottom w-[min(88vw,20rem)] p-0 flex flex-col bg-sidebar">
           <SidebarContent {...sidebarContentProps} onLinkClick={() => setSheetOpen(false)} />
         </SheetContent>
       </Sheet>
@@ -405,7 +401,7 @@ export default function Sidebar({ userType = "player" }: SidebarProps) {
 
   // Desktop: Fixed sidebar
   return (
-    <aside className="fixed left-0 top-16 z-40 flex h-[calc(100vh-4rem)] w-72 flex-col border-r border-white/10 bg-[linear-gradient(180deg,rgba(7,20,28,0.98),rgba(4,10,14,0.98))] text-white shadow-[0_20px_48px_rgba(0,0,0,0.24)]">
+    <aside className="fixed left-0 top-16 h-[calc(100vh-4rem)] w-72 bg-sidebar border-r border-sidebar-border flex flex-col z-40">
       <SidebarContent {...sidebarContentProps} />
     </aside>
   );

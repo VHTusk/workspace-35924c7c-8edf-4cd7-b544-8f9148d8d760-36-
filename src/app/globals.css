@@ -184,47 +184,47 @@
    Outdoor, fresh, competitive
    ======================================== */
 .theme-cornhole {
-  --primary: #16c47f;
-  --primary-hover: #12a86d;
-  --primary-active: #0d8f5d;
-  --primary-foreground: #04110c;
-  
-  --secondary: #0f1b16;
-  --secondary-hover: #14231d;
-  --secondary-foreground: #d9fff0;
-  
-  --accent: #3c2a08;
-  --accent-hover: #4b3409;
-  --accent-foreground: #ffd66b;
-  
-  --ring: #8bffcf;
-  
-  --sport-primary: #16c47f;
-  --sport-secondary: #0e6c54;
-  --sport-accent: #ffd33d;
-  
-  --background: #050c10;
-  --background-alt: #07131b;
-  --foreground: #f7feff;
-  --foreground-muted: #9fc2cb;
-  --card: #08141c;
-  --card-hover: #0b1822;
-  --card-foreground: #f7feff;
-  --popover: #09161f;
-  --popover-foreground: #f7feff;
-  --muted: #0d1921;
-  --muted-foreground: #8ba8b1;
-  --border: rgba(24, 175, 206, 0.22);
-  --border-strong: rgba(24, 175, 206, 0.34);
-  --input: rgba(10, 25, 34, 0.96);
-  --sidebar: #07141c;
-  --sidebar-foreground: #effcff;
-  --sidebar-primary: #16c47f;
-  --sidebar-primary-foreground: #04110c;
-  --sidebar-accent: #0d1a23;
-  --sidebar-accent-foreground: #effcff;
-  --sidebar-border: rgba(24, 175, 206, 0.18);
-  --sidebar-ring: #8bffcf;
+    --primary: #059669;
+    --primary-hover: #047857;
+    --primary-active: #065F46;
+    --primary-foreground: #FFFFFF;
+    
+    --secondary: #ECFDF5;
+    --secondary-hover: #D1FAE5;
+    --secondary-foreground: #064E3B;
+    
+    --accent: #10B981;
+    --accent-hover: #059669;
+    --accent-foreground: #FFFFFF;
+    
+    --ring: #34D399;
+    
+    --sport-primary: #059669;
+    --sport-secondary: #10B981;
+    --sport-accent: #34D399;
+    
+    --background: #FAFDFB;
+    --background-alt: #F0FDF4;
+    --foreground: #0F172A;
+    --foreground-muted: #64748B;
+    --card: #FFFFFF;
+    --card-hover: #F8FAFC;
+  --card-foreground: #0F172A;
+  --popover: #FFFFFF;
+  --popover-foreground: #0F172A;
+  --muted: #F1F5F9;
+  --muted-foreground: #64748B;
+  --border: rgba(5, 150, 105, 0.14);
+  --border-strong: rgba(5, 150, 105, 0.24);
+  --input: #FFFFFF;
+  --sidebar: #FFFFFF;
+  --sidebar-foreground: #0F172A;
+  --sidebar-primary: #059669;
+  --sidebar-primary-foreground: #FFFFFF;
+  --sidebar-accent: #ECFDF5;
+  --sidebar-accent-foreground: #064E3B;
+  --sidebar-border: #D1FAE5;
+  --sidebar-ring: #34D399;
   
   --chart-1: #16c47f;
   --chart-2: #ffd33d;
@@ -247,47 +247,47 @@
    Indoor, pub, sophisticated, precision
    ======================================== */
 .theme-darts {
-  --primary: #18afce;
-  --primary-hover: #1397b2;
-  --primary-active: #0f7b92;
-  --primary-foreground: #041018;
-  
-  --secondary: #0f1920;
-  --secondary-hover: #122028;
-  --secondary-foreground: #d8fbff;
-  
-  --accent: #3d1e0f;
-  --accent-hover: #4a2512;
-  --accent-foreground: #ffb57e;
-  
-  --ring: #7de8ff;
-  
-  --sport-primary: #18afce;
-  --sport-secondary: #0f6f86;
-  --sport-accent: #ee5d0e;
-  
-  --background: #050c10;
-  --background-alt: #07131b;
-  --foreground: #f7feff;
-  --foreground-muted: #9fc2cb;
-  --card: #08141c;
-  --card-hover: #0b1822;
-  --card-foreground: #f7feff;
-  --popover: #09161f;
-  --popover-foreground: #f7feff;
-  --muted: #0d1921;
-  --muted-foreground: #8ba8b1;
-  --border: rgba(24, 175, 206, 0.22);
-  --border-strong: rgba(24, 175, 206, 0.34);
-  --input: rgba(10, 25, 34, 0.96);
-  --sidebar: #07141c;
-  --sidebar-foreground: #effcff;
-  --sidebar-primary: #18afce;
-  --sidebar-primary-foreground: #041018;
-  --sidebar-accent: #0d1a23;
-  --sidebar-accent-foreground: #effcff;
-  --sidebar-border: rgba(24, 175, 206, 0.18);
-  --sidebar-ring: #7de8ff;
+    --primary: #0D9488;
+    --primary-hover: #0F766E;
+    --primary-active: #115E59;
+    --primary-foreground: #FFFFFF;
+    
+    --secondary: #F0FDFA;
+    --secondary-hover: #CCFBF1;
+    --secondary-foreground: #134E4A;
+    
+    --accent: #14B8A6;
+    --accent-hover: #0D9488;
+    --accent-foreground: #FFFFFF;
+    
+    --ring: #5EEAD4;
+    
+    --sport-primary: #0D9488;
+    --sport-secondary: #14B8A6;
+    --sport-accent: #5EEAD4;
+    
+    --background: #FAFCFC;
+    --background-alt: #F0FDFA;
+    --foreground: #0F172A;
+    --foreground-muted: #64748B;
+    --card: #FFFFFF;
+    --card-hover: #F8FAFC;
+  --card-foreground: #0F172A;
+  --popover: #FFFFFF;
+  --popover-foreground: #0F172A;
+  --muted: #F1F5F9;
+  --muted-foreground: #64748B;
+  --border: rgba(13, 148, 136, 0.14);
+  --border-strong: rgba(13, 148, 136, 0.24);
+  --input: #FFFFFF;
+  --sidebar: #FFFFFF;
+  --sidebar-foreground: #0F172A;
+  --sidebar-primary: #0D9488;
+  --sidebar-primary-foreground: #FFFFFF;
+  --sidebar-accent: #F0FDFA;
+  --sidebar-accent-foreground: #134E4A;
+  --sidebar-border: #CCFBF1;
+  --sidebar-ring: #5EEAD4;
   
   --chart-1: #18afce;
   --chart-2: #ee5d0e;
@@ -573,41 +573,6 @@
       var(--background);
   }
 
-  .vh-sport-shell {
-    position: relative;
-    overflow: hidden;
-    background:
-      radial-gradient(circle at top, rgba(24, 175, 206, 0.18), transparent 30%),
-      radial-gradient(circle at 80% 0%, rgba(238, 93, 14, 0.14), transparent 28%),
-      linear-gradient(180deg, #041017 0%, #050c10 48%, #03080c 100%);
-  }
-
-  .vh-sport-shell::before {
-    content: "";
-    position: absolute;
-    inset: 0;
-    pointer-events: none;
-    opacity: 0.24;
-    background-image:
-      linear-gradient(rgba(24, 175, 206, 0.12) 1px, transparent 1px),
-      linear-gradient(90deg, rgba(24, 175, 206, 0.12) 1px, transparent 1px);
-    background-size: 48px 48px;
-  }
-
-  .vh-sport-main {
-    position: relative;
-    z-index: 1;
-  }
-
-  .vh-sport-panel {
-    border: 1px solid rgba(24, 175, 206, 0.18);
-    background: linear-gradient(180deg, rgba(9, 19, 27, 0.96), rgba(5, 11, 15, 0.96));
-    box-shadow:
-      inset 0 0 0 1px rgba(24, 175, 206, 0.04),
-      0 0 28px rgba(24, 175, 206, 0.08);
-    backdrop-filter: blur(16px);
-  }
-  
   /* Glow effects */
   .glow-sport {
     box-shadow: 0 0 20px color-mix(in srgb, var(--sport-primary) 25%, transparent),
