@@ -293,10 +293,15 @@ export function UniversalRegisterPanel({
 
       </CardHeader>
 
-      <CardContent className="space-y-4 px-4 pb-5 sm:px-6 sm:pb-6">
-        {accountType === "player" && (
-          <GoogleOneTap sport={selectedSport} autoPrompt={false} anchorId="universal-register-google" />
-        )}
+        <CardContent className="space-y-4 px-4 pb-5 sm:px-6 sm:pb-6">
+          {accountType === "player" && (
+            <GoogleOneTap
+              sport={selectedSport}
+              autoPrompt={false}
+              anchorId="universal-register-google"
+              onLoginSuccess={(data) => finishRegister(data.redirectTo || `/${selectedSport}/dashboard`)}
+            />
+          )}
 
         <Button
           type="button"

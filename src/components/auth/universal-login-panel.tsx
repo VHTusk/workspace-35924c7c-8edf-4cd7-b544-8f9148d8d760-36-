@@ -86,7 +86,7 @@ export function UniversalLoginPanel({
 
   const finishLogin = (destination?: string) => {
     onSuccess?.();
-    window.location.href = destination || successRedirect || `/${selectedSport}/dashboard`;
+    window.location.href = successRedirect || destination || `/${selectedSport}/dashboard`;
   };
 
   const applyErrorState = (
@@ -185,10 +185,10 @@ export function UniversalLoginPanel({
           "We could not sign you in right now. Please try again.",
         );
 
-        if (!orgError) {
-          finishLogin(`/${selectedSport}/org/dashboard`);
-          return;
-        }
+          if (!orgError) {
+            finishLogin();
+            return;
+          }
 
         applyErrorState(
           orgError.code ?? playerError.code,
@@ -284,7 +284,12 @@ export function UniversalLoginPanel({
           </div>
         )}
 
-        <GoogleOneTap sport={selectedSport} autoPrompt={false} anchorId="universal-login-google" />
+        <GoogleOneTap
+          sport={selectedSport}
+          autoPrompt={false}
+          anchorId="universal-login-google"
+          onLoginSuccess={(data) => finishLogin(data.redirectTo)}
+        />
 
         <Button
           type="button"
