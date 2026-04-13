@@ -329,32 +329,32 @@ export default function HomePage() {
         heroTitleAccent: "Inclusive Sports",
         heroTitleEnd: "Ecosystem",
         heroDescription:
-          "Every sport. Every city. One competitive system where tournaments stay structured and rankings keep moving.",
-        primaryCta: "Join Upcoming Competitions",
-        primaryCtaLoggedIn: "Open Sport Home",
-        secondaryCta: "View Sport Home",
-        sportsLine: "Starting with Cornhole, Darts, Frisbee Golf, Pickleball",
+          "Structured tournaments, verified results, and rankings across sports.",
+        primaryCta: "Create Profile",
+        primaryCtaLoggedIn: "",
+        secondaryCta: "Choose a Sport",
+        sportsLine: "Cornhole and Darts live now",
         sportsEyebrow: "Sports",
         sportsTitle: "Pick your starting sport",
-        sportsDescription: "Select the competition format you want to enter first and move into scheduled local play.",
+        sportsDescription: "Choose a sport and enter its competition home.",
         details: "Enter",
         players: "Players",
         tournaments: "Tournaments",
         prizePool: "Prize Pool",
         flowEyebrow: "Competition flow",
         flowTitle: "How it works",
-        flowDescription: "A simple path from registration to repeat competitive play.",
+        flowDescription: "Register, join, compete, get ranked.",
         platformEyebrow: "Platform features",
         platformTitle: "Built for champions",
         platformDescription:
-          "Core systems designed for repeatable tournaments, verified outcomes, and steady player progress.",
+          "Verified results, repeat tournaments, and clear player progress.",
         momentumEyebrow: "Momentum",
-        momentumTitle: "Growing every day",
-        ctaTitle: "Ready to Start Competing?",
+        momentumTitle: "Platform growth",
+        ctaTitle: "Start Your Competition Journey",
         ctaDescription:
-          "Join structured competitions, build your ranking, and move through a more consistent competitive system.",
-        ctaButton: "Get Started",
-        ctaButtonLoggedIn: "Open Sport Home",
+          "Create your profile and enter your first sport.",
+        ctaButton: "Create Profile",
+        ctaButtonLoggedIn: "",
       };
   const sportShowcaseCopy = isHindi
     ? [
@@ -519,31 +519,30 @@ export default function HomePage() {
                     {landingCopy.heroDescription}
                   </p>
 
-                  <div className="mt-7 flex flex-col gap-3 sm:flex-row">
-                    <Button
-                      className="h-11 rounded-xl bg-[#d6ff3f] px-5 text-sm font-semibold text-[#12230f] shadow-[0_0_22px_rgba(214,255,63,0.28)] transition-all hover:-translate-y-0.5 hover:bg-[#c8f12c]"
-                      onClick={() => {
-                        if (sessionStatus.authenticated) {
-                          router.push(loggedInHref);
-                          return;
-                        }
-
-                        openAuth("register");
-                      }}
-                    >
-                      {sessionStatus.authenticated ? landingCopy.primaryCtaLoggedIn : landingCopy.primaryCta}
-                    </Button>
-                    <Button
-                      asChild
-                      variant="outline"
-                      className="h-11 rounded-xl border-[#18AFCE]/40 bg-[#08141c] px-5 text-sm font-semibold text-[#c3f8ff] shadow-[0_0_18px_rgba(24,175,206,0.14)] transition-all hover:-translate-y-0.5 hover:bg-[#0c1c26] hover:text-white"
-                    >
-                      <Link href={defaultSportHref}>
-                        {landingCopy.secondaryCta}
-                        <ArrowRight className="ml-2 h-4 w-4" />
-                      </Link>
-                    </Button>
-                  </div>
+                    {!sessionStatus.authenticated ? (
+                      <div className="mt-7 flex flex-col gap-3 sm:flex-row">
+                        <Button
+                          className="h-11 rounded-xl bg-[#d6ff3f] px-5 text-sm font-semibold text-[#12230f] shadow-[0_0_22px_rgba(214,255,63,0.28)] transition-all hover:-translate-y-0.5 hover:bg-[#c8f12c]"
+                          onClick={() => openAuth("register")}
+                        >
+                          {landingCopy.primaryCta}
+                        </Button>
+                        <Button
+                          asChild
+                          variant="outline"
+                          className="h-11 rounded-xl border-[#18AFCE]/40 bg-[#08141c] px-5 text-sm font-semibold text-[#c3f8ff] shadow-[0_0_18px_rgba(24,175,206,0.14)] transition-all hover:-translate-y-0.5 hover:bg-[#0c1c26] hover:text-white"
+                        >
+                          <Link href={defaultSportHref}>
+                            {landingCopy.secondaryCta}
+                            <ArrowRight className="ml-2 h-4 w-4" />
+                          </Link>
+                        </Button>
+                      </div>
+                    ) : (
+                      <p className="mt-7 text-sm font-medium text-white/62">
+                        Choose a sport from the menu or cards below.
+                      </p>
+                    )}
 
                   <p className="mt-4 text-xs font-medium uppercase tracking-[0.22em] text-white/45">
                     {landingCopy.sportsLine}
@@ -667,36 +666,31 @@ export default function HomePage() {
               </div>
             </section>
 
-            <section className="px-4 pb-8 pt-2 sm:px-6 lg:px-8">
-              <div className="rounded-[26px] border border-[#18AFCE]/24 bg-[radial-gradient(circle_at_left,rgba(214,255,63,0.18),transparent_32%),radial-gradient(circle_at_right,rgba(24,175,206,0.18),transparent_30%),linear-gradient(180deg,rgba(13,24,32,0.98),rgba(8,13,18,0.98))] px-6 py-8 text-center shadow-[0_0_24px_rgba(24,175,206,0.12)]">
-                <h2 className="text-3xl font-semibold text-white">{landingCopy.ctaTitle}</h2>
-                <p className="mx-auto mt-3 max-w-2xl text-sm leading-7 text-white/62">
-                  {landingCopy.ctaDescription}
-                </p>
-                <div className="mt-6 flex flex-col justify-center gap-3 sm:flex-row">
-                  <Button
-                    className="h-11 rounded-xl bg-[#d6ff3f] px-6 text-sm font-semibold text-[#12220f] shadow-[0_0_22px_rgba(214,255,63,0.28)] transition-all hover:-translate-y-0.5 hover:bg-[#c8f12c]"
-                    onClick={() => {
-                      if (sessionStatus.authenticated) {
-                        router.push(loggedInHref);
-                        return;
-                      }
-
-                      openAuth("register");
-                    }}
-                  >
-                    {sessionStatus.authenticated ? landingCopy.ctaButtonLoggedIn : landingCopy.ctaButton}
-                  </Button>
-                  <Button
-                    asChild
-                    variant="outline"
-                    className="h-11 rounded-xl border-[#18AFCE]/40 bg-[#08151d] px-6 text-sm font-semibold text-[#c8f7ff] shadow-[0_0_18px_rgba(24,175,206,0.12)] transition-all hover:-translate-y-0.5 hover:bg-[#0d1b24]"
-                  >
-                    <Link href={defaultSportHref}>{landingCopy.secondaryCta}</Link>
-                  </Button>
-                </div>
-              </div>
-            </section>
+              {!sessionStatus.authenticated ? (
+                <section className="px-4 pb-8 pt-2 sm:px-6 lg:px-8">
+                  <div className="rounded-[26px] border border-[#18AFCE]/24 bg-[radial-gradient(circle_at_left,rgba(214,255,63,0.18),transparent_32%),radial-gradient(circle_at_right,rgba(24,175,206,0.18),transparent_30%),linear-gradient(180deg,rgba(13,24,32,0.98),rgba(8,13,18,0.98))] px-6 py-8 text-center shadow-[0_0_24px_rgba(24,175,206,0.12)]">
+                    <h2 className="text-3xl font-semibold text-white">{landingCopy.ctaTitle}</h2>
+                    <p className="mx-auto mt-3 max-w-2xl text-sm leading-7 text-white/62">
+                      {landingCopy.ctaDescription}
+                    </p>
+                    <div className="mt-6 flex flex-col justify-center gap-3 sm:flex-row">
+                      <Button
+                        className="h-11 rounded-xl bg-[#d6ff3f] px-6 text-sm font-semibold text-[#12220f] shadow-[0_0_22px_rgba(214,255,63,0.28)] transition-all hover:-translate-y-0.5 hover:bg-[#c8f12c]"
+                        onClick={() => openAuth("register")}
+                      >
+                        {landingCopy.ctaButton}
+                      </Button>
+                      <Button
+                        asChild
+                        variant="outline"
+                        className="h-11 rounded-xl border-[#18AFCE]/40 bg-[#08151d] px-6 text-sm font-semibold text-[#c8f7ff] shadow-[0_0_18px_rgba(24,175,206,0.12)] transition-all hover:-translate-y-0.5 hover:bg-[#0d1b24]"
+                      >
+                        <Link href={defaultSportHref}>{landingCopy.secondaryCta}</Link>
+                      </Button>
+                    </div>
+                  </div>
+                </section>
+              ) : null}
 
             <SiteFooter variant="landing" />
           </div>
