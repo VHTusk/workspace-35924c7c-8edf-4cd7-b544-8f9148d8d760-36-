@@ -26,12 +26,15 @@ import { Button } from "@/components/ui/button";
 import LanguageSelector from "@/components/ui/language-selector";
 import { useTranslation } from "@/hooks/use-translation";
 import SportImageCarousel from "@/components/sport-image-carousel";
+import { toast } from "sonner";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+
+const LANDING_AUTH_NOTICE_KEY = "valorhive:landing-auth-notice";
 
 const HERO_OUTCOMES = [
   "Verified match results",
@@ -190,6 +193,35 @@ export default function HomePage() {
       cancelled = true;
     };
   }, []);
+
+  useEffect(() => {
+    if (!sessionStatus.authenticated || typeof window === "undefined") {
+      return;
+    }
+
+    const rawNotice = window.sessionStorage.getItem(LANDING_AUTH_NOTICE_KEY);
+    if (!rawNotice) {
+      return;
+    }
+
+    try {
+      const notice = JSON.parse(rawNotice) as {
+        title?: string;
+        description?: string;
+      };
+
+      if (notice.title) {
+        toast.success(notice.title, {
+          description: notice.description,
+          id: "landing-auth-notice",
+        });
+      }
+    } catch {
+      // ignore malformed session notice
+    } finally {
+      window.sessionStorage.removeItem(LANDING_AUTH_NOTICE_KEY);
+    }
+  }, [sessionStatus.authenticated]);
 
   const openAuth = (view: "login" | "register") => {
     const params = new URLSearchParams(searchParams.toString());
@@ -461,9 +493,6 @@ export default function HomePage() {
                           </button>
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end" className="w-44">
-                          <DropdownMenuItem asChild>
-                            <Link href={loggedInHref}>Open Sport Home</Link>
-                          </DropdownMenuItem>
                           <DropdownMenuItem onClick={handleLogout}>Logout</DropdownMenuItem>
                         </DropdownMenuContent>
                       </DropdownMenu>

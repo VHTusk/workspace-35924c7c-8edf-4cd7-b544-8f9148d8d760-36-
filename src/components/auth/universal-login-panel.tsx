@@ -24,6 +24,8 @@ type UniversalLoginPanelProps = {
   onSuccess?: () => void;
 };
 
+const LANDING_AUTH_NOTICE_KEY = "valorhive:landing-auth-notice";
+
 export function UniversalLoginPanel({
   initialSport,
   hideSportSelection = false,
@@ -85,6 +87,16 @@ export function UniversalLoginPanel({
   };
 
   const finishLogin = (destination?: string) => {
+    if (successRedirect === "/" && typeof window !== "undefined") {
+      window.sessionStorage.setItem(
+        LANDING_AUTH_NOTICE_KEY,
+        JSON.stringify({
+          type: "login",
+          title: "Logged in",
+          description: "Choose a sport from the Sports menu to continue.",
+        }),
+      );
+    }
     onSuccess?.();
     window.location.href = successRedirect || destination || `/${selectedSport}/dashboard`;
   };

@@ -26,6 +26,8 @@ type UniversalRegisterPanelProps = {
   onSuccess?: () => void;
 };
 
+const LANDING_AUTH_NOTICE_KEY = "valorhive:landing-auth-notice";
+
 export function UniversalRegisterPanel({
   initialSport,
   successRedirect,
@@ -97,6 +99,16 @@ export function UniversalRegisterPanel({
   };
 
   const finishRegister = (destination: string, preserveDestination = false) => {
+    if (!preserveDestination && successRedirect === "/" && typeof window !== "undefined") {
+      window.sessionStorage.setItem(
+        LANDING_AUTH_NOTICE_KEY,
+        JSON.stringify({
+          type: "register",
+          title: accountType === "player" ? "Profile created" : "Account created",
+          description: "Choose a sport from the Sports menu to get started.",
+        }),
+      );
+    }
     onSuccess?.();
     router.push(preserveDestination ? destination : successRedirect || destination);
   };
