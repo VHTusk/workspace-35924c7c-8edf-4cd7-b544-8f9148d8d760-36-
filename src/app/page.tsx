@@ -38,8 +38,8 @@ const LANDING_AUTH_NOTICE_KEY = "valorhive:landing-auth-notice";
 
 const HERO_OUTCOMES = [
   "Verified match results",
-  "Recurring city tournaments",
-  "Rankings that keep moving",
+  "Repeat tournaments",
+  "District to national pathway",
 ];
 
 const HOW_IT_WORKS = [
@@ -67,23 +67,23 @@ const HOW_IT_WORKS = [
 
 const BUILT_FOR_CHAMPIONS = [
   {
-    title: "Tournament Management",
-    description: "Structured operations built for recurring competitive formats.",
+    title: "Verified Results",
+    description: "Official results recorded match by match.",
     icon: Trophy,
   },
   {
-    title: "Dual Rating System",
-    description: "Rank movement and visible points that reflect performance.",
+    title: "Rankings",
+    description: "Points and movement tied to performance.",
     icon: Target,
   },
   {
-    title: "Geographic Tiers",
-    description: "District-to-national progression with clearer competition stages.",
+    title: "Progression",
+    description: "District, state, and national competition path.",
     icon: MapPinned,
   },
   {
-    title: "Fair Play System",
-    description: "Verified results, transparent standards, and match integrity.",
+    title: "Fair Competition",
+    description: "Structured formats and match integrity.",
     icon: ShieldCheck,
   },
 ];
@@ -357,31 +357,31 @@ export default function HomePage() {
         dashboard: "Dashboard",
         openProfile: "Open Profile",
         eyebrow: "Structured Competition",
-        heroTitleStart: "India's Premier",
-        heroTitleAccent: "Inclusive Sports",
-        heroTitleEnd: "Ecosystem",
+        heroTitleStart: "Competitive",
+        heroTitleAccent: "Sports",
+        heroTitleEnd: "Across India",
         heroDescription:
-          "Structured tournaments, verified results, and rankings across sports.",
+          "Join tournaments, track results, and build your ranking.",
         primaryCta: "Create Profile",
         primaryCtaLoggedIn: "",
-        secondaryCta: "Choose a Sport",
-        sportsLine: "Cornhole and Darts live now",
+        secondaryCta: "How It Works",
+        sportsLine: "",
         sportsEyebrow: "Sports",
-        sportsTitle: "Pick your starting sport",
-        sportsDescription: "Choose a sport and enter its competition home.",
+        sportsTitle: "Choose Your Sport",
+        sportsDescription: "Enter Cornhole or Darts competition.",
         details: "Enter",
         players: "Players",
         tournaments: "Tournaments",
         prizePool: "Prize Pool",
         flowEyebrow: "Competition flow",
-        flowTitle: "How it works",
-        flowDescription: "Register, join, compete, get ranked.",
-        platformEyebrow: "Platform features",
-        platformTitle: "Built for champions",
+        flowTitle: "How ValorHive Works",
+        flowDescription: "Register once. Join tournaments. Play. Get ranked.",
+        platformEyebrow: "Why ValorHive",
+        platformTitle: "Why Players Return",
         platformDescription:
-          "Verified results, repeat tournaments, and clear player progress.",
-        momentumEyebrow: "Momentum",
-        momentumTitle: "Platform growth",
+          "Verified results, repeat play, and clear progress.",
+        momentumEyebrow: "Stats",
+        momentumTitle: "By the Numbers",
         ctaTitle: "Start Your Competition Journey",
         ctaDescription:
           "Create your profile and enter your first sport.",
@@ -561,21 +561,19 @@ export default function HomePage() {
                           variant="outline"
                           className="h-11 rounded-xl border-[#18AFCE]/40 bg-[#08141c] px-5 text-sm font-semibold text-[#c3f8ff] shadow-[0_0_18px_rgba(24,175,206,0.14)] transition-all hover:-translate-y-0.5 hover:bg-[#0c1c26] hover:text-white"
                         >
-                          <Link href={defaultSportHref}>
+                          <Link href="#how-it-works">
                             {landingCopy.secondaryCta}
                             <ArrowRight className="ml-2 h-4 w-4" />
                           </Link>
                         </Button>
                       </div>
-                    ) : (
-                      <p className="mt-7 text-sm font-medium text-white/62">
-                        Choose a sport from the menu or cards below.
-                      </p>
-                    )}
+                    ) : null}
 
-                  <p className="mt-4 text-xs font-medium uppercase tracking-[0.22em] text-white/45">
-                    {landingCopy.sportsLine}
-                  </p>
+                  {landingCopy.sportsLine ? (
+                    <p className="mt-4 text-xs font-medium uppercase tracking-[0.22em] text-white/45">
+                      {landingCopy.sportsLine}
+                    </p>
+                  ) : null}
                 </div>
               </div>
 
@@ -618,11 +616,9 @@ export default function HomePage() {
                           </div>
                           <div>
                             <h3 className="text-3xl font-semibold">{sport.label}</h3>
-                            <div className="mt-3 grid grid-cols-3 gap-5 text-sm">
-                              <SportStat value="5,000+" label={landingCopy.players} />
-                              <SportStat value="250+" label={landingCopy.tournaments} />
-                              <SportStat value="INR 25L+" label={landingCopy.prizePool} />
-                            </div>
+                            <p className="mt-2 text-sm font-medium text-[#18313d]/78">
+                              {sport.tagline}
+                            </p>
                           </div>
                         </div>
 
@@ -639,7 +635,7 @@ export default function HomePage() {
               </div>
             </section>
 
-            <section className="px-4 pb-6 pt-2 sm:px-6 lg:px-8">
+            <section id="how-it-works" className="px-4 pb-6 pt-2 sm:px-6 lg:px-8">
               <SectionHeading
                 eyebrow={landingCopy.flowEyebrow}
                 title={landingCopy.flowTitle}
@@ -695,33 +691,7 @@ export default function HomePage() {
               </div>
             </section>
 
-              {!sessionStatus.authenticated ? (
-                <section className="px-4 pb-8 pt-2 sm:px-6 lg:px-8">
-                  <div className="rounded-[26px] border border-[#18AFCE]/24 bg-[radial-gradient(circle_at_left,rgba(214,255,63,0.18),transparent_32%),radial-gradient(circle_at_right,rgba(24,175,206,0.18),transparent_30%),linear-gradient(180deg,rgba(13,24,32,0.98),rgba(8,13,18,0.98))] px-6 py-8 text-center shadow-[0_0_24px_rgba(24,175,206,0.12)]">
-                    <h2 className="text-3xl font-semibold text-white">{landingCopy.ctaTitle}</h2>
-                    <p className="mx-auto mt-3 max-w-2xl text-sm leading-7 text-white/62">
-                      {landingCopy.ctaDescription}
-                    </p>
-                    <div className="mt-6 flex flex-col justify-center gap-3 sm:flex-row">
-                      <Button
-                        className="h-11 rounded-xl bg-[#d6ff3f] px-6 text-sm font-semibold text-[#12220f] shadow-[0_0_22px_rgba(214,255,63,0.28)] transition-all hover:-translate-y-0.5 hover:bg-[#c8f12c]"
-                        onClick={() => openAuth("register")}
-                      >
-                        {landingCopy.ctaButton}
-                      </Button>
-                      <Button
-                        asChild
-                        variant="outline"
-                        className="h-11 rounded-xl border-[#18AFCE]/40 bg-[#08151d] px-6 text-sm font-semibold text-[#c8f7ff] shadow-[0_0_18px_rgba(24,175,206,0.12)] transition-all hover:-translate-y-0.5 hover:bg-[#0d1b24]"
-                      >
-                        <Link href={defaultSportHref}>{landingCopy.secondaryCta}</Link>
-                      </Button>
-                    </div>
-                  </div>
-                </section>
-              ) : null}
-
-            <SiteFooter variant="landing" />
+              <SiteFooter variant="landing" />
           </div>
         </div>
       </main>
