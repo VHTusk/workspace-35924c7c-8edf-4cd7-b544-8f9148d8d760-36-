@@ -13,7 +13,7 @@ import { Label } from "@/components/ui/label";
 import GoogleOneTap from "@/components/auth/google-one-tap";
 import { WhatsAppRegister } from "@/components/auth/whatsapp-register";
 import { getAuthSportOption, normalizeAuthSport, type AuthSportSlug } from "@/components/auth/auth-sport-config";
-import { type AuthFieldErrors } from "@/lib/auth-contract";
+import { AUTH_CODES, type AuthFieldErrors } from "@/lib/auth-contract";
 import { parseAuthResponse } from "@/lib/auth-client";
 import { toast } from "sonner";
 
@@ -111,6 +111,29 @@ export function UniversalRegisterPanel({
     }
     onSuccess?.();
     router.push(preserveDestination ? destination : successRedirect || destination);
+  };
+
+  const finishGoogleAuth = (data: { code?: string; redirectTo?: string }) => {
+    const destination = data.redirectTo || `/${selectedSport}/dashboard`;
+
+    if (data.code === AUTH_CODES.LOGIN_SUCCESS) {
+      if (successRedirect === "/" && typeof window !== "undefined") {
+        window.sessionStorage.setItem(
+          LANDING_AUTH_NOTICE_KEY,
+          JSON.stringify({
+            type: "login",
+            title: "Logged in",
+            description: "Choose a sport from the Sports menu to continue.",
+          }),
+        );
+      }
+
+      onSuccess?.();
+      router.push(successRedirect || destination);
+      return;
+    }
+
+    finishRegister(destination);
   };
 
   const handleSubmit = async (event: React.FormEvent) => {
@@ -311,7 +334,7 @@ export function UniversalRegisterPanel({
               sport={selectedSport}
               autoPrompt={false}
               anchorId="universal-register-google"
-              onLoginSuccess={(data) => finishRegister(data.redirectTo || `/${selectedSport}/dashboard`)}
+              onLoginSuccess={finishGoogleAuth}
             />
           )}
 

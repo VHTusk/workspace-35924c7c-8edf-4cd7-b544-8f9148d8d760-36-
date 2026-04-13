@@ -3,6 +3,7 @@
 import { useEffect, useId, useState } from "react";
 import { Loader2 } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import type { AuthCode } from "@/lib/auth-contract";
 
 type GoogleOneTapProps = {
   sport?: string;
@@ -18,6 +19,7 @@ type GoogleOneTapProps = {
 
 type GoogleOneTapResponse = {
   success: boolean;
+  code?: AuthCode;
   message?: string;
   redirectTo?: string;
 };
