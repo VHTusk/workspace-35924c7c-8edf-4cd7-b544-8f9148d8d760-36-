@@ -108,7 +108,10 @@ export function UniversalRegisterPanel({
   };
 
   const finishRegister = (destination: string, preserveDestination = false) => {
-    if (!preserveDestination && successRedirect === "/" && typeof window !== "undefined") {
+    const shouldUseLandingSuccessState =
+      !preserveDestination && successRedirect === "/" && accountType === "player" && typeof window !== "undefined";
+
+    if (shouldUseLandingSuccessState) {
       window.sessionStorage.setItem(
         LANDING_AUTH_NOTICE_KEY,
         JSON.stringify({
@@ -119,7 +122,12 @@ export function UniversalRegisterPanel({
       );
     }
     onSuccess?.();
-    const finalDestination = preserveDestination ? destination : successRedirect || destination;
+    const finalDestination =
+      preserveDestination
+        ? destination
+        : successRedirect === "/" && accountType === "org"
+          ? "/org/home"
+          : successRedirect || destination;
 
     if (typeof window !== "undefined" && finalDestination === "/") {
       window.location.href = finalDestination;

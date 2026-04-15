@@ -450,30 +450,40 @@ export default function HomePage() {
                     </>
                   ) : (
                     <>
-                      <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                          <button
-                            type="button"
-                            className="inline-flex items-center gap-2 rounded-xl border border-[#18AFCE]/30 bg-[#07141c] px-3 py-2 text-sm font-semibold text-[#c8f7ff] transition-all hover:bg-[#0c1b24]"
-                          >
-                            <span>{sportsMenuLabel}</span>
-                            <ChevronDown className="h-4 w-4" />
-                          </button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end" className="w-48">
-                          {AUTH_SPORTS.map((sport) => {
-                            const Icon = sport.icon;
-                            return (
-                              <DropdownMenuItem key={sport.slug} asChild>
-                                <Link href={`/${sport.slug}`} className="flex items-center gap-2">
-                                  <Icon className="h-4 w-4" />
-                                  {sport.label}
-                                </Link>
-                              </DropdownMenuItem>
-                            );
-                          })}
-                        </DropdownMenuContent>
-                      </DropdownMenu>
+                      {sessionStatus.userType === "player" ? (
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <button
+                              type="button"
+                              className="inline-flex items-center gap-2 rounded-xl border border-[#18AFCE]/30 bg-[#07141c] px-3 py-2 text-sm font-semibold text-[#c8f7ff] transition-all hover:bg-[#0c1b24]"
+                            >
+                              <span>{sportsMenuLabel}</span>
+                              <ChevronDown className="h-4 w-4" />
+                            </button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end" className="w-48">
+                            {AUTH_SPORTS.map((sport) => {
+                              const Icon = sport.icon;
+                              return (
+                                <DropdownMenuItem key={sport.slug} asChild>
+                                  <Link href={`/${sport.slug}`} className="flex items-center gap-2">
+                                    <Icon className="h-4 w-4" />
+                                    {sport.label}
+                                  </Link>
+                                </DropdownMenuItem>
+                              );
+                            })}
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      ) : (
+                        <Button
+                          asChild
+                          variant="outline"
+                          className="h-10 rounded-xl border-[#18AFCE]/36 bg-[#08141c] px-4 text-sm font-semibold text-[#c8f7ff] shadow-[0_0_18px_rgba(24,175,206,0.1)] transition-all hover:-translate-y-0.5 hover:bg-[#0d1b24]"
+                        >
+                          <Link href="/org/home">{landingCopy.dashboard}</Link>
+                        </Button>
+                      )}
 
                       <DropdownMenu>
                         <DropdownMenuTrigger asChild>

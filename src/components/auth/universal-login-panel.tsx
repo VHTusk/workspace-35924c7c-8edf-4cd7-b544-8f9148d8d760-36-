@@ -14,7 +14,6 @@ import { WhatsAppLogin } from "@/components/auth/whatsapp-login";
 import { AUTH_SPORTS, getAuthSportOption, normalizeAuthSport, type AuthSportSlug } from "@/components/auth/auth-sport-config";
 import { AUTH_CODES, type AuthFieldErrors } from "@/lib/auth-contract";
 import { parseAuthResponse } from "@/lib/auth-client";
-import { getOrgHomeRoute } from "@/lib/org-auth-routing";
 import { toast } from "sonner";
 
 type UniversalLoginPanelProps = {
@@ -88,7 +87,7 @@ export function UniversalLoginPanel({
   };
 
   const finishLogin = (destination?: string) => {
-    if (successRedirect === "/" && typeof window !== "undefined") {
+    if (successRedirect === "/" && (!destination || destination === "/") && typeof window !== "undefined") {
       window.sessionStorage.setItem(
         LANDING_AUTH_NOTICE_KEY,
         JSON.stringify({
@@ -99,7 +98,9 @@ export function UniversalLoginPanel({
       );
     }
     onSuccess?.();
-    window.location.href = successRedirect || destination || `/${selectedSport}/dashboard`;
+    const finalDestination =
+      successRedirect === "/" && destination && destination !== "/" ? destination : successRedirect || destination || `/${selectedSport}/dashboard`;
+    window.location.href = finalDestination;
   };
 
   const applyErrorState = (
@@ -199,8 +200,7 @@ export function UniversalLoginPanel({
         );
 
           if (!orgError) {
-            const organization = orgData.organization as { type?: string } | undefined;
-            finishLogin(getOrgHomeRoute(selectedSport, organization?.type));
+            finishLogin("/org/home");
             return;
           }
 
