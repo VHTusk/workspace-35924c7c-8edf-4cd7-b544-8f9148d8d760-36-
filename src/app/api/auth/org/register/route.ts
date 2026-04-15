@@ -8,6 +8,7 @@ import { withRateLimit } from '@/lib/rate-limit';
 import { normalizeSport } from '@/lib/sports';
 import { AUTH_CODES } from '@/lib/auth-contract';
 import { authError, authSuccess } from '@/lib/auth-response';
+import { isOrgAuthType } from '@/lib/org-auth-routing';
 import {
   isValidEmailAddress,
   isValidPhoneNumber,
@@ -45,6 +46,18 @@ async function orgRegisterHandler(request: NextRequest) {
     const normalizedName = sanitizeName(name);
     const normalizedEmail = normalizeEmail(email);
     const normalizedPhone = normalizePhone(phone);
+
+    if (!isOrgAuthType(type)) {
+      return authError(
+        AUTH_CODES.REQUIRED_FIELD_MISSING,
+        'Please choose the organization type.',
+        400,
+        {
+          field: 'orgType',
+          fieldErrors: { orgType: 'Please choose the organization type.' },
+        },
+      );
+    }
 
     if (!normalizedName) {
       return authError(

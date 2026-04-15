@@ -10,11 +10,19 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import GoogleOneTap from "@/components/auth/google-one-tap";
 import { WhatsAppRegister } from "@/components/auth/whatsapp-register";
 import { getAuthSportOption, normalizeAuthSport, type AuthSportSlug } from "@/components/auth/auth-sport-config";
 import { AUTH_CODES, type AuthFieldErrors } from "@/lib/auth-contract";
 import { parseAuthResponse } from "@/lib/auth-client";
+import { getOrgHomeRoute, ORG_AUTH_TYPE_OPTIONS, type OrgAuthType } from "@/lib/org-auth-routing";
 import { toast } from "sonner";
 
 type AccountType = "player" | "org";
@@ -47,6 +55,7 @@ export function UniversalRegisterPanel({
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
   const [orgName, setOrgName] = useState("");
+  const [orgType, setOrgType] = useState<OrgAuthType | "">("");
   const [emailOrPhone, setEmailOrPhone] = useState(searchParams.get("phone") || "");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
@@ -181,6 +190,13 @@ export function UniversalRegisterPanel({
       return;
     }
 
+    if (accountType === "org" && !orgType) {
+      setFieldErrors({ orgType: "Please choose the organization type." });
+      setError("Please choose the organization type.");
+      setLoading(false);
+      return;
+    }
+
     if (!trimmedIdentifier) {
       setFieldErrors({ emailOrPhone: "Please enter your email address or mobile number." });
       setError("Please enter your email address or mobile number.");
@@ -242,6 +258,7 @@ export function UniversalRegisterPanel({
             }
             : {
                 name: orgName.trim(),
+                type: orgType,
                 email,
                 phone,
                 password,
@@ -283,7 +300,7 @@ export function UniversalRegisterPanel({
         return;
       }
 
-      finishRegister(`/${selectedSport}/org/dashboard`);
+      finishRegister(getOrgHomeRoute(selectedSport, orgType));
     } catch (requestError) {
       console.error(requestError);
       setError("We could not complete your registration right now. Please try again.");
@@ -445,6 +462,38 @@ export function UniversalRegisterPanel({
                     />
                   </div>
                   {fieldErrors.name && <p className="text-xs text-red-500">{fieldErrors.name}</p>}
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="universal-register-org-type">Organization type</Label>
+                  <Select
+                    value={orgType}
+                    onValueChange={(value) => {
+                      setOrgType(value as OrgAuthType);
+                      setFieldErrors((current) => ({ ...current, orgType: undefined }));
+                      setError("");
+                    }}
+                  >
+                    <SelectTrigger
+                      id="universal-register-org-type"
+                      aria-invalid={Boolean(fieldErrors.orgType)}
+                    >
+                      <SelectValue placeholder="Choose type" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {ORG_AUTH_TYPE_OPTIONS.map((option) => (
+                        <SelectItem key={option.value} value={option.value}>
+                          {option.label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  {fieldErrors.orgType && <p className="text-xs text-red-500">{fieldErrors.orgType}</p>}
+                  {!fieldErrors.orgType && (
+                    <p className="text-xs text-muted-foreground">
+                      This decides whether we open the corporate, school, or college module.
+                    </p>
+                  )}
                 </div>
 
               </>

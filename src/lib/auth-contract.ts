@@ -61,6 +61,7 @@ export type AuthField =
   | 'identifier'
   | 'lastName'
   | 'name'
+  | 'orgType'
   | 'otp'
   | 'password'
   | 'phone'

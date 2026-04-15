@@ -14,6 +14,7 @@ import { WhatsAppLogin } from "@/components/auth/whatsapp-login";
 import { AUTH_SPORTS, getAuthSportOption, normalizeAuthSport, type AuthSportSlug } from "@/components/auth/auth-sport-config";
 import { AUTH_CODES, type AuthFieldErrors } from "@/lib/auth-contract";
 import { parseAuthResponse } from "@/lib/auth-client";
+import { getOrgHomeRoute } from "@/lib/org-auth-routing";
 import { toast } from "sonner";
 
 type UniversalLoginPanelProps = {
@@ -192,13 +193,14 @@ export function UniversalLoginPanel({
           }),
         });
 
-        const { error: orgError } = await parseAuthResponse(
+        const { data: orgData, error: orgError } = await parseAuthResponse(
           orgResponse,
           "We could not sign you in right now. Please try again.",
         );
 
           if (!orgError) {
-            finishLogin();
+            const organization = orgData.organization as { type?: string } | undefined;
+            finishLogin(getOrgHomeRoute(selectedSport, organization?.type));
             return;
           }
 
