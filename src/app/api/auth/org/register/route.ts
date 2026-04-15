@@ -101,6 +101,18 @@ async function orgRegisterHandler(request: NextRequest) {
       });
     }
 
+    if (confirmPassword === undefined || confirmPassword === null || confirmPassword === '') {
+      return authError(
+        AUTH_CODES.REQUIRED_FIELD_MISSING,
+        'Please re-enter your password.',
+        400,
+        {
+          field: 'confirmPassword',
+          fieldErrors: { confirmPassword: 'Please re-enter your password.' },
+        },
+      );
+    }
+
     if (confirmPassword !== undefined && password !== confirmPassword) {
       return authError(
         AUTH_CODES.PASSWORD_MISMATCH,

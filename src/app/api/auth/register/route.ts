@@ -162,6 +162,18 @@ async function registerHandler(request: NextRequest): Promise<NextResponse> {
       );
     }
 
+    if (trimmedPassword && trimmedConfirmPassword === undefined) {
+      return authError(
+        AUTH_CODES.REQUIRED_FIELD_MISSING,
+        'Please re-enter your password.',
+        400,
+        {
+          field: 'confirmPassword',
+          fieldErrors: { confirmPassword: 'Please re-enter your password.' },
+        },
+      );
+    }
+
     if (trimmedConfirmPassword !== undefined && trimmedPassword !== trimmedConfirmPassword) {
       return authError(
         AUTH_CODES.PASSWORD_MISMATCH,

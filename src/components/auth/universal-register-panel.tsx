@@ -110,28 +110,42 @@ export function UniversalRegisterPanel({
       );
     }
     onSuccess?.();
-    router.push(preserveDestination ? destination : successRedirect || destination);
+    const finalDestination = preserveDestination ? destination : successRedirect || destination;
+
+    if (typeof window !== "undefined" && finalDestination === "/") {
+      window.location.href = finalDestination;
+      return;
+    }
+
+    router.push(finalDestination);
   };
 
   const finishGoogleAuth = (data: { code?: string; redirectTo?: string }) => {
     const destination = data.redirectTo || `/${selectedSport}/dashboard`;
 
-    if (data.code === AUTH_CODES.LOGIN_SUCCESS) {
-      if (successRedirect === "/" && typeof window !== "undefined") {
-        window.sessionStorage.setItem(
-          LANDING_AUTH_NOTICE_KEY,
-          JSON.stringify({
+      if (data.code === AUTH_CODES.LOGIN_SUCCESS) {
+        if (successRedirect === "/" && typeof window !== "undefined") {
+          window.sessionStorage.setItem(
+            LANDING_AUTH_NOTICE_KEY,
+            JSON.stringify({
             type: "login",
             title: "Logged in",
             description: "Choose a sport from the Sports menu to continue.",
           }),
         );
-      }
+        }
 
-      onSuccess?.();
-      router.push(successRedirect || destination);
-      return;
-    }
+        onSuccess?.();
+        const finalDestination = successRedirect || destination;
+
+        if (typeof window !== "undefined" && finalDestination === "/") {
+          window.location.href = finalDestination;
+          return;
+        }
+
+        router.push(finalDestination);
+        return;
+      }
 
     finishRegister(destination);
   };
@@ -516,7 +530,7 @@ export function UniversalRegisterPanel({
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="universal-register-confirm-password">Confirm password</Label>
+              <Label htmlFor="universal-register-confirm-password">Re-enter password</Label>
               <div className="relative">
                 <Lock className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
                 <Input
@@ -536,6 +550,9 @@ export function UniversalRegisterPanel({
               {fieldErrors.confirmPassword && <p className="text-xs text-red-500">{fieldErrors.confirmPassword}</p>}
               {!fieldErrors.confirmPassword && confirmPassword && password !== confirmPassword && (
                 <p className="text-xs text-red-500">Password and confirm password do not match.</p>
+              )}
+              {!fieldErrors.confirmPassword && confirmPassword && password === confirmPassword && (
+                <p className="text-xs text-green-600 dark:text-green-400">Passwords match.</p>
               )}
             </div>
 
